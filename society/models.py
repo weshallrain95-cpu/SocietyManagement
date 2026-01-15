@@ -1104,3 +1104,31 @@ class PendingTransaction(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+# society/models.py
+from django.db import models
+from django.core.exceptions import ValidationError
+
+class AuditEvent(models.Model):
+    event_type = models.CharField(max_length=128)
+    actor_id = models.CharField(max_length=64, null=True, blank=True)
+
+    domain = models.CharField(max_length=64)
+    object_type = models.CharField(max_length=64)
+    object_id = models.CharField(max_length=64)
+
+    payload = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Audit Event"
+        verbose_name_plural = "Audit Events"
+
+    def save(self, *args, **kwargs):
+        # allow INSERT only
+        if self.pk:
+            raise ValidationError("Audit events are immutable and cannot be modified.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Audit events cannot be deleted.")

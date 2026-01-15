@@ -76,7 +76,7 @@ class TransactionRuleAdmin(admin.ModelAdmin):
 
 from django.contrib import admin
 from society.models import PendingTransaction
-from society.services import approve_pending_transaction
+from society import services as legacy_services
 
 
 @admin.register(PendingTransaction)
@@ -98,7 +98,7 @@ class PendingTransactionAdmin(admin.ModelAdmin):
 
     def approve_transactions(self, request, queryset):
         for txn in queryset:
-            approve_pending_transaction(
+            legacy_services.approve_pending_transaction(
                 pending_txn=txn,
                 approved_by=request.user,
             )

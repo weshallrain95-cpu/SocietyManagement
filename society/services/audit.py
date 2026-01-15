@@ -52,3 +52,29 @@ def create_audit_event(
         AuditEvent.objects.filter(pk=event.pk).update(event_hash=event.event_hash)
 
         return event
+# society/services/audit.py
+
+from society.models import AuditEvent
+
+def emit_audit_event(
+    *,
+    event_type: str,
+    domain: str,
+    object_type: str,
+    object_id: str,
+    payload: dict,
+    actor_id: str | None = None,
+):
+    """
+    Canonical audit event emitter.
+    This is the ONLY place AuditEvent is written.
+    """
+
+    AuditEvent.objects.create(
+        event_type=event_type,
+        domain=domain,
+        object_type=object_type,
+        object_id=object_id,
+        payload=payload,
+        actor_id=actor_id,
+    )
