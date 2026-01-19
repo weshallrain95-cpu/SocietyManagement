@@ -1118,6 +1118,12 @@ class AuditEvent(models.Model):
 
     payload = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    event_hash = models.CharField(
+    max_length=64,
+    editable=False,
+    db_index=True,
+)
 
     class Meta:
         ordering = ["-created_at"]
