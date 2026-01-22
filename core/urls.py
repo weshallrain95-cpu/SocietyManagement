@@ -41,5 +41,10 @@ urlpatterns = [
         finalize_society_completion,
     ),
 ]
+from django.urls import path, include
+
+urlpatterns += [
+    path("api/", include("society.api.urls")),
+]
 
 

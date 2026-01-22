@@ -104,3 +104,63 @@ class PendingTransactionAdmin(admin.ModelAdmin):
             )
 
     approve_transactions.short_description = "Approve selected transactions"
+
+from django.contrib import admin
+from society.models import AuditEvent
+
+
+@admin.register(AuditEvent)
+class AuditEventAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "created_at",
+        "event_type",
+        "domain",
+        "object_type",
+        "object_id",
+        "actor_id",
+        "short_hash",
+    )
+
+    list_filter = (
+        "domain",
+        "event_type",
+        "object_type",
+    )
+
+    search_fields = (
+        "object_id",
+        "actor_id",
+        "event_hash",
+    )
+
+    ordering = ("-created_at",)
+
+    readonly_fields = (
+        "created_at",
+        "event_type",
+        "domain",
+        "object_type",
+        "object_id",
+        "actor_id",
+        "payload_pretty",
+        "event_hash",
+    )
+
+    def short_hash(self, obj):
+        return obj.event_hash[:12]
+
+    short_hash.short_description = "Hash"
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+    def payload_pretty(self, obj):
+        import json
+        return json.dumps(obj.payload, indent=2)
+
+    payload_pretty.short_description = "Payload"
