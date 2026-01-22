@@ -127,3 +127,8 @@ class GovernedMessagingService:
         )
 
         return {"status": "sent", "message": message_obj}
+
+        # 9. Compliance lifecycle registration
+        from communications.services.lifecycle_service import LifecycleService
+        lifecycle = LifecycleService()
+        lifecycle.process(message_obj, context.get("message_type", "general"))
