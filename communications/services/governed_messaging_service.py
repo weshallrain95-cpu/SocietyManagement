@@ -59,19 +59,31 @@ class GovernedMessagingService:
             )
             return {"status": "blocked", "reason": "enforcement"}
 
-        # 3. Moderation
+                # 3. Moderation
         moderation_result = self.moderation_engine.evaluate(
             message=content,
             context=context
         )
 
-        if not moderation_result.get("allowed", True):
+        if moderation_result["result"]["block"]:
             self.audit.log_event(
                 event_type="MESSAGE_BLOCKED_MODERATION",
-                payload={"sender": str(sender), "content": content},
+                payload=moderation_result,
                 actor=sender
             )
             return {"status": "blocked", "reason": "moderation"}
+
+        if moderation_result["result"]["escalate"]:
+            from communications.services.escalation_service import EscalationService
+            esc = EscalationService()
+            esc.escalate(
+                message_obj=None,
+                reason=moderation_result["decision"],
+                context=context
+            )
+
+        # Flagging still allows flow
+
 
         # 4. Compliance
         compliance_ok = self.compliance_engine.validate(
