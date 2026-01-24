@@ -1,5 +1,4 @@
 from .authority_graph import AuthorityGraphService
-
-__all__ = [
-    "AuthorityGraphService",
-]
+from .canon_registry import CanonRegistryService
+from .document_registry import DocumentRegistryService
+from .bylaw_engine import BylawEngine
