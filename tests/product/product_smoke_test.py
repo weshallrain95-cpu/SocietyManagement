@@ -39,3 +39,19 @@ def test_finance_approve_payment_flow():
     assert result is not None
     assert result["status"] == "approved"
     assert result["payment_id"] == "pay_001"
+
+def test_members_add_flow():
+    req = DummyRequest()
+
+    result = ProductAPIGateway.dispatch(
+        request=req,
+        domain="members",
+        action="add_member",
+        payload={"name": "Ravi"}
+    )
+
+    assert result is not None
+    assert result["status"] == "member_added"
+    assert result["name"] == "Ravi"
+    assert result["society_id"] == "society456"
+

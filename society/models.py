@@ -1105,6 +1105,7 @@ class PendingTransaction(models.Model):
     class Meta:
         ordering = ["-created_at"]
 # society/models.py
+
 from django.db import models
 from django.core.exceptions import ValidationError
 
@@ -1118,12 +1119,20 @@ class AuditEvent(models.Model):
 
     payload = models.JSONField()
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
+    previous_hash = models.CharField(   # ✅ ADD THIS
+        max_length=64,
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+
     event_hash = models.CharField(
-    max_length=64,
-    editable=False,
-    db_index=True,
-)
+        max_length=64,
+        editable=False,
+        db_index=True,
+    )
+
 
     class Meta:
         ordering = ["-created_at"]
@@ -1138,3 +1147,6 @@ class AuditEvent(models.Model):
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Audit events cannot be deleted.")
+
+# Intelligence persistence models
+from society.intelligence.persistence.models import IntelligenceMemoryEvent
