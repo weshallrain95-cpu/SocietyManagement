@@ -1,0 +1,20 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Basic Security Scan
+        run: |
+          echo "Running basic security checks..."
+          grep -R "SECRET_KEY" . || true
+          grep -R "PASSWORD" . || true
+

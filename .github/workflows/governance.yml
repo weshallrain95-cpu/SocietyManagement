@@ -1,0 +1,20 @@
+name: Governance Validation
+
+on:
+  pull_request:
+    branches: [ develop, main ]
+
+jobs:
+  governance-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Governance Structure Check
+        run: |
+          echo "Checking governance structure..."
+          test -d society/governance || (echo "Missing governance directory" && exit 1)
+          test -d society/compliance || (echo "Missing compliance directory" && exit 1)
+
