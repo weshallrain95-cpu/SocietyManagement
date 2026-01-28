@@ -1,5 +1,7 @@
 # Changelog
 # SocietyOS — Product Changelog
+> All releases follow RELEASE.md governance model  
+> No unversioned releases are permitted
 
 ## Versioning Model
 vMajor.Minor.Patch
