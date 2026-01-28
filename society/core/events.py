@@ -47,7 +47,7 @@ class EventBus:
         self.subscribers[event_name].append(handler)
 
     def publish(self, event_name: str, payload: Dict[str, Any], source: str = "system"):
-        event = Event(event_name=event_name, payload=payload, source=source)
+        event = Event(name=event_name, payload=payload, source=source)
         self.history.append(event)
 
         if self.context.debug:
