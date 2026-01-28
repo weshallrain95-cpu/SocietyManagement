@@ -11,6 +11,7 @@ from society.core.state import StateEngine
 from society.core.router import Router
 from society.core.orchestrator import Orchestrator
 from society.core.lifecycle import LifecycleManager
+from society.core.registry import SystemRegistry
 
 
 class SocietySystem:
@@ -28,11 +29,23 @@ class SocietySystem:
         # Core runtime
         self.runtime: RuntimeEngine = self.kernel.runtime
 
+                # Registry
+        self.registry = SystemRegistry()
+
         # Subsystems
         self.event_bus = EventBus(self.context)
         self.state_engine = StateEngine(self.context)
         self.router = Router(self.context, self.event_bus)
         self.orchestrator = Orchestrator(self.context, self.state_engine, self.event_bus)
+
+        # Register core components
+        self.registry.register("kernel", "core", self.kernel)
+        self.registry.register("context", "core", self.context)
+        self.registry.register("runtime", "core", self.runtime)
+        self.registry.register("event_bus", "core", self.event_bus)
+        self.registry.register("state_engine", "core", self.state_engine)
+        self.registry.register("router", "core", self.router)
+        self.registry.register("orchestrator", "core", self.orchestrator)
 
         # Lifecycle
         self.lifecycle = LifecycleManager(
@@ -44,7 +57,11 @@ class SocietySystem:
             orchestrator=self.orchestrator,
         )
 
+        # Register lifecycle
+        self.registry.register("lifecycle", "core", self.lifecycle)
+
         self.initialized = False
+
 
     def boot(self):
         """
@@ -87,11 +104,11 @@ class SocietySystem:
         """
         return {
             "initialized": self.initialized,
+            "environment": self.context.environment,
             "lifecycle": self.lifecycle.status(),
             "runtime": self.runtime.status(),
-            "environment": self.context.environment,
+            "registry": self.registry.stats(),
         }
-
 
 def bootstrap_system() -> SocietySystem:
     """
