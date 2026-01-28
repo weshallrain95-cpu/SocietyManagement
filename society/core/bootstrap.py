@@ -12,6 +12,7 @@ from society.core.router import Router
 from society.core.orchestrator import Orchestrator
 from society.core.lifecycle import LifecycleManager
 from society.core.registry import SystemRegistry
+from society.core.env import load_environment
 
 
 class SocietySystem:
@@ -19,9 +20,13 @@ class SocietySystem:
     Live SocietyOS system instance
     """
 
-    def __init__(self):
+    def __init__(self, kernel: Kernel, context: ExecutionContext, runtime: RuntimeEngine):
+        self.kernel = kernel
+        self.context = context
+        self.runtime = runtime
+
         # Kernel
-        self.kernel = Kernel()
+        self.kernel = kernel
 
         # Core context
         self.context: ExecutionContext = self.kernel.context
@@ -110,11 +115,35 @@ class SocietySystem:
             "registry": self.registry.stats(),
         }
 
-def bootstrap_system() -> SocietySystem:
+def bootstrap_system(environment: str = None):
     """
-    Factory function for SocietyOS system
+    Bootstrap SocietyOS system
     """
-    system = SocietySystem()
-    system.boot()
+    print("[SYSTEM] Bootstrapping SocietyOS")
+
+    # Load environment config
+    env_config = load_environment()
+
+    # Context
+    context = ExecutionContext(environment=env_config.environment)
+
+    # Kernel
+    kernel = Kernel(context=context)
+
+    # Runtime
+    runtime = RuntimeEngine(context=context)
+
+    # System
+    system = SocietySystem(
+        kernel=kernel,
+        context=context,
+        runtime=runtime,
+    )
+
+    # Bind environment config
+    system.env = env_config
+
+    print("[SYSTEM] SocietyOS bootstrapped")
     return system
+
 

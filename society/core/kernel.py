@@ -13,8 +13,8 @@ class Kernel:
     Root execution kernel of SocietyOS
     """
 
-    def __init__(self):
-        self.context = ExecutionContext()
+    def __init__(self, context):
+        self.context = context
         self.runtime = RuntimeEngine(self.context)
         self.components: Dict[str, Any] = {}
         self.started = False

@@ -14,7 +14,8 @@ class ExecutionContext:
     Global execution context for SocietyOS runtime
     """
 
-    def __init__(self):
+    def __init__(self, environment: str = "local"):
+        self.environment = environment
         self.context_id = str(uuid.uuid4())
         self.start_time = datetime.utcnow()
 
