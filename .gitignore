@@ -1,1 +1,4 @@
 # Repo-level ignores
+__pycache__/
+*.pyc
+
