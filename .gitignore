@@ -1,4 +1,7 @@
 # Repo-level ignores
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
 
