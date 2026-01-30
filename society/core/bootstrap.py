@@ -13,6 +13,7 @@ from society.core.orchestrator import Orchestrator
 from society.core.lifecycle import LifecycleManager
 from society.core.registry import SystemRegistry
 from society.core.env import load_environment
+from society.core.governance import GovernanceAuthority
 
 
 class SocietySystem:
@@ -34,8 +35,16 @@ class SocietySystem:
         # Core runtime
         self.runtime: RuntimeEngine = self.kernel.runtime
 
-                # Registry
+        # Registry
         self.registry = SystemRegistry()
+
+        # Governance
+        self.governance = GovernanceAuthority(
+            mode=getattr(self, "env", None).governance_mode if hasattr(self, "env") else "observe"
+        )
+
+        # Register governance
+        self.registry.register("governance", "core", self.governance)
 
         # Subsystems
         self.event_bus = EventBus(self.context)
