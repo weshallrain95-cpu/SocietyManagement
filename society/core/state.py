@@ -1,12 +1,13 @@
 """
 SocietyOS State Engine
-Central state management system
+Central state management system (Governed)
 """
 
 import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 from society.core.context import ExecutionContext
+from society.core.governance import GovernanceDecision
 
 
 class StateRecord:
@@ -33,7 +34,7 @@ class StateRecord:
 
 class StateEngine:
     """
-    Global state engine for SocietyOS
+    Global state engine for SocietyOS (Governed)
     """
 
     def __init__(self, context: ExecutionContext):
@@ -41,7 +42,22 @@ class StateEngine:
         self.store: Dict[str, StateRecord] = {}
         self.history: Dict[str, list[StateRecord]] = {}
 
+    # -------------------------
+    # Mutations (Governed)
+    # -------------------------
+
     def set(self, key: str, value: Any, scope: str = "global"):
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            f"state.set:{key}",
+            {"key": key, "value": value, "scope": scope},
+        )
+
+        if not decision.allowed:
+            raise PermissionError(
+                f"State write blocked for '{key}': {decision.reason}"
+            )
+
         record = StateRecord(key=key, value=value, scope=scope)
         self.store[key] = record
 
@@ -52,6 +68,45 @@ class StateEngine:
         if self.context.debug:
             print(f"[STATE] SET {key} = {value}")
 
+    def delete(self, key: str):
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            f"state.delete:{key}",
+            {"key": key},
+        )
+
+        if not decision.allowed:
+            raise PermissionError(
+                f"State delete blocked for '{key}': {decision.reason}"
+            )
+
+        if key in self.store:
+            del self.store[key]
+            if self.context.debug:
+                print(f"[STATE] DELETE {key}")
+
+    def reset(self):
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            "state.reset",
+            {"operation": "reset"},
+        )
+
+        if not decision.allowed:
+            raise PermissionError(
+                f"State reset blocked: {decision.reason}"
+            )
+
+        self.store.clear()
+        self.history.clear()
+
+        if self.context.debug:
+            print("[STATE] RESET")
+
+    # -------------------------
+    # Reads (Ungoverned)
+    # -------------------------
+
     def get(self, key: str, default: Optional[Any] = None) -> Any:
         record = self.store.get(key)
         if not record:
@@ -60,12 +115,6 @@ class StateEngine:
 
     def exists(self, key: str) -> bool:
         return key in self.store
-
-    def delete(self, key: str):
-        if key in self.store:
-            del self.store[key]
-            if self.context.debug:
-                print(f"[STATE] DELETE {key}")
 
     def snapshot(self) -> Dict[str, Any]:
         """
@@ -80,16 +129,9 @@ class StateEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def reset(self):
-        self.store.clear()
-        self.history.clear()
-        if self.context.debug:
-            print("[STATE] RESET")
-
     # --- Future hooks ---
     # persist()
     # restore()
     # rollback()
     # diff()
     # audit_export()
-
