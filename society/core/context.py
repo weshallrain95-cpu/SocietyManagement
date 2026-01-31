@@ -8,6 +8,8 @@ import os
 from datetime import datetime
 from typing import Dict, Any
 
+import uuid
+from datetime import datetime
 
 class ExecutionContext:
     """
@@ -18,6 +20,26 @@ class ExecutionContext:
         self.environment = environment
         self.context_id = str(uuid.uuid4())
         self.start_time = datetime.utcnow()
+
+        # Debug / diagnostics
+        self.debug = False
+        # Lifecycle state
+        self.initialized = False
+
+        # Runtime flags
+        self.flags = {}
+
+        # Shared runtime state (used by RuntimeEngine)
+        self.state = {}
+        # Back-reference to running system (governance/control)
+        self.system = None
+
+
+
+
+    def initialize(self):
+        # Keep this lightweight — lifecycle depends on it
+        print("[CONTEXT] Execution context initialized")
 
         # Environment
         self.environment = os.getenv("ENVIRONMENT", "local")

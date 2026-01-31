@@ -148,6 +148,8 @@ def bootstrap_system(environment: str = None):
         context=context,
         runtime=runtime,
     )
+    # 🔑 Bind system back into context (required for governance)
+    context.system = system
 
     # Bind environment config
     system.env = env_config

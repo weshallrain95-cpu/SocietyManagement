@@ -10,11 +10,12 @@ from society.core.events import EventBus
 from society.core.state import StateEngine
 from society.core.router import Router
 from society.core.orchestrator import Orchestrator
+from society.core.governance import GovernanceDecision
 
 
 class LifecycleManager:
     """
-    System lifecycle controller
+    System lifecycle controller (Governed)
     """
 
     def __init__(
@@ -37,11 +38,30 @@ class LifecycleManager:
         self.health: Dict[str, bool] = {}
         self.started = False
 
+    # -------------------------
+    # Component Tracking
+    # -------------------------
+
     def register_component(self, name: str):
         self.components.append(name)
         self.health[name] = False
 
+    # -------------------------
+    # Lifecycle: BOOT
+    # -------------------------
+
     def boot(self):
+        # Governance gate
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            "system.boot",
+            {}
+        )
+        if not decision.allowed:
+            raise PermissionError(
+                f"Boot blocked by governance: {decision.reason}"
+            )
+
         if self.started:
             return
 
@@ -70,14 +90,44 @@ class LifecycleManager:
         self.started = True
         print("[LIFECYCLE] System boot complete")
 
+    # -------------------------
+    # Lifecycle: START
+    # -------------------------
+
     def start(self):
+        # Governance gate
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            "system.start",
+            {}
+        )
+        if not decision.allowed:
+            raise PermissionError(
+                f"Start blocked by governance: {decision.reason}"
+            )
+
         if not self.started:
             self.boot()
 
         print("[LIFECYCLE] System start")
         self.runtime.start()
 
+    # -------------------------
+    # Lifecycle: SHUTDOWN
+    # -------------------------
+
     def shutdown(self):
+        # Governance gate
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            "system.shutdown",
+            {}
+        )
+        if not decision.allowed:
+            raise PermissionError(
+                f"Shutdown blocked by governance: {decision.reason}"
+            )
+
         print("[LIFECYCLE] Shutdown initiated")
 
         self.runtime.stop()
@@ -90,12 +140,31 @@ class LifecycleManager:
 
         print("[LIFECYCLE] System shutdown complete")
 
+    # -------------------------
+    # Lifecycle: RELOAD
+    # -------------------------
+
     def reload(self):
+        # Governance gate
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            "system.reload",
+            {}
+        )
+        if not decision.allowed:
+            raise PermissionError(
+                f"Reload blocked by governance: {decision.reason}"
+            )
+
         print("[LIFECYCLE] Reload initiated")
 
         self.shutdown()
         self.boot()
         self.start()
+
+    # -------------------------
+    # Status
+    # -------------------------
 
     def status(self) -> Dict[str, Any]:
         return {
@@ -104,4 +173,3 @@ class LifecycleManager:
             "health": self.health,
             "runtime": self.runtime.status(),
         }
-
