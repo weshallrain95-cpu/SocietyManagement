@@ -1,12 +1,13 @@
 """
 SocietyOS Orchestrator System
-Workflow and process orchestration engine
+Workflow and process orchestration engine (Governed)
 """
 
 from typing import Callable, Dict, List, Any, Optional
 from society.core.context import ExecutionContext
 from society.core.state import StateEngine
 from society.core.events import EventBus, Event
+from society.core.governance import GovernanceDecision
 
 
 class Step:
@@ -40,14 +41,23 @@ class Workflow:
 
 class Orchestrator:
     """
-    Core workflow orchestration engine
+    Core workflow orchestration engine (Governed)
     """
 
-    def __init__(self, context: ExecutionContext, state_engine: StateEngine, event_bus: EventBus):
+    def __init__(
+        self,
+        context: ExecutionContext,
+        state_engine: StateEngine,
+        event_bus: EventBus,
+    ):
         self.context = context
         self.state_engine = state_engine
         self.event_bus = event_bus
         self.workflows: Dict[str, Workflow] = {}
+
+    # -------------------------
+    # Registration
+    # -------------------------
 
     def register_workflow(self, workflow: Workflow):
         self.workflows[workflow.name] = workflow
@@ -55,11 +65,31 @@ class Orchestrator:
         if self.context.debug:
             print(f"[ORCHESTRATOR] Registered workflow: {workflow.name}")
 
+    # -------------------------
+    # Execute (Governed)
+    # -------------------------
+
     def execute(self, workflow_name: str, payload: Dict[str, Any]) -> Any:
         workflow = self.workflows.get(workflow_name)
 
         if not workflow:
             raise ValueError(f"Workflow not found: {workflow_name}")
+
+        # Governance gate (single entry point)
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            f"workflow.execute:{workflow_name}",
+            {
+                "workflow": workflow_name,
+                "steps": [step.name for step in workflow.steps],
+                "payload": payload,
+            },
+        )
+
+        if not decision.allowed:
+            raise PermissionError(
+                f"Workflow '{workflow_name}' blocked by governance: {decision.reason}"
+            )
 
         execution_id = f"{workflow_name}-{self.context.execution_id}"
 
@@ -129,4 +159,3 @@ class Orchestrator:
                         print(f"[ORCHESTRATOR ERROR] Compensation failed: {ce}")
 
             raise e
-
