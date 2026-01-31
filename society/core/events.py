@@ -1,12 +1,13 @@
 """
 SocietyOS Event Bus System
-Central event communication layer
+Central event communication layer (Governed)
 """
 
 import uuid
 from datetime import datetime
 from typing import Callable, Dict, List, Any
 from society.core.context import ExecutionContext
+from society.core.governance import GovernanceDecision
 
 
 class Event:
@@ -33,7 +34,7 @@ class Event:
 
 class EventBus:
     """
-    Publish / Subscribe Event Bus
+    Publish / Subscribe Event Bus (Governed)
     """
 
     def __init__(self, context: ExecutionContext):
@@ -41,19 +42,39 @@ class EventBus:
         self.subscribers: Dict[str, List[Callable[[Event], None]]] = {}
         self.history: List[Event] = []
 
+    # -------------------------
+    # Subscription
+    # -------------------------
+
     def subscribe(self, event_name: str, handler: Callable[[Event], None]):
         if event_name not in self.subscribers:
             self.subscribers[event_name] = []
         self.subscribers[event_name].append(handler)
 
+    # -------------------------
+    # Publish (Governed)
+    # -------------------------
+
     def publish(self, event_name: str, payload: Dict[str, Any], source: str = "system"):
+        # Governance gate
+        decision = self.context.system.governance.evaluate(
+            self.context,
+            f"event.publish:{event_name}",
+            payload,
+        )
+
+        if not decision.allowed:
+            raise PermissionError(
+                f"Event '{event_name}' blocked by governance: {decision.reason}"
+            )
+
         event = Event(name=event_name, payload=payload, source=source)
         self.history.append(event)
 
         if self.context.debug:
             print(f"[EVENT] {event_name} from {source}")
 
-        # Dispatch to subscribers
+        # Dispatch to subscribers (isolated)
         handlers = self.subscribers.get(event_name, [])
         for handler in handlers:
             try:
@@ -61,9 +82,12 @@ class EventBus:
             except Exception as e:
                 print(f"[EVENT ERROR] Handler failure for {event_name}: {e}")
 
+    # -------------------------
+    # History
+    # -------------------------
+
     def get_history(self) -> List[Dict[str, Any]]:
         return [e.snapshot() for e in self.history]
 
     def clear_history(self):
         self.history.clear()
-
