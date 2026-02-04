@@ -15,6 +15,106 @@ This engine is PROCESS-AWARE, not UI-AWARE.
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from django.db import transaction
+import re
+from statutory.preregistration.status import (
+    is_preregistration_complete,
+    preregistration_blockers,
+)
+
+# ------------------------------------------------------------------
+# Artifact Context Contracts (Stage 0 – Maharashtra)
+# ------------------------------------------------------------------
+# These define the ONLY allowed placeholders for auto-population.
+# They are legally sensitive and MUST remain explicit.
+# ------------------------------------------------------------------
+
+ARTIFACT_CONTEXT_CONTRACTS = {
+
+    # --------------------------------------------------
+    # FORM A — Application for Society Registration (MH)
+    # --------------------------------------------------
+    "FORM_A_MH": {
+        "required": [
+            "society_name",
+            "society_address",
+            "society_type",
+            "area_of_operation",
+            "first_meeting_date",
+            "promoter_count",
+            "chief_promoter_name",
+            "chief_promoter_address",
+            "chief_promoter_phone",
+            "authorized_share_capital",
+            "share_value",
+            "bank_name",
+            "bank_branch",
+            "declaration_place",
+            "declaration_date",
+            "chief_promoter_signature",
+        ],
+        "optional": [],
+        "rules": {
+            "promoter_count": ">=10",
+            "chief_promoter_phone": "indian_mobile",
+            "authorized_share_capital": ">0",
+            "share_value": ">0",
+        },
+        "description": (
+            "Form A — Application for registration of a Cooperative "
+            "Housing Society under Maharashtra Cooperative Societies Act"
+        ),
+    },
+
+    # --------------------------------------------------
+    # Provisional Managing Committee Resolution (MH)
+    # --------------------------------------------------
+    "PROVISIONAL_COMMITTEE_RESOLUTION_MH": {
+        "required": [
+            "society_name",
+            "meeting_date",
+            "meeting_place",
+            "resolution_number",
+            "chairman_name",
+            "secretary_name",
+            "committee_members",   # List[{name, role}]
+            "resolution_text",
+            "signatories",         # List[{name, role}]
+        ],
+        "optional": [],
+        "rules": {},
+        "description": (
+            "Resolution appointing Provisional Managing Committee "
+            "prior to society registration (Maharashtra)"
+        ),
+    },
+
+    # --------------------------------------------------
+    # Draft Bye-laws (MH)
+    # --------------------------------------------------
+    "BYLAW_DRAFT_MH": {
+        "required": [
+            "society_name",
+            "registered_address",
+            "district",
+            "promoter_name",
+            "total_flats",
+            "adoption_date",
+        ],
+        "optional": [
+            "registration_number",
+            "taluka",
+            "village",
+        ],
+        "rules": {
+            "total_flats": ">0",
+        },
+        "description": (
+            "Draft Bye-laws of a Cooperative Housing Society "
+            "as per Maharashtra Cooperative Societies Rules"
+        ),
+    },
+}
+
 
 # Core system imports (already existing in your codebase)
 from society.core.governance import GovernanceDecision
@@ -85,6 +185,7 @@ class ObligationDTO:
 # ------------------------------------------------------------------
 # Core Engine
 # ------------------------------------------------------------------
+PLACEHOLDER_PATTERN = re.compile(r"{{\s*([a-zA-Z0-9_.]+)\s*}}")
 
 class StatutoryOnboardingEngine:
     """
@@ -121,6 +222,62 @@ class StatutoryOnboardingEngine:
 
         if not decision.allowed and self.governance.mode == "enforce":
             raise GovernanceBlockedError(decision.reason)
+    
+    # --------------------------------------------------------------
+    # Template rendering helper (STRICT)
+    # --------------------------------------------------------------
+
+    def _render_template(
+        self,
+        template_body: str,
+        context_data: Dict[str, Any],
+        *,
+        artifact_code: str,
+    ) -> str:
+        """
+        Internal helper to render legal artifacts safely.
+
+        Responsibilities:
+        - Enforce artifact context contract
+        - Reject missing mandatory fields
+        - Perform deterministic placeholder substitution
+        """
+
+        # --------------------------------------------------
+        # 1. HARD VALIDATION (THIS WAS MISSING)
+        # --------------------------------------------------
+        self._validate_artifact_context(
+            artifact_code=artifact_code,
+            context_data=context_data,
+        )
+
+        # --------------------------------------------------
+        # 2. Deterministic placeholder substitution
+        # --------------------------------------------------
+        rendered = template_body
+
+        for key, value in context_data.items():
+            rendered = rendered.replace(
+                "{{ " + key + " }}",
+                str(value),
+            )
+        return rendered
+
+
+        # --------------------------------------------------
+        # 3. Render template
+        # --------------------------------------------------
+        rendered = template_body
+
+        for key, value in context_data.items():
+            rendered = rendered.replace(
+                "{{ " + key + " }}",
+                str(value),
+            )
+
+        return rendered
+
+
 
     # --------------------------------------------------------------
     # Entry point – Stage 0
@@ -255,9 +412,10 @@ class StatutoryOnboardingEngine:
         context_data: Dict[str, Any],
     ) -> str:
         """
-        Generate auto-filled legal artifact (bylaws, forms, letters).
+        Generate auto-filled legal artifact (Stage 0).
 
-        Returns rendered document (HTML / text / path).
+        Returns:
+            Rendered document (text / HTML).
         """
 
         obligation = LegalObligation.objects.get(id=obligation_id)
@@ -268,8 +426,75 @@ class StatutoryOnboardingEngine:
         if not template:
             raise ValidationError("No artifact template found")
 
-        # TODO: render template_body with context_data
-        return template.template_body
+        artifact_code = template.artifact_type
+
+        self._validate_artifact_context(
+            artifact_code=artifact_code,
+            context_data=context_data,
+        )
+
+        rendered = self._render_template(
+            template.template_body,
+            context_data,
+        )
+
+
+        return rendered
+
+    # --------------------------------------------------------------
+    # Artifact context validation (Stage 0 – critical)
+    # --------------------------------------------------------------
+
+    def _validate_artifact_context(
+        self,
+        artifact_code: str,
+        context_data: Dict[str, Any],
+    ) -> None:
+        """
+        Validate artifact context against frozen contract.
+
+        Rules:
+        - All required fields must be present
+        - No unknown fields allowed
+        - Optional fields allowed
+        - Empty strings are treated as missing
+        """
+
+        contract = ARTIFACT_CONTEXT_CONTRACTS.get(artifact_code)
+
+        if not contract:
+            raise ValidationError(
+                f"No artifact context contract defined for '{artifact_code}'"
+            )
+
+        required_fields = set(contract.get("required", []))
+        optional_fields = set(contract.get("optional", []))
+        allowed_fields = required_fields | optional_fields
+
+        provided_fields = set(context_data.keys())
+
+        # Missing required fields
+        missing = {
+            field for field in required_fields
+            if field not in context_data
+            or context_data[field] is None
+            or context_data[field] == ""
+        }
+
+
+        if missing:
+            raise ValidationError(
+                f"Missing required fields for {artifact_code}: "
+                f"{', '.join(sorted(missing))}"
+            )
+
+        # Unknown fields (strict!)
+        unknown = provided_fields - allowed_fields
+        if unknown:
+            raise ValidationError(
+                f"Unknown fields for {artifact_code}: "
+                f"{', '.join(sorted(unknown))}"
+            )
 
     # --------------------------------------------------------------
     # Validation & override hooks
@@ -304,6 +529,41 @@ class StatutoryOnboardingEngine:
 
         # TODO: write override record
         pass
+    # --------------------------------------------------------------
+    # Registrar submission (GUARDED ENTRY POINT)
+    # --------------------------------------------------------------
+
+    @transaction.atomic
+    def submit_for_registration(self, society: Society) -> None:
+        """
+        Submit society for Registrar registration.
+
+        This is the ONLY allowed entry point into the
+        Registrar Submission flow.
+        """
+
+        if society is None:
+            raise ValidationError(
+                "No society found. Cannot submit for registration."
+            )
+
+        self._governance_check(
+            "onboarding.submit_for_registration",
+            {"society_id": society.id},
+        )
+
+        if not is_preregistration_complete(society):
+            raise ValidationError({
+                "message": "Pre-registration onboarding is incomplete.",
+                "blockers": preregistration_blockers(society),
+            })
+        # TODO (later phases):
+        # - mark PRE_REGISTRATION stage complete
+        # - transition to REGISTRATION_SUBMITTED
+        # - emit registrar.submission.initiated event
+
+        return None
+
 
     # --------------------------------------------------------------
     # Stage progression
@@ -336,3 +596,5 @@ class StatutoryOnboardingEngine:
         # - assign chairman role
         # - emit onboarding.completed event
         pass
+
+    
