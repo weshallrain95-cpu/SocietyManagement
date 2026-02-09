@@ -50,19 +50,51 @@ class LegalChecklistItem(models.Model):
 
 
 class LegalArtifactTemplate(models.Model):
-    ARTIFACT_TYPES = (
-        ('FORM', 'Form'),
-        ('RESOLUTION', 'Resolution'),
-        ('NOTICE', 'Notice'),
-        ('REGISTER', 'Register'),
+    """
+    Template for statutory legal artifacts (forms, letters, resolutions).
+
+    artifact_type  → UI / category (Form, Letter, Resolution)
+    artifact_code  → ENGINE contract key (FORM_A, BYLAW_DRAFT, etc.)
+    """
+
+    ARTIFACT_TYPES = [
+        ("FORM", "Form"),
+        ("LETTER", "Letter"),
+        ("RESOLUTION", "Resolution"),
+        ("MINUTES", "Minutes"),
+    ]
+
+    legal_obligation = models.ForeignKey(
+        "LegalObligation",
+        on_delete=models.CASCADE,
+        related_name="artifact_templates",
     )
 
-    legal_obligation = models.ForeignKey(LegalObligation, on_delete=models.CASCADE)
-    artifact_type = models.CharField(max_length=20, choices=ARTIFACT_TYPES)
-    template_body = models.TextField()
+    artifact_type = models.CharField(
+        max_length=32,
+        choices=ARTIFACT_TYPES,
+    )
+
+    # ✅ THIS IS THE MISSING PIECE
+    artifact_code = models.CharField(
+    max_length=64,
+    null=True,
+    blank=True,
+    db_index=True,   # keep lookup fast
+    )
+
+
+    template_body = models.TextField(
+        help_text="Template body with placeholders like {{ society_name }}",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["artifact_code"]
 
     def __str__(self):
-        return f"{self.artifact_type} template"
+        return f"{self.artifact_code} ({self.get_artifact_type_display()})"
 
 
 class SocietyLegalProgress(models.Model):

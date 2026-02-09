@@ -1,6 +1,13 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from statutory.preregistration.registrar_pack import generate_registrar_pack
+
+
+from statutory.preregistration.snapshot import preregistration_readiness_snapshot
+from society.models import Society
 
 from society.models import Society
 from statutory.services import (
@@ -112,3 +119,172 @@ def finalize_society_completion(request, society_id):
         },
         status=status.HTTP_200_OK,
     )
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from society.models import Society
+from statutory.preregistration.snapshot import preregistration_readiness_snapshot
+
+def preregistration_snapshot_view(request, society_id):
+    """
+    Society-aware preregistration snapshot endpoint.
+    """
+
+    society = get_object_or_404(Society, id=society_id)
+
+    snapshot = preregistration_readiness_snapshot(society)
+
+    return JsonResponse(snapshot, status=200)
+
+    snapshot = preregistration_readiness_snapshot(society)
+    return JsonResponse(snapshot, status=200)
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+from statutory.preregistration.actions import complete_obligation
+from statutory.preregistration.snapshot import preregistration_readiness_snapshot
+from society.models import Society
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
+def update_preregistration_obligation_status(request, obligation_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    import json
+    data = json.loads(request.body)
+
+    society_id = data.get("society_id")
+    new_status = data.get("status")
+
+    if not society_id or not new_status:
+        return JsonResponse({"error": "Missing parameters"}, status=400)
+
+    from statutory.models import SocietyObligationStatus
+    from society.models import Society
+    from statutory.models import LegalObligation
+
+    society = Society.objects.filter(id=society_id).first()
+    obligation = LegalObligation.objects.filter(id=obligation_id).first()
+
+    if not society or not obligation:
+        return JsonResponse({"error": "Invalid society or obligation"}, status=404)
+
+    status_obj, created = SocietyObligationStatus.objects.get_or_create(
+        society=society,
+        legal_obligation=obligation,
+        defaults={"status": new_status},
+    )
+
+    if not created:
+        status_obj.status = new_status
+        status_obj.save()
+
+    return JsonResponse({
+        "success": True,
+        "status": status_obj.status,
+    })
+
+
+from django.http import JsonResponse
+from society.models import Society
+
+
+def societies_list_view(request):
+    societies = Society.objects.all().values("id", "name")
+
+    return JsonResponse({
+        "societies": list(societies)
+    })
+
+# statutory/api.py (append or add near other views)
+
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404
+from statutory.preregistration.registrar_pack import generate_registrar_pack
+
+from statutory.models import SocietyLegalDocument, LegalArtifactTemplate
+from society.models import Society
+
+@csrf_exempt  # DEV ONLY: remove this in production and use proper CSRF/session
+@require_POST
+def upload_preregistration_document(request):
+    """
+    Expected form-data:
+      - society_id (int)
+      - template_id (int)
+      - file (file)
+    Returns JSON with the created document info or 400 on missing params.
+    """
+    society_id = request.POST.get("society_id")
+    template_id = request.POST.get("template_id")
+    uploaded_file = request.FILES.get("file")
+
+    if not society_id or not template_id or not uploaded_file:
+        return HttpResponseBadRequest("Missing society_id, template_id or file")
+
+    # validate models exist
+    society = get_object_or_404(Society, id=society_id)
+    template = get_object_or_404(LegalArtifactTemplate, id=template_id)
+
+    # create SocietyLegalDocument. Field names: template, file, status, uploaded_at
+    doc = SocietyLegalDocument.objects.create(
+        society=society,
+        template=template,
+        file=uploaded_file,
+        status="SIGNED"  # or whatever initial status is appropriate
+    )
+
+    return JsonResponse({
+        "id": doc.id,
+        "society_id": doc.society_id,
+        "template_id": template.id,
+        "status": doc.status,
+        "uploaded_at": doc.uploaded_at.isoformat() if doc.uploaded_at else None,
+    }, status=201)
+
+from django.http import JsonResponse
+from society.models import Society
+
+
+def registrar_pack_view(request, society_id):
+    society = Society.objects.filter(id=society_id).first()
+
+    if not society:
+        return JsonResponse({"error": "Society not found"}, status=404)
+
+    data = generate_registrar_pack(society)
+    return JsonResponse(data, status=200)
+
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from statutory.models import SocietyLegalDocument
+
+@csrf_exempt
+@require_POST
+def delete_preregistration_document(request):
+    """
+    Deletes an uploaded preregistration document.
+
+    Expected POST body:
+    {
+        "template_id": int
+    }
+    """
+
+    template_id = request.POST.get("template_id") or request.GET.get("template_id")
+
+    if not template_id:
+        return JsonResponse({"error": "template_id required"}, status=400)
+
+    deleted, _ = SocietyLegalDocument.objects.filter(template_id=template_id).delete()
+
+    if deleted == 0:
+        return JsonResponse({"error": "Document not found"}, status=404)
+
+    return JsonResponse({"success": True})
+

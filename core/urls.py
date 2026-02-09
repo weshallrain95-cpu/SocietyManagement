@@ -47,4 +47,11 @@ urlpatterns += [
     path("api/", include("society.api.urls")),
 ]
 
+from django.urls import include, path
+
+urlpatterns = [
+    # ... existing routes
+    path("", include("statutory.urls")),
+]
+
 
