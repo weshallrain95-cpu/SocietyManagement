@@ -140,3 +140,16 @@ class GovernanceAuthority:
             "rules": len(self.rules),
             "audit_events": len(self.audit_log),
         }
+
+def one_time_society_onboarding_rule(context, action, payload):
+    """
+    Blocks society onboarding if already completed
+    """
+    if action != "workflow.execute.society.onboard":
+        return True, ""
+
+    exists = context.state.get("society.exists")
+    if exists:
+        return False, "Society onboarding already completed"
+
+    return True, ""

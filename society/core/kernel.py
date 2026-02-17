@@ -13,9 +13,9 @@ class Kernel:
     Root execution kernel of SocietyOS
     """
 
-    def __init__(self, context):
+    def __init__(self, context: ExecutionContext):
         self.context = context
-        self.runtime = RuntimeEngine(self.context)
+        self.runtime = RuntimeEngine(context)
         self.components: Dict[str, Any] = {}
         self.started = False
 
@@ -24,7 +24,7 @@ class Kernel:
 
     def boot(self):
         if self.started:
-            raise RuntimeError("Kernel already started")
+            return
 
         self.context.initialize()
         self.runtime.initialize()
@@ -34,7 +34,7 @@ class Kernel:
     def shutdown(self):
         if not self.started:
             return
+
         self.runtime.shutdown()
         self.started = False
         print("[KERNEL] SocietyOS kernel shutdown")
-

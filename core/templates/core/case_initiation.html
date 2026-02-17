@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Society Registration — Case Initiation</title>
+</head>
+<body>
+
+<h2>Society Registration — Case Initiation</h2>
+
+<form method="post" action="/case/create/">
+    {% csrf_token %}
+
+    <label>Name</label><br>
+    <input type="text" name="name" required><br><br>
+
+    <label>Phone No.</label><br>
+    <input type="text" name="phone" required><br><br>
+
+    <label>Designation</label><br>
+    <select name="designation">
+        <option>Chief Promoter</option>
+        <option>Committee Member</option>
+        <option>Chairman</option>
+        <option>Interested Owner</option>
+    </select><br><br>
+
+    <button type="submit">Initiate Case</button>
+
+</form>
+
+</body>
+</html>

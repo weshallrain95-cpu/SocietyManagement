@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from . import views
 
 from statutory.api import (
     next_legal_step,
@@ -52,6 +53,37 @@ from django.urls import include, path
 urlpatterns = [
     # ... existing routes
     path("", include("statutory.urls")),
+]
+
+from statutory.bylaws.api import full_bylaw_version
+
+urlpatterns += [
+    path("api/bylaws/<str:code>/full/", full_bylaw_version),
+]
+
+from django.urls import path
+from statutory.bylaws.views import BylawsVersionExportView
+
+urlpatterns += [
+    path("api/bylaws/version/<str:code>/export/", BylawsVersionExportView.as_view(), name="bylaws-version-export"),
+]
+
+from django.urls import path, include
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("bylaws/", include("statutory.bylaws.urls")),
+]
+
+from django.urls import path
+from .views import status_selection
+from . import views
+
+urlpatterns = [
+    path("", status_selection, name="status_selection"),
+    path("start/", views.case_initiation, name="case_initiation"),
+    path("case/create/", views.case_create, name="case_create"),
+    path("case/<int:case_id>/", views.case_dashboard, name="case_dashboard"),
 ]
 
 

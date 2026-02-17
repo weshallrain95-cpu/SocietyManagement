@@ -7,6 +7,7 @@ from statutory.api import (
     delete_preregistration_document,
     societies_list_view,
     registrar_pack_view,
+    registrar_pack_download_view,
 )
 
 urlpatterns = [
@@ -46,5 +47,19 @@ urlpatterns = [
         name="delete-preregistration-document",
     ),
 
+    path(
+        "api/societies/<int:society_id>/registrar-pack/download",
+        registrar_pack_download_view,
+    ),
+
 ]
 
+from statutory.bylaws.api import (
+    list_bylaw_decisions,
+    save_bylaw_decisions,
+)
+
+urlpatterns += [
+    path("api/bylaws/decisions", list_bylaw_decisions),
+    path("api/societies/<int:society_id>/bylaws/decisions/save", save_bylaw_decisions),
+]

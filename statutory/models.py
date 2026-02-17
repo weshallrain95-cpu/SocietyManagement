@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import User
 from society.models import Society
 
-
 class State(models.Model):
     code = models.CharField(max_length=10, unique=True)  # MH, KA, DL, etc.
     name = models.CharField(max_length=100)
@@ -215,7 +214,7 @@ class SocietyLegalDocument(models.Model):
         ordering = ["-uploaded_at"]
 
     def __str__(self):
-        return f"{self.society.name} – {self.template.name}"
+        return f"{self.society.name} – {self.template.artifact_code}"
     
     def save(self, *args, **kwargs):
         is_new_upload = self.pk is None
@@ -264,3 +263,47 @@ class ShareOwnership(models.Model):
     def __str__(self):
         status = "ACTIVE" if self.is_active else "HISTORICAL"
         return f"{self.member} – {status}"
+
+class SocietyBylawDecision(models.Model):
+    """
+    Stores decisions taken by a specific society
+    against a by-law decision definition.
+    """
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="bylaw_decisions",
+    )
+
+    decision = models.ForeignKey(
+        "bylaws.BylawDecision",
+        on_delete=models.CASCADE,
+        related_name="society_values",
+    )
+
+    ENFORCEMENT_CHOICES = (
+        ("ADVISORY", "Advisory"),
+        ("SOFT_BLOCK", "Soft Block"),
+        ("HARD_BLOCK", "Hard Block"),
+        ("CONDITIONAL", "Conditional"),
+    )
+
+    enforcement_level = models.CharField(
+        max_length=20,
+        choices=ENFORCEMENT_CHOICES,
+        default="ADVISORY",
+    )   
+
+    value = models.TextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("society", "decision")
+
+    def __str__(self):
+        return f"{self.society.name} — {self.decision.decision_code}"
+
+

@@ -1,26 +1,64 @@
 # statutory/preregistration/status.py
 from typing import List, Dict
 
-from django.db.models import Q
-
 from statutory.models import (
     State,
     LegalStage,
     LegalObligation,
-    LegalChecklistItem,
     SocietyObligationStatus,
     SocietyLegalDocument,
 )
 
-PRE_REGISTRATION_STAGE_NAME = "PRE_REGISTRATION"
+# IMPORTANT:
+# We no longer rely on "PRE_REGISTRATION"
+# because real seeded stages are named:
+# "Society Formation & Registration (Pre-Registration)"
+PRE_REGISTRATION_STAGE_KEYWORD = "Pre-Registration"
+
 COMPLETED_STATUS = "COMPLETED"
 VALID_DOCUMENT_STATUSES = ("SIGNED", "VERIFIED")
 
 
+def _get_preregistration_stage(society):
+    """
+    Unified resolver used by BOTH:
+    - snapshot.py
+    - status.py
+
+    Prevents mismatch bugs.
+    """
+
+    if society is None:
+        return None
+
+    state_obj = None
+    state_code = getattr(society, "state_code", None)
+
+    if state_code:
+        state_obj = State.objects.filter(code__iexact=state_code).first()
+
+    stage = None
+
+    # Prefer state-scoped stage
+    if state_obj:
+        stage = LegalStage.objects.filter(
+            state=state_obj,
+            name__icontains=PRE_REGISTRATION_STAGE_KEYWORD
+        ).first()
+
+    # Fallback: global stage
+    if stage is None:
+        stage = LegalStage.objects.filter(
+            name__icontains=PRE_REGISTRATION_STAGE_KEYWORD
+        ).first()
+
+    return stage
+
+
 def is_preregistration_complete(society) -> bool:
     """
-    Returns True if and only if the society has completed
-    all mandatory pre-registration obligations with evidence.
+    Returns True only when ALL mandatory obligations
+    and required evidence documents are complete.
     """
     blockers = preregistration_blockers(society)
     return len(blockers) == 0
@@ -29,7 +67,7 @@ def is_preregistration_complete(society) -> bool:
 def preregistration_blockers(society) -> List[Dict]:
     """
     Return a list of blocker dicts describing why preregistration is not complete.
-    Defensive: works when some related rows are missing and provides helpful messages.
+    Fully defensive. Handles missing configuration gracefully.
     """
 
     if society is None:
@@ -38,20 +76,7 @@ def preregistration_blockers(society) -> List[Dict]:
             "message": "No society record found. Pre-registration cannot be evaluated."
         }]
 
-    # Resolve State from society.state_code if possible
-    state_obj = None
-    state_code = getattr(society, "state_code", None)
-    if state_code:
-        state_obj = State.objects.filter(code__iexact=state_code).first()
-
-    # Try to load the configured LegalStage for pre-registration for the resolved state.
-    stage = None
-    if state_obj:
-        stage = LegalStage.objects.filter(state=state_obj, name__icontains=PRE_REGISTRATION_STAGE_NAME).first()
-
-    if stage is None:
-        # Fall back: try any stage with PRE_REGISTRATION in name (global)
-        stage = LegalStage.objects.filter(name__icontains=PRE_REGISTRATION_STAGE_NAME).first()
+    stage = _get_preregistration_stage(society)
 
     if stage is None:
         return [{
@@ -59,13 +84,16 @@ def preregistration_blockers(society) -> List[Dict]:
             "message": "Pre-registration legal stage is not configured."
         }]
 
-    blockers = []
+    blockers: List[Dict] = []
 
-    # Use LegalObligation as the canonical obligation entity (it links to legal_stage).
-    obligations = LegalObligation.objects.filter(legal_stage=stage, mandatory=True)
+    obligations = LegalObligation.objects.filter(
+        legal_stage=stage,
+        mandatory=True
+    )
 
     for obligation in obligations:
-        # Check SocietyObligationStatus for the obligation
+
+        # Check obligation completion
         obligation_status = SocietyObligationStatus.objects.filter(
             society=society,
             legal_obligation=obligation
@@ -78,11 +106,11 @@ def preregistration_blockers(society) -> List[Dict]:
                 "obligation_title": obligation.title,
                 "message": "Mandatory legal obligation not completed."
             })
-            # This obligation is incomplete; no point checking documents for it.
             continue
 
-        # If the obligation has associated artifact templates then signed/verified documents are required.
+        # Check evidence document requirement
         requires_document = obligation.artifact_templates.exists()
+
         if requires_document:
             has_signed_document = SocietyLegalDocument.objects.filter(
                 society=society,

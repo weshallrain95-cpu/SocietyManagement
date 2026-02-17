@@ -159,3 +159,35 @@ class Orchestrator:
                         print(f"[ORCHESTRATOR ERROR] Compensation failed: {ce}")
 
             raise e
+
+def register_society_onboarding_workflow(orchestrator, context, state_engine):
+    from society.core.orchestrator import Workflow, Step
+
+    workflow = Workflow("society.onboard")
+
+    # STEP 1 — initiate society
+    def initiate_society():
+        state_engine.set("society.exists", True)
+        return "society.initiated"
+
+    # STEP 2 — bind chairman
+    def bind_chairman():
+        state_engine.set("society.chairman_id", "CHAIRMAN_DEMO_ID")
+        return "chairman.bound"
+
+    # STEP 3 — lock governance
+    def lock_governance():
+        context.system.governance.mode = "enforce"
+        return "governance.locked"
+
+    # STEP 4 — activate society
+    def activate_society():
+        state_engine.set("society.status", "ACTIVE")
+        return "society.active"
+
+    workflow.add_step(Step("initiate_society", initiate_society))
+    workflow.add_step(Step("bind_chairman", bind_chairman))
+    workflow.add_step(Step("lock_governance", lock_governance))
+    workflow.add_step(Step("activate_society", activate_society))
+
+    orchestrator.register_workflow(workflow)

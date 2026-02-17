@@ -288,3 +288,21 @@ def delete_preregistration_document(request):
 
     return JsonResponse({"success": True})
 
+from django.http import HttpResponse
+from statutory.preregistration.pack_builder import build_registrar_pack
+
+def registrar_pack_download_view(request, society_id):
+    society = Society.objects.get(id=society_id)
+
+    snapshot = preregistration_readiness_snapshot(society)
+    if not snapshot["registrar_ready"]:
+        return HttpResponse(
+            "Registrar pack not ready",
+            status=400
+        )
+
+    pack_bytes = build_registrar_pack(society)
+
+    response = HttpResponse(pack_bytes, content_type="application/zip")
+    response["Content-Disposition"] = f'attachment; filename="registrar_pack_society_{society_id}.zip"'
+    return response

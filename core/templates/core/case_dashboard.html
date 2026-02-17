@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Case Dashboard</title>
+</head>
+<body>
+
+<h2>Society Registration Case Dashboard</h2>
+
+<p><strong>Case ID:</strong> {{ case.id }}</p>
+<p><strong>Initiated By:</strong> {{ case.initiated_by.full_name }}</p>
+<p><strong>Phone:</strong> {{ case.initiated_by.phone }}</p>
+<p><strong>Status:</strong> {{ case.status }}</p>
+
+<hr>
+
+<h3>Registration Stages</h3>
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>Stage</th>
+        <th>Status</th>
+        <th>Document Generated</th>
+        <th>Uploaded</th>
+        <th>Completed</th>
+    </tr>
+
+    {% for stage in stages %}
+    <tr>
+        <td>{{ stage.stage_code }}</td>
+        <td>{{ stage.status }}</td>
+        <td>{{ stage.document_generated }}</td>
+        <td>{{ stage.document_uploaded }}</td>
+        <td>{{ stage.completed }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+</body>
+</html>
+

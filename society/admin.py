@@ -164,3 +164,7 @@ class AuditEventAdmin(admin.ModelAdmin):
         return json.dumps(obj.payload, indent=2)
 
     payload_pretty.short_description = "Payload"
+
+from .models import Person
+
+admin.site.register(Person)

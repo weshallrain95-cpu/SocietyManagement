@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 import {
   fetchPreregistrationSnapshot,
   completeObligation,
-  fetchRegistrarPack,
+  downloadRegistrarPack,
+  deletePreregistrationDocument,
 } from "../api/preregistration";
+
 import type { PreregistrationSnapshot } from "../types/preregistration";
 
 import { StatusBanner } from "../components/StatusBanner";
@@ -12,16 +14,18 @@ import { ChecklistTable } from "../components/ChecklistTable";
 import { BlockersPanel } from "../components/BlockersPanel";
 import { useSociety } from "../context/SocietyContext";
 import { SocietySelector } from "../components/SocietySelector";
-import { deletePreregistrationDocument } from "../api/preregistration";
-
 
 export function PreRegistrationReadinessPage() {
   const [snapshot, setSnapshot] =
     useState<PreregistrationSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
   const { society } = useSociety();
 
+  // -----------------------------
+  // Load snapshot
+  // -----------------------------
   const load = () => {
     setLoading(true);
     setError(null);
@@ -38,6 +42,9 @@ export function PreRegistrationReadinessPage() {
     load();
   }, [society]);
 
+  // -----------------------------
+  // Toggle obligation status
+  // -----------------------------
   const toggleItem = async (obligationId: number, currentStatus: string) => {
     if (!society) return;
 
@@ -53,6 +60,9 @@ export function PreRegistrationReadinessPage() {
     }
   };
 
+  // -----------------------------
+  // Delete uploaded document
+  // -----------------------------
   const handleDelete = async (templateId: number) => {
     if (!society) return;
 
@@ -65,19 +75,17 @@ export function PreRegistrationReadinessPage() {
     }
   };
 
-  const handleGeneratePack = async () => {
+  // -----------------------------
+  // Download Registrar Pack (ZIP)
+  // -----------------------------
+  const handleDownloadPack = () => {
     if (!society) return;
-
-    try {
-      const data = await fetchRegistrarPack(society.id);
-      console.log("Registrar pack:", data);
-      alert("Registrar pack generated — check console for now.");
-    } catch (err) {
-      console.error(err);
-      setError("Failed to generate registrar pack");
-    }
+    downloadRegistrarPack(society.id);
   };
 
+  // -----------------------------
+  // UI STATES
+  // -----------------------------
   if (loading) {
     return (
       <div style={{ padding: "24px" }}>
@@ -104,6 +112,9 @@ export function PreRegistrationReadinessPage() {
     );
   }
 
+  // -----------------------------
+  // MAIN UI
+  // -----------------------------
   return (
     <div style={{ padding: "24px" }}>
       <SocietySelector />
@@ -114,6 +125,15 @@ export function PreRegistrationReadinessPage() {
         summary={snapshot.summary}
         registrarReady={snapshot.registrar_ready}
       />
+
+      {/* Registrar Pack download appears ONLY when ready */}
+      {snapshot.registrar_ready && (
+        <div style={{ marginTop: "16px" }}>
+          <button onClick={handleDownloadPack}>
+            Download Registrar Pack
+          </button>
+        </div>
+      )}
 
       <ChecklistTable
         items={snapshot.items}

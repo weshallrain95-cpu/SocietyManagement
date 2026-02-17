@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Society Status</title>
+</head>
+<body>
+
+<h2>Society Status</h2>
+<p>Select the current status of your society to proceed.</p>
+
+<form method="get" action="/start/">
+
+    <div>
+        <input type="radio" name="status" value="operational">
+        Society registered and operational
+    </div>
+
+    <div>
+        <input type="radio" name="status" value="partial">
+        Society registered but not fully functional
+    </div>
+
+    <div>
+        <input type="radio" name="status" value="pending" required>
+        Society formation and registration pending
+    </div>
+
+    <br><br>
+    <button type="submit">Proceed</button>
+
+</form>
+
+</body>
+</html>

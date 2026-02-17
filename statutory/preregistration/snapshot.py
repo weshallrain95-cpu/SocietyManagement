@@ -18,7 +18,7 @@ from society.models import Society
 
 
 SNAPSHOT_TITLE_MH = "Pre-Registration Readiness Checklist (Maharashtra)"
-PRE_REGISTRATION_STAGE_NAME = "PRE_REGISTRATION"
+PRE_REGISTRATION_STAGE_KEYWORD = "Pre-Registration"
 
 
 def preregistration_readiness_snapshot(society: Society) -> Dict:
@@ -59,10 +59,15 @@ def preregistration_readiness_snapshot(society: Society) -> Dict:
 
     # Resolve PRE_REGISTRATION stage
     stage = None
+
     if state_obj:
         stage = LegalStage.objects.filter(
             state=state_obj,
-            name__icontains=PRE_REGISTRATION_STAGE_NAME
+            name__icontains=PRE_REGISTRATION_STAGE_KEYWORD
+        ).first()
+    if stage is None:
+        stage = LegalStage.objects.filter(
+            name__icontains=PRE_REGISTRATION_STAGE_KEYWORD
         ).first()
 
     if stage is None:

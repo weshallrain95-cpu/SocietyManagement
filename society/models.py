@@ -37,6 +37,14 @@ class Society(models.Model):
         blank=True,
         help_text="Registrar office / ward / zone"
     )
+    # -----------------------------
+    # Legal Jurisdiction (NEW)
+    # -----------------------------
+    state_code = models.CharField(
+        max_length=10,
+        default="MH",
+        help_text="Legal jurisdiction state code (MH, KA, DL, etc.)"
+    )
 
     LEGAL_STATUS_CHOICES = [
         ("DRAFT", "Draft"),
@@ -1150,3 +1158,80 @@ class AuditEvent(models.Model):
 
 # Intelligence persistence models
 from society.intelligence.persistence.models import IntelligenceMemoryEvent
+
+class Person(models.Model):
+    """
+    Core human identity across the platform.
+    One person can interact with multiple societies.
+    Phone is the primary unique identifier.
+    """
+
+    full_name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=15, unique=True)
+    email = models.EmailField(blank=True, null=True)
+
+    is_verified = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.phone})"
+
+class Case(models.Model):
+    """
+    Represents a society formation / governance / legal case.
+    First version focuses on pre-registration initiation.
+    """
+
+    CASE_TYPES = [
+        ("prereg", "Pre-Registration"),
+        ("handover", "Builder Handover"),
+        ("legal", "Legal"),
+    ]
+
+    initiated_by = models.ForeignKey(Person, on_delete=models.CASCADE)
+    case_type = models.CharField(max_length=20, choices=CASE_TYPES, default="prereg")
+
+    status = models.CharField(max_length=50, default="initiated")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.case_type} case by {self.initiated_by.full_name}"
+
+class CaseStage(models.Model):
+    """
+    Represents each mandatory step in the society formation lifecycle.
+    Auto-created when a Case is initiated.
+    """
+
+    STAGE_CODES = [
+        ("member_list", "Member List"),
+        ("share_structure", "Share Structure"),
+        ("entrance_fees", "Entrance Fees"),
+        ("promoter_affidavit", "Promoter Affidavit"),
+        ("bank_account", "Bank Account"),
+        ("building_docs", "Building Documents"),
+        ("oc_cc", "OC / CC"),
+        ("land_docs", "Land Documents"),
+        ("builder_noc", "Builder NOC"),
+        ("society_resolution", "Society Resolution"),
+        ("bylaws_final", "Final By-laws"),
+    ]
+
+    case = models.ForeignKey(Case, on_delete=models.CASCADE, related_name="stages")
+
+    stage_code = models.CharField(max_length=50, choices=STAGE_CODES)
+
+    status = models.CharField(max_length=50, default="pending")
+    document_generated = models.BooleanField(default=False)
+    document_uploaded = models.BooleanField(default=False)
+    completed = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("case", "stage_code")
+
+    def __str__(self):
+        return f"{self.stage_code} — {self.case.id}"

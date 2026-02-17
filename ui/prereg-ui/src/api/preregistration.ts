@@ -109,3 +109,10 @@ export async function deletePreregistrationDocument(
 
   return res.json();
 }
+
+export function downloadRegistrarPack(societyId: number) {
+  window.open(
+    `${API_BASE}/api/societies/${societyId}/registrar-pack/download`,
+    "_blank"
+  );
+}
