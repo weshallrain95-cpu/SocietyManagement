@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Decision Workspace</title>
+</head>
+<body>
+
+<h2>Decision Workspace</h2>
+
+<p><strong>Case:</strong> {{ case.id }}</p>
+<p><strong>Stage:</strong> {{ stage_code }}</p>
+
+<hr>
+
+<form method="post">
+    {% csrf_token %}
+
+    {% for d in decisions %}
+        <div style="margin-bottom:20px;">
+            <label>
+                <strong>{{ d.question }}</strong>
+            </label>
+            <br>
+
+            {% if d.allowed_values.options %}
+                <select name="{{ d.decision_code }}">
+                    <option value="">Select</option>
+                    {% for opt in d.allowed_values.options %}
+                        <option value="{{ opt }}">{{ opt }}</option>
+                    {% endfor %}
+                </select>
+
+            {% elif d.allowed_values.range %}
+                <input
+                    type="number"
+                    name="{{ d.decision_code }}"
+                    min="{{ d.allowed_values.range.0 }}"
+                    max="{{ d.allowed_values.range.1 }}"
+                >
+
+            {% else %}
+                <input type="text" name="{{ d.decision_code }}">
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    <button type="submit">Save & Continue</button>
+</form>
+
+</body>
+</html>

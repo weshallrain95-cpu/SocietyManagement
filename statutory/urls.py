@@ -54,7 +54,7 @@ urlpatterns = [
 
 ]
 
-from statutory.bylaws.api import (
+from bylaws.api import (
     list_bylaw_decisions,
     save_bylaw_decisions,
 )

@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views import View
-from statutory.bylaws.models import BylawVersion
+from bylaws.models import BylawVersion
 
 class BylawsVersionExportView(View):
     def get(self, request, code):

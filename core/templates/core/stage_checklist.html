@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Stage Checklist</title>
+</head>
+<body>
+
+<h2>Stage: {{ stage.stage_code|title }}</h2>
+
+<p><strong>Case:</strong> {{ case.id }}</p>
+
+<p>This stage requires certain legal steps before proceeding.</p>
+
+<hr>
+
+<h3>Purpose</h3>
+<p>Ensure statutory compliance before document generation.</p>
+
+<h3>Documents Required</h3>
+<ul>
+    <li>Relevant supporting documents</li>
+    <li>Committee confirmations</li>
+    <li>Legal validations</li>
+</ul>
+
+<h3>Outputs</h3>
+<ul>
+    <li>Registrar-ready forms</li>
+    <li>Legally structured data</li>
+</ul>
+
+<hr>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <label>
+        <input type="checkbox" name="acknowledged" required>
+        I confirm I understand the requirements of this stage.
+    </label>
+
+    <br><br>
+
+    <button type="submit">
+        Continue to decisions →
+    </button>
+</form>
+
+</body>
+</html>

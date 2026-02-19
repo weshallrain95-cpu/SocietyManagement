@@ -27,7 +27,11 @@
 
     {% for stage in stages %}
     <tr>
-        <td>{{ stage.stage_code }}</td>
+        <td>
+            <a href="/case/{{ case.id }}/stage/{{ stage.stage_code }}/">
+                {{ stage.stage_code|title }}
+            </a>
+        </td>
         <td>{{ stage.status }}</td>
         <td>{{ stage.document_generated }}</td>
         <td>{{ stage.document_uploaded }}</td>
@@ -38,4 +42,3 @@
 
 </body>
 </html>
-

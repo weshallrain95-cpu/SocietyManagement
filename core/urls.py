@@ -55,14 +55,14 @@ urlpatterns = [
     path("", include("statutory.urls")),
 ]
 
-from statutory.bylaws.api import full_bylaw_version
+from bylaws.api import full_bylaw_version
 
 urlpatterns += [
     path("api/bylaws/<str:code>/full/", full_bylaw_version),
 ]
 
 from django.urls import path
-from statutory.bylaws.views import BylawsVersionExportView
+from bylaws.views import BylawsVersionExportView
 
 urlpatterns += [
     path("api/bylaws/version/<str:code>/export/", BylawsVersionExportView.as_view(), name="bylaws-version-export"),
@@ -72,7 +72,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("bylaws/", include("statutory.bylaws.urls")),
+    path("bylaws/", include("bylaws.urls")),
 ]
 
 from django.urls import path
@@ -85,5 +85,41 @@ urlpatterns = [
     path("case/create/", views.case_create, name="case_create"),
     path("case/<int:case_id>/", views.case_dashboard, name="case_dashboard"),
 ]
+
+from django.contrib import admin
+from django.urls import path, include
+from core import views
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+
+    # Case creation
+    path("", views.case_create, name="case_create"),
+
+    # Case dashboard
+    path("case/<int:case_id>/", views.case_dashboard, name="case_dashboard"),
+
+    # Stage entry (Checklist → Decisions → Form)
+    path(
+        "case/<int:case_id>/stage/<str:stage_code>/",
+        views.stage_entry,
+        name="stage_entry"
+    ),
+    path(
+        "case/<int:case_id>/stage/<str:stage_code>/checklist/",
+        views.stage_checklist,
+        name="stage_checklist"
+    ),
+
+    path(
+        "case/<int:case_id>/stage/<str:stage_code>/decisions/",
+        views.decision_workspace,
+        name="decision_workspace"
+    ),
+
+    # Statutory module routes
+    path("statutory/", include("statutory.urls")),
+]
+
 
 

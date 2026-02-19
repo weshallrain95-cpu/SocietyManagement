@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 
-from statutory.bylaws.models import BylawDecision
+from bylaws.models import BylawDecision
 
 
 @api_view(["GET"])
@@ -75,7 +75,7 @@ def save_bylaw_decisions(request, society_id):
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 
-from statutory.bylaws.models import (
+from bylaws.models import (
     BylawVersion,
     BylawChapter,
     BylawClause,
@@ -137,7 +137,7 @@ def full_bylaw_version(request, code):
     return Response(serializer.data)
 
 from django.shortcuts import render
-from statutory.bylaws.models import BylawVersion
+from bylaws.models import BylawVersion
 
 
 def bylaws_viewer(request):

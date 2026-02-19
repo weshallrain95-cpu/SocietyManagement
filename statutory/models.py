@@ -306,4 +306,6 @@ class SocietyBylawDecision(models.Model):
     def __str__(self):
         return f"{self.society.name} — {self.decision.decision_code}"
 
+# Register bylaws domain models under statutory app
+from bylaws.models import *
 
