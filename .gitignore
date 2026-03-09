@@ -6,3 +6,17 @@ __pycache__/
 db.sqlite3
 media/
 *.egg-info/
+# OS
+.DS_Store
+
+# Local database
+db.sqlite3
+db.sqlite3.bak*
+
+# Dumps
+*.sql
+
+# Local test data
+owners.xlsx
+
+tree.txt

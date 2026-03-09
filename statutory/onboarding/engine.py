@@ -277,8 +277,6 @@ class StatutoryOnboardingEngine:
 
         return rendered
 
-
-
     # --------------------------------------------------------------
     # Entry point – Stage 0
     # --------------------------------------------------------------
@@ -289,6 +287,7 @@ class StatutoryOnboardingEngine:
         initiator_phone: str,
         society_data: Optional[Dict[str, Any]] = None,
         state_code: str = "MH",
+        case: Optional["Case"] = None,
     ) -> OnboardingStartResult:
         """
         Start Stage 0 onboarding.
@@ -308,7 +307,14 @@ class StatutoryOnboardingEngine:
         # TODO: check one-time onboarding rule (deployment/society)
 
         # Create or reuse society draft
-        society = self._create_or_get_society_draft(society_data)
+        society = self._create_or_get_society_draft(case, society_data)
+
+        # Ensure SoftOnboardingTracker exists
+        from society.models import SoftOnboardingTracker
+
+        SoftOnboardingTracker.objects.get_or_create(
+            society=society
+        )
 
         # Seed statutory stages & obligations
         self._seed_legal_stages(society, state_code)
@@ -328,16 +334,25 @@ class StatutoryOnboardingEngine:
     # --------------------------------------------------------------
 
     def _create_or_get_society_draft(
-        self, society_data: Optional[Dict[str, Any]]
+        self,
+        case,
+        society_data: Optional[Dict[str, Any]]
     ) -> Society:
         """
         Create minimal Society record if not present.
         """
+        if case and case.society:
+            return case.society
+
         if not society_data:
             society_data = {"name": "Draft Society"}
 
-        # TODO: smarter matching / dedupe logic
         society = Society.objects.create(**society_data)
+
+        if case:
+            case.society = society
+            case.save(update_fields=["society"])
+
         return society
 
     # --------------------------------------------------------------
@@ -348,7 +363,16 @@ class StatutoryOnboardingEngine:
         """
         Attach LegalStage graph to society.
         """
-        stages = LegalStage.objects.filter(state=state_code).order_by("sequence_order")
+        from statutory.models import State
+
+        state_obj = State.objects.filter(code__iexact=state_code).first()
+
+        if not state_obj:
+            raise OnboardingError(f"Invalid state code: {state_code}")
+
+        stages = LegalStage.objects.filter(
+            state=state_obj
+        ).order_by("sequence_order")
 
         if not stages.exists():
             raise OnboardingError(f"No legal stages found for state {state_code}")
@@ -552,14 +576,46 @@ class StatutoryOnboardingEngine:
             {"society_id": society.id},
         )
 
+        # Validate prereg completion
         if not is_preregistration_complete(society):
             raise ValidationError({
                 "message": "Pre-registration onboarding is incomplete.",
                 "blockers": preregistration_blockers(society),
             })
-        # TODO (later phases):
+
+        # --------------------------------------------------
+        # PREVENT DOUBLE SUBMISSION
+        # --------------------------------------------------
+        from statutory.models import RegistrarSubmission
+        from statutory.preregistration.snapshot import preregistration_readiness_snapshot
+        from django.utils import timezone
+
+        if RegistrarSubmission.objects.filter(
+            society=society,
+            status="SUBMITTED"
+        ).exists():
+            raise ValidationError("Society already submitted to registrar.")
+
+        # --------------------------------------------------
+        # CAPTURE SNAPSHOT HASH (LEGAL RECORD)
+        # --------------------------------------------------
+        snapshot = preregistration_readiness_snapshot(society)
+
+        RegistrarSubmission.objects.create(
+            society=society,
+            snapshot_hash=str(hash(str(snapshot))),
+            submitted_at=timezone.now(),
+            status="SUBMITTED",
+        )
+
+        # --------------------------------------------------
+        # FUTURE LIFECYCLE HOOKS (INTENTIONALLY EMPTY)
+        # --------------------------------------------------
+        # TODO (Phase B):
         # - mark PRE_REGISTRATION stage complete
-        # - transition to REGISTRATION_SUBMITTED
+        # - freeze prereg obligations
+        # - lock document uploads
+        # - transition lifecycle state
         # - emit registrar.submission.initiated event
 
         return None
@@ -597,4 +653,23 @@ class StatutoryOnboardingEngine:
         # - emit onboarding.completed event
         pass
 
+    def _initialize_finance_layer(self, society):
+        """
+        Seeds Chart of Accounts and creates opening AccountingPeriod.
+        Idempotent.
+        """
+
+        # Prevent double initialization
+        if society.chart_of_accounts.exists() and society.accounting_periods.exists():
+            return
+
+        from society.services import seed_default_coa_for_society
+        from society.services import create_opening_accounting_period_for_society
+
+        # Seed COA
+        seed_default_coa_for_society(society=society)
+
+        # Create first financial year
+        create_opening_accounting_period_for_society(society=society)
+        
     

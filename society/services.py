@@ -1267,3 +1267,344 @@ def assert_open_accounting_period(*, society, entry_date):
         )
 
     return period
+
+from datetime import date
+from django.db import transaction
+from society.models import AccountingPeriod
+
+
+@transaction.atomic
+def create_opening_accounting_period_for_society(*, society):
+    """
+    Creates the first open financial year for the society.
+    Idempotent.
+    """
+
+    if AccountingPeriod.objects.filter(society=society).exists():
+        return None  # Already initialized
+
+    today = date.today()
+
+    # Determine financial year (April–March)
+    if today.month < 4:
+        start_year = today.year - 1
+    else:
+        start_year = today.year
+
+    start_date = date(start_year, 4, 1)
+    end_date = date(start_year + 1, 3, 31)
+
+    return AccountingPeriod.objects.create(
+        society=society,
+        start_date=start_date,
+        end_date=end_date,
+        is_closed=False,
+    )
+
+# ==========================================================
+# SOCIETY STRUCTURE GENERATOR
+# ==========================================================
+
+from django.db import transaction
+from society.models import Wing, Floor, Flat
+
+WING_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def generate_wing_name(index: int) -> str:
+    """
+    Converts index → A,B,C...Z
+    """
+    if index < len(WING_ALPHABET):
+        return WING_ALPHABET[index]
+
+    return f"W{index + 1}"
+
+
+def generate_flat_number(
+    wing_name,
+    floor_number,
+    flat_index,
+    style="A-101",
+):
+
+    if style == "A-101":
+        return f"{wing_name}-{floor_number}{flat_index:02d}"
+
+    if style == "A101":
+        return f"{wing_name}{floor_number}{flat_index:02d}"
+
+    if style == "101":
+        return f"{floor_number}{flat_index:02d}"
+
+    raise ValueError(f"Unsupported flat numbering style: {style}")
+
+
+@transaction.atomic
+def generate_society_structure(
+    *,
+    society,
+    total_wings,
+    floors_per_wing,
+    floor_layout,
+    flat_numbering_style="A-101",
+):
+
+    # Prevent duplicate structure
+    if society.flats.exists():
+        return {
+            "status": "SKIPPED",
+            "message": "Society structure already exists",
+            "wings": society.wings.count(),
+            "floors": Floor.objects.filter(wing__society=society).count(),
+            "flats": society.flats.count(),
+        }
+
+    created_wings = 0
+    created_floors = 0
+    created_flats = 0
+
+    for wing_index in range(total_wings):
+
+        wing_name = generate_wing_name(wing_index)
+
+        wing = Wing.objects.create(
+            society=society,
+            name=wing_name,
+        )
+
+        created_wings += 1
+
+        for floor_number in range(1, floors_per_wing + 1):
+
+            floor = Floor.objects.create(
+                wing=wing,
+                number=floor_number,
+            )
+
+            created_floors += 1
+
+            for flat_index, layout in enumerate(floor_layout, start=1):
+
+                flat_number = generate_flat_number(
+                    wing_name,
+                    floor_number,
+                    flat_index,
+                    flat_numbering_style,
+                )
+
+                Flat.objects.create(
+                    society=society,
+
+                    # legacy fields
+                    wing=wing_name,
+                    floor=floor_number,
+
+                    # canonical relations
+                    wing_ref=wing,
+                    floor_ref=floor,
+
+                    flat_number=flat_number,
+                    flat_type=layout.get("type"),
+                    carpet_area_sqft=layout.get("area"),
+                )
+
+                created_flats += 1
+
+    return {
+        "status": "CREATED",
+        "wings": created_wings,
+        "floors": created_floors,
+        "flats": created_flats,
+        "flats_per_floor": len(floor_layout),
+    }
+
+
+from collections import defaultdict
+from django.utils import timezone
+from society.models import Flat, Person, FlatOwnership, FlatOwner
+
+
+def import_flat_owners(*, society, rows):
+
+    grouped = defaultdict(list)
+
+    for r in rows:
+        grouped[r["flat"]].append(r)
+
+    flats_processed = 0
+
+    for flat_number, owners in grouped.items():
+
+        flat = Flat.objects.filter(
+            society=society,
+            flat_number=flat_number,
+        ).first()
+
+        if not flat:
+            raise ValueError(f"Flat not found: {flat_number}")
+
+        # --------------------------------
+        # Find existing ownership
+        # --------------------------------
+        ownership = FlatOwnership.objects.filter(
+            flat=flat,
+            is_active=True,
+        ).first()
+
+        if not ownership:
+            ownership = FlatOwnership.objects.create(
+                flat=flat,
+                acquired_on=timezone.now().date(),
+                is_active=True,
+            )
+
+        # --------------------------------
+        # Add owners
+        # --------------------------------
+        total_percent = 0
+
+        for o in owners:
+
+            person, _ = Person.objects.get_or_create(
+                phone=o["phone"],
+                defaults={"full_name": o["name"]},
+            )
+
+            FlatOwner.objects.get_or_create(
+                ownership=ownership,
+                person=person,
+                defaults={
+                    "ownership_percentage": o["percent"]
+                }
+            )
+
+            total_percent += o["percent"]
+
+        if total_percent != 100:
+            raise ValueError(
+                f"Ownership for flat {flat_number} must equal 100%"
+            )
+
+        flats_processed += 1
+
+    return {
+        "flats_processed": flats_processed
+    }
+
+import openpyxl
+from collections import defaultdict
+from decimal import Decimal
+from django.db import transaction
+from django.utils import timezone
+
+from society.models import (
+    Person,
+    Flat,
+    FlatOwnership,
+    FlatOwner,
+)
+
+
+@transaction.atomic
+def import_flat_owners_from_excel(*, society, file_path):
+    """
+    Bulk import flat owners from Excel.
+    """
+
+    workbook = openpyxl.load_workbook(file_path)
+    sheet = workbook.active
+
+    rows = []
+    for r in sheet.iter_rows(min_row=2, values_only=True):
+
+        rows.append({
+            "flat": r[0],
+            "name": r[1],
+            "phone": str(r[2]) if r[2] else None,
+            "percent": r[3],
+            "entity": r[4],
+        })
+
+    return import_flat_owners(society=society, rows=rows)
+
+
+@transaction.atomic
+def import_flat_owners(*, society, rows):
+    """
+    Core import engine (Excel / CSV / API compatible).
+    """
+
+    flats = {
+        f.flat_number: f
+        for f in Flat.objects.filter(society=society)
+    }
+
+    grouped = defaultdict(list)
+
+    for r in rows:
+        grouped[r["flat"]].append(r)
+
+    created_people = 0
+    ownership_records = 0
+    owner_links = 0
+
+    for flat_number, owners in grouped.items():
+
+        flat = flats.get(flat_number)
+
+        if not flat:
+            raise ValueError(f"Flat not found: {flat_number}")
+
+        percent_total = sum(
+            Decimal(str(o["percent"])) for o in owners
+        )
+
+        if percent_total != Decimal("100"):
+            raise ValueError(
+                f"Ownership must total 100 for flat {flat_number}"
+            )
+
+        ownership, created = FlatOwnership.objects.get_or_create(
+            flat=flat,
+            is_active=True,
+            defaults={
+                "acquired_on": timezone.now().date()
+            },
+        )
+
+        if created:
+            ownership_records += 1
+
+        for o in owners:
+
+            person = None
+
+            if o["name"]:
+                person, p_created = Person.objects.get_or_create(
+                    phone=o["phone"],
+                    defaults={
+                        "full_name": o["name"],
+                    }
+                )
+
+                if p_created:
+                    created_people += 1
+
+            FlatOwner.objects.get_or_create(
+                ownership=ownership,
+                person=person,
+                legal_entity_name=o["entity"],
+                defaults={
+                    "ownership_percentage": o["percent"]
+                }
+            )
+
+            owner_links += 1
+
+    return {
+        "people_created": created_people,
+        "ownership_records": ownership_records,
+        "owners_linked": owner_links,
+    }
+    

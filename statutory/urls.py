@@ -1,3 +1,5 @@
+# statutory/urls.py — LIFECYCLE ROUTER
+
 from django.urls import path
 
 from statutory.api import (
@@ -8,58 +10,84 @@ from statutory.api import (
     societies_list_view,
     registrar_pack_view,
     registrar_pack_download_view,
+    submit_to_registrar,
 )
 
 urlpatterns = [
+
+    # Society listing
     path(
-        "api/societies",
+        "societies/",
         societies_list_view,
         name="societies-list",
     ),
 
+    # Preregistration snapshot
     path(
-        "api/societies/<int:society_id>/preregistration/snapshot",
+        "societies/<int:society_id>/preregistration/snapshot/",
         preregistration_snapshot_view,
         name="preregistration-snapshot",
     ),
 
+    # Obligation status update
     path(
-        "api/preregistration/obligations/<int:obligation_id>/status",
+        "preregistration/obligations/<int:obligation_id>/status/",
         update_preregistration_obligation_status,
         name="update-preregistration-obligation-status",
     ),
 
+    # Document upload/delete
     path(
-        "api/preregistration/documents/upload",
+        "preregistration/documents/upload/",
         upload_preregistration_document,
         name="upload-preregistration-document",
     ),
-
     path(
-        "api/societies/<int:society_id>/registrar-pack",
-        registrar_pack_view,
-        name="registrar-pack",
-    ),
-
-    path(
-        "api/preregistration/documents/delete",
+        "preregistration/documents/delete/",
         delete_preregistration_document,
         name="delete-preregistration-document",
     ),
 
+    # Registrar pack
     path(
-        "api/societies/<int:society_id>/registrar-pack/download",
-        registrar_pack_download_view,
+        "societies/<int:society_id>/registrar-pack/",
+        registrar_pack_view,
+        name="registrar-pack",
     ),
-
+    path(
+        "societies/<int:society_id>/registrar-pack/download/",
+        registrar_pack_download_view,
+        name="registrar-pack-download",
+    ),
+    path(
+        "societies/<int:society_id>/submit/",
+        submit_to_registrar,
+        name="submit-to-registrar",
+    ),
 ]
 
-from bylaws.api import (
-    list_bylaw_decisions,
-    save_bylaw_decisions,
-)
+from statutory.cockpit import preregistration_cockpit_view
 
 urlpatterns += [
-    path("api/bylaws/decisions", list_bylaw_decisions),
-    path("api/societies/<int:society_id>/bylaws/decisions/save", save_bylaw_decisions),
+    path(
+        "preregistration/cockpit/<int:society_id>/",
+        preregistration_cockpit_view,
+        name="preregistration-cockpit",
+    ),
+
+    path(
+        "societies/<int:society_id>/cockpit/",
+        preregistration_cockpit_view,
+        name="society-cockpit",
+    ),
+]
+
+from statutory.api import control_room_overview
+
+urlpatterns += [
+    path(
+        "control-room/overview/",
+        control_room_overview,
+        name="control-room-overview",
+    ),
 ]

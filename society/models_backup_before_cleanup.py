@@ -2,7 +2,6 @@ from django.db import models
 from django.db.models import Q
 from django.conf import settings
 from django.contrib.auth.models import User
-from core.managers.society_manager import SocietyManager
 
 
 class Society(models.Model):
@@ -24,8 +23,6 @@ class Society(models.Model):
         max_length=50,
         unique=True,
         db_index=True,
-        null=True,
-        blank=True,
         help_text="Official society registration number issued by Registrar"
     )
 
@@ -77,45 +74,6 @@ class Society(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.registration_number})"
-
-class Wing(models.Model):
-    society = models.ForeignKey(
-        "society.Society",
-        on_delete=models.CASCADE,
-        related_name="wings",
-    )
-
-    name = models.CharField(max_length=50)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    objects = SocietyManager()
-    
-    class Meta:
-        unique_together = ("society", "name")
-        ordering = ["name"]
-
-    def __str__(self):
-        return f"{self.society.name} - Wing {self.name}"
-
-class Floor(models.Model):
-    wing = models.ForeignKey(
-        "society.Wing",
-        on_delete=models.CASCADE,
-        related_name="floors",
-    )
-
-    number = models.IntegerField()
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ("wing", "number")
-        ordering = ["number"]
-
-    def __str__(self):
-        return f"{self.wing} - Floor {self.number}"
-
 # ==========================================================
 # SOCIETY OFFICE BEARER (Governance Identity Layer)
 # ==========================================================
@@ -123,6 +81,18 @@ class Floor(models.Model):
 class SocietyOfficeBearer(models.Model):
     """
     Canonical governance identity for a society.
+
+    This is the SOURCE OF TRUTH for:
+    - Chairman
+    - Secretary
+    - Treasurer
+    - Committee Members
+
+    Drives:
+    - Maker / Checker
+    - Approvals
+    - Registrar workflows
+    - Governance enforcement
     """
 
     ROLE_CHOICES = (
@@ -136,14 +106,6 @@ class SocietyOfficeBearer(models.Model):
         "society.Society",
         on_delete=models.CASCADE,
         related_name="office_bearers",
-    )
-
-    committee_membership_ref = models.ForeignKey(
-        "society.CommitteeMembership",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="legacy_office_bearers",
     )
 
     user = models.ForeignKey(
@@ -161,18 +123,18 @@ class SocietyOfficeBearer(models.Model):
     appointed_on = models.DateField(
         null=True,
         blank=True,
-        help_text="Date when the role was assigned",
+        help_text="Date when the role was assigned"
     )
 
     term_end = models.DateField(
         null=True,
         blank=True,
-        help_text="End of office term",
+        help_text="End of office term"
     )
 
     is_active = models.BooleanField(
         default=True,
-        db_index=True,
+        db_index=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -183,119 +145,35 @@ class SocietyOfficeBearer(models.Model):
             models.Index(fields=["society", "role", "is_active"]),
         ]
 
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        from django.utils import timezone
-
-        leadership_roles = {"CHAIRMAN", "SECRETARY", "TREASURER"}
-
-        # Leadership must be committee-backed
-        if self.role in leadership_roles and not self.committee_membership_ref:
-            raise ValidationError(
-                f"{self.role} must be linked to an active CommitteeMembership."
-            )
-
-        if self.committee_membership_ref:
-
-            # Same society enforcement
-            if self.committee_membership_ref.society_id != self.society_id:
-                raise ValidationError(
-                    "Committee membership must belong to the same society."
-                )
-
-            # Active membership enforcement
-            if not self.committee_membership_ref.is_active:
-                raise ValidationError(
-                    "Committee membership must be active."
-                )
-
-            # Term validity enforcement
-            today = timezone.now().date()
-            if not (
-                self.committee_membership_ref.elected_on
-                <= today
-                <= self.committee_membership_ref.term_end
-            ):
-                raise ValidationError(
-                    "Committee membership term is not currently valid."
-                )
-
-            # Identity binding enforcement
-            member_person = self.committee_membership_ref.member.person
-
-            if not member_person.user:
-                raise ValidationError(
-                    "Committee member's Person record must be linked to a User."
-                )
-
-            if self.user != member_person.user:
-                raise ValidationError(
-                    "OfficeBearer user must match Committee Member's linked User."
-                )
-
     def __str__(self):
         return f"{self.user} — {self.role} — {self.society.name}"
 
-
+        
 from django.db import models
 
-
 class Flat(models.Model):
-
     society = models.ForeignKey(
         "society.Society",
         on_delete=models.CASCADE,
         related_name="flats",
     )
 
-    # -----------------------------
-    # Identity
-    # -----------------------------
     flat_number = models.CharField(
         max_length=20,
-        help_text="Flat number as per society records (e.g. A-101, 1203)",
+        help_text="Flat number as per society records (e.g. A-101, 1203)"
     )
 
     wing = models.CharField(
         max_length=20,
         blank=True,
         null=True,
-        help_text="Wing / building identifier (legacy support)",
+        help_text="Wing / building identifier (if applicable)"
     )
 
     floor = models.IntegerField(
         blank=True,
         null=True,
-        help_text="Floor number (legacy support)",
-    )
-
-    # -----------------------------
-    # Canonical Structure Links
-    # -----------------------------
-    wing_ref = models.ForeignKey(
-        "society.Wing",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="flat_records",
-    )
-
-    floor_ref = models.ForeignKey(
-        "society.Floor",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="flat_records",
-    )
-
-    # -----------------------------
-    # Flat Configuration
-    # -----------------------------
-    flat_type = models.CharField(
-        max_length=20,
-        blank=True,
-        null=True,
-        help_text="Flat configuration such as 1BHK, 2BHK, 3BHK",
+        help_text="Floor number"
     )
 
     carpet_area_sqft = models.DecimalField(
@@ -303,24 +181,16 @@ class Flat(models.Model):
         decimal_places=2,
         blank=True,
         null=True,
-        help_text="Carpet area in square feet",
+        help_text="Carpet area in square feet"
     )
 
-    # -----------------------------
-    # Status
-    # -----------------------------
     is_active = models.BooleanField(
         default=True,
-        help_text="Whether this flat is active (not merged / demolished)",
+        help_text="Whether this flat is active (not merged / demolished)"
     )
 
-    # -----------------------------
-    # Audit
-    # -----------------------------
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    objects = SocietyManager()
 
     class Meta:
         unique_together = ("society", "flat_number")
@@ -430,65 +300,46 @@ class MaintenanceAccount(models.Model):
         return f"{self.flat} – {self.status}"
 
 class FlatOwner(models.Model):
-    """
-    Represents an owner of a flat.
-
-    Ownership is linked to a FlatOwnership record so that
-    ownership history (resale, transfer, inheritance) can
-    be preserved over time.
-    """
-
     ownership = models.ForeignKey(
         "society.FlatOwnership",
         on_delete=models.CASCADE,
         related_name="owners",
     )
 
-    person = models.ForeignKey(
-        "society.Person",
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="flat_ownerships",
         null=True,
         blank=True,
-        help_text="Individual person owner (if applicable)",
+        help_text="Linked user account (if individual)",
     )
 
     legal_entity_name = models.CharField(
         max_length=255,
-        null=True,
         blank=True,
-        help_text="Company / Trust / Legal entity owner (if applicable)",
+        null=True,
+        help_text="Company / Trust / Entity name (if applicable)",
     )
 
     ownership_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        help_text="Ownership percentage (must total 100% per flat)",
+        help_text="Ownership percentage (e.g. 50.00)",
     )
-
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 check=(
-                    models.Q(person__isnull=False)
+                    models.Q(user__isnull=False)
                     | models.Q(legal_entity_name__isnull=False)
                 ),
                 name="flatowner_requires_person_or_entity",
-            ),
-            models.UniqueConstraint(
-                fields=["ownership", "person"],
-                name="unique_owner_per_flat",
-            ),
+            )
         ]
 
     def __str__(self):
-        if self.person:
-            return f"{self.person.full_name} ({self.ownership.flat.flat_number})"
-
-        return f"{self.legal_entity_name} ({self.ownership.flat.flat_number})"
-
+        return self.user.get_full_name() if self.user else self.legal_entity_name
 class Amenity(models.Model):
     society = models.ForeignKey(
         "society.Society",
@@ -515,15 +366,12 @@ class Amenity(models.Model):
 
     is_active = models.BooleanField(default=True)
 
-    objects = SocietyManager()
-
     class Meta:
         unique_together = ("society", "name")
         ordering = ["name"]
 
     def __str__(self):
         return f"{self.name} ({'Paid' if self.is_chargeable else 'Free'})"
-
 class ParkingSlot(models.Model):
     PARKING_TYPE_CHOICES = [
         ("CAR", "Car"),
@@ -562,7 +410,6 @@ class ParkingSlot(models.Model):
 
     def __str__(self):
         return f"{self.society.name} - {self.slot_number}"
-
 class ParkingAllocation(models.Model):
     parking_slot = models.ForeignKey(
         ParkingSlot,
@@ -593,7 +440,6 @@ class ParkingAllocation(models.Model):
 
     def __str__(self):
         return f"{self.parking_slot} → {self.flat or self.user}"
-
 class Amenity(models.Model):
     society = models.ForeignKey(
         "society.Society",
@@ -611,8 +457,6 @@ class Amenity(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
 
     class Meta:
         unique_together = ("society", "name")
@@ -750,8 +594,6 @@ class MaintenanceBill(models.Model):
         decimal_places=2,
     )
 
-    objects = SocietyManager()
-
     class Meta:
         unique_together = ("society", "billing_month")
         ordering = ["-billing_month"]
@@ -848,8 +690,6 @@ class Payment(models.Model):
 
     received_on = models.DateField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
 
     class Meta:
         ordering = ["-received_on", "-created_at"]
@@ -1062,8 +902,6 @@ class ChartOfAccount(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    objects = SocietyManager()
-
     class Meta:
         unique_together = ("society", "code")
         ordering = ["account_type", "code"]
@@ -1105,8 +943,6 @@ class ChartOfAccount(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
 
     class Meta:
         unique_together = ("society", "code")
@@ -1154,8 +990,6 @@ class LedgerEntry(models.Model):
     description = models.TextField()
     entry_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
 
     class Meta:
         ordering = ["entry_date", "id"]
@@ -1214,8 +1048,6 @@ class LedgerEntry(models.Model):
         help_text="External reference ID",
     )
 
-    objects = SocietyManager()
-
     class Meta:
         ordering = ["entry_date", "id"]
 
@@ -1248,9 +1080,6 @@ class TransactionRule(models.Model):
         default=timezone.now,
         editable=False,
     )
-    
-    objects = SocietyManager()
-
     class Meta:
         unique_together = ("society", "transaction_type")
 
@@ -1297,8 +1126,6 @@ class AccountingPeriod(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
     )
-
-    objects = SocietyManager()
 
     class Meta:
         unique_together = ("society", "start_date", "end_date")
@@ -1356,8 +1183,6 @@ class PendingTransaction(models.Model):
     approved_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
 
     class Meta:
         ordering = ["-created_at"]
@@ -1418,107 +1243,13 @@ class Person(models.Model):
     full_name = models.CharField(max_length=255)
     phone = models.CharField(max_length=15, unique=True)
     email = models.EmailField(blank=True, null=True)
-    user = models.OneToOneField(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="person_profile",
-        help_text="Linked authentication user account"
-    )
+
     is_verified = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.full_name} ({self.phone})"
-
-class SocietyMember(models.Model):
-
-    MEMBERSHIP_TYPES = [
-        ("REGULAR", "Regular Member"),
-        ("ASSOCIATE", "Associate Member"),
-        ("NOMINAL", "Nominal Member"),
-        ("PROVISIONAL", "Provisional Member"),
-        ("INSTITUTIONAL", "Institutional Member"),
-    ]
-
-    society = models.ForeignKey(
-        "society.Society",
-        on_delete=models.CASCADE,
-        related_name="members",
-    )
-
-    person = models.ForeignKey(
-        "society.Person",
-        on_delete=models.CASCADE,
-        related_name="society_memberships",
-    )
-
-    membership_type = models.CharField(
-        max_length=30,
-        choices=MEMBERSHIP_TYPES,
-    )
-
-    member_number = models.CharField(max_length=50)
-
-    admitted_on = models.DateField()
-
-    ceased_on = models.DateField(null=True, blank=True)
-
-    is_active = models.BooleanField(default=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
-
-    class Meta:
-        unique_together = ("society", "person")
-        constraints = [
-            models.UniqueConstraint(
-                fields=["society", "member_number"],
-                name="unique_member_number_per_society",
-            )
-        ]
-
-    def __str__(self):
-        return f"{self.person} ({self.member_number})"
-
-class CommitteeMembership(models.Model):
-    society = models.ForeignKey(
-        "society.Society",
-        on_delete=models.CASCADE,
-        related_name="committee_memberships",
-    )
-
-    member = models.ForeignKey(
-        "society.SocietyMember",
-        on_delete=models.CASCADE,
-        related_name="committee_memberships",
-    )
-
-    elected_on = models.DateField()
-
-    term_end = models.DateField()
-
-    is_active = models.BooleanField(default=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
-    
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["society", "member"],
-                condition=models.Q(is_active=True),
-                name="unique_active_committee_member_per_society",
-            )
-        ]
-        ordering = ["-elected_on"]
-
-    def __str__(self):
-        return f"{self.member} - Committee"
 
 class Case(models.Model):
     """
@@ -1534,14 +1265,7 @@ class Case(models.Model):
 
     initiated_by = models.ForeignKey(Person, on_delete=models.CASCADE)
     case_type = models.CharField(max_length=20, choices=CASE_TYPES, default="prereg")
-    
-    society = models.OneToOneField(
-        "society.Society",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="formation_case",
-    )
+
     status = models.CharField(max_length=50, default="initiated")
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1585,121 +1309,3 @@ class CaseStage(models.Model):
 
     def __str__(self):
         return f"{self.stage_code} — {self.case.id}"
-
-# ==========================================================
-# SOFT ONBOARDING TRACKER
-# ==========================================================
-
-class SoftOnboardingTracker(models.Model):
-    """
-    Tracks structural & finance readiness
-    before legal preregistration completion.
-    """
-
-    society = models.OneToOneField(
-        "society.Society",
-        on_delete=models.CASCADE,
-        related_name="soft_onboarding_tracker",
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def evaluate_and_initialize(self):
-        """
-        If structure becomes ready and finance not yet initialized,
-        trigger finance layer setup.
-        """
-        if not self.is_structure_ready():
-            return
-
-        if self.is_finance_ready():
-            return
-
-        # Lazy import to avoid circular dependency
-        from statutory.onboarding.engine import StatutoryOnboardingEngine
-
-        engine = StatutoryOnboardingEngine()
-        engine._initialize_finance_layer(self.society)
-
-    # -----------------------------
-    # STRUCTURE CHECK
-    # -----------------------------
-
-    def is_structure_ready(self) -> bool:
-        society = self.society
-
-        if not society.wings.exists():
-            return False
-
-        if not society.flats.exists():
-            return False
-
-        if not society.members.exists():
-            return False
-
-        # Ensure floors exist via wing relation
-        from society.models import Floor
-        if not Floor.objects.filter(wing__society=society).exists():
-            return False
-
-        # Ensure all flats are properly linked
-        unlinked_flats = society.flats.filter(
-            models.Q(wing_ref__isnull=True) |
-            models.Q(floor_ref__isnull=True)
-        )
-
-        if unlinked_flats.exists():
-            return False
-
-        return True
-
-    # -----------------------------
-    # FINANCE CHECK
-    # -----------------------------
-
-    def is_finance_ready(self) -> bool:
-        return (
-            self.society.chart_of_accounts.exists()
-            and self.society.accounting_periods.exists()
-        )
-
-    # -----------------------------
-    # OVERALL STATUS
-    # -----------------------------
-
-    def readiness_snapshot(self) -> dict:
-        structure_ready = self.is_structure_ready()
-        finance_ready = self.is_finance_ready()
-
-        return {
-            "structure_ready": structure_ready,
-            "finance_ready": finance_ready,
-            "overall_soft_ready": structure_ready and finance_ready,
-        }
-
-    def __str__(self):
-        return f"SoftOnboardingTracker - {self.society.name}"
-
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-
-@receiver(post_save, sender=Wing)
-@receiver(post_save, sender=Floor)
-@receiver(post_save, sender=Flat)
-@receiver(post_save, sender=SocietyMember)
-def evaluate_structure_on_change(sender, instance, **kwargs):
-    society = getattr(instance, "society", None)
-
-    # Floor gets society via wing
-    if sender.__name__ == "Floor":
-        society = instance.wing.society
-
-    if not society:
-        return
-
-    try:
-        tracker = society.soft_onboarding_tracker
-        tracker.evaluate_and_initialize()
-    except SoftOnboardingTracker.DoesNotExist:
-        pass

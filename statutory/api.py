@@ -4,10 +4,11 @@ from rest_framework import status
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from statutory.preregistration.registrar_pack import generate_registrar_pack
-
+from django.views.decorators.csrf import csrf_exempt
 
 from statutory.preregistration.snapshot import preregistration_readiness_snapshot
 from society.models import Society
+from statutory.control_room_engine import ControlRoomEngine
 
 from society.models import Society
 from statutory.services import (
@@ -16,7 +17,6 @@ from statutory.services import (
     complete_current_step,
     finalize_society_if_allowed,
 )
-
 
 @api_view(["GET"])
 def next_legal_step(request, society_id):
@@ -306,3 +306,108 @@ def registrar_pack_download_view(request, society_id):
     response = HttpResponse(pack_bytes, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="registrar_pack_society_{society_id}.zip"'
     return response
+
+# Paste-safe replacement for submit_to_registrar
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from django.db import transaction
+
+# Prefer the explicit, stable import (avoid fragile re-exports)
+from statutory.preregistration.snapshot import preregistration_readiness_snapshot
+
+from statutory.models import RegistrarSubmission
+from society.models import Society
+
+
+@csrf_exempt         # dev only; remove in production
+@require_POST
+@transaction.atomic
+def submit_to_registrar(request, society_id):
+    """
+    Conservative, safe submission handler.
+
+    - Locks the society row to avoid concurrent duplicate SUBMITTED entries.
+    - Uses explicit preregistration snapshot import from statutory.preregistration.
+    - Returns JSON with an explicit ISO timestamp.
+    """
+
+    # 1) Load society (fail fast)
+    try:
+        # Lock the society row for the duration of this transaction to serialize submissions
+        society = Society.objects.select_for_update().get(id=society_id)
+    except Society.DoesNotExist:
+        return JsonResponse({"error": "Society not found"}, status=404)
+
+    # 2) Read readiness snapshot (explicit stable import)
+    snapshot = preregistration_readiness_snapshot(society)
+    if not snapshot.get("registrar_ready"):
+        return JsonResponse({"error": "Society not registrar ready"}, status=400)
+
+    # 3) Prevent double submission (safe under select_for_update lock)
+    already = RegistrarSubmission.objects.filter(
+        society=society,
+        status="SUBMITTED"
+    ).exists()
+
+    if already:
+        return JsonResponse({"error": "Already submitted"}, status=400)
+
+    # 4) Create submission
+    # Use more robust hash if you want stable cross-process results (optionally swap later)
+    snapshot_hash = str(hash(str(snapshot)))
+
+    submission = RegistrarSubmission.objects.create(
+        society=society,
+        submitted_by=request.user if getattr(request, "user", None) and request.user.is_authenticated else None,
+        snapshot_hash=snapshot_hash,
+        submitted_at=timezone.now(),
+        status="SUBMITTED",
+    )
+
+    # 5) Return explicit ISO timestamp (clear for clients)
+    return JsonResponse({
+        "message": "Submitted successfully",
+        "submitted_at": submission.submitted_at.isoformat(),
+    })
+
+@csrf_exempt
+def create_society_structure(request, society_id):
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    import json
+    from society.services.structure_generator import generate_society_structure
+
+    data = json.loads(request.body)
+
+    society = Society.objects.get(id=society_id)
+
+    result = generate_society_structure(
+        society=society,
+        total_wings=data["total_wings"],
+        floors_per_wing=data["floors_per_wing"],
+        flats_per_floor=data["flats_per_floor"],
+        flat_numbering_style=data.get("flat_numbering", "A-101"),
+        carpet_area=data.get("carpet_area"),
+    )
+
+    return JsonResponse({
+        "success": True,
+        "structure": result
+    })
+
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(["GET"])
+def control_room_overview(request):
+
+    engine = ControlRoomEngine()
+
+    snapshot = engine.build_overview()
+
+    return Response(snapshot)

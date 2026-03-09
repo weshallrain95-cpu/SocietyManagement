@@ -307,5 +307,145 @@ class SocietyBylawDecision(models.Model):
         return f"{self.society.name} — {self.decision.decision_code}"
 
 # Register bylaws domain models under statutory app
-from bylaws.models import *
 
+# ==========================================================
+# REGISTRAR SUBMISSION LIFECYCLE ENTITY (NEW)
+# ==========================================================
+
+from django.utils import timezone
+
+
+class RegistrarSubmission(models.Model):
+    """
+    Represents the legal act of filing the society
+    with the Registrar. This is irreversible and
+    freezes prereg lifecycle state.
+    """
+
+    STATUS_CHOICES = (
+        ("SUBMITTED", "Submitted"),
+        ("ACKNOWLEDGED", "Acknowledged"),
+        ("QUERIED", "Queried by Registrar"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    )
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="registrar_submissions",
+    )
+
+    submitted_at = models.DateTimeField(default=timezone.now)
+
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+
+    snapshot_hash = models.CharField(
+        max_length=128,
+        help_text="Integrity hash of prereg snapshot at submission time",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="SUBMITTED",
+    )
+
+    registrar_reference = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Registrar file/reference number",
+    )
+
+    remarks = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        indexes = [
+            models.Index(fields=["society", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.society.name} — {self.status} — {self.submitted_at}"
+
+# ==========================================================
+# SOCIETY REGISTRATION APPROVAL (LEGAL BIRTH GATE)
+# ==========================================================
+
+from django.conf import settings
+from django.utils import timezone
+
+
+class SocietyRegistrationApproval(models.Model):
+    """
+    Maker–Checker gate for final Society Registration Number entry.
+
+    Maker:
+        Any managing committee member.
+
+    Checker:
+        ONLY Chairman (resolved via governance assignments).
+
+    This entity protects the legal registration event from:
+    - typos
+    - premature activation
+    - single-actor approval
+    """
+
+    STATUS_CHOICES = (
+        ("PENDING", "Pending Chairman Approval"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    )
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="registration_approvals",
+    )
+
+    # Maker input
+    proposed_registration_number = models.CharField(max_length=100)
+    proposed_registration_date = models.DateField()
+
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="registration_proposals_made",
+    )
+
+    proposed_at = models.DateTimeField(default=timezone.now)
+
+    # Chairman decision
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING",
+    )
+
+    approved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="registration_approvals_given",
+    )
+
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    rejection_reason = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-proposed_at"]
+        indexes = [
+            models.Index(fields=["society", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.society.name} — {self.status}"
