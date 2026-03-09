@@ -64,4 +64,17 @@ class SocietyHealthEngine:
             "score": score,
             "signals": signals,
         }
-        
+
+
+# ------------------------------------------------------
+# MODULE LEVEL WRAPPER (used by cockpit)
+# ------------------------------------------------------
+
+def calculate_society_health_score(society):
+
+    engine = SocietyHealthEngine()
+
+    result = engine.calculate(society)
+
+    return result["score"]
+    

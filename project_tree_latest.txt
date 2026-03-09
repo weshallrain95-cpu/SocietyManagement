@@ -1,0 +1,679 @@
+.
+├── __init__.py
+├── .DS_Store
+├── .env.dev
+├── .env.local
+├── .env.prod
+├── .env.staging
+├── .github
+│   └── workflows
+│       ├── ci.yml
+│       ├── governance.yml
+│       └── security.yml
+├── .gitignore
+├── .ipynb_checkpoints
+│   └── manage-checkpoint.py
+├── affidavit.txt
+├── ARCH.md
+├── bylaws
+│   ├── __init__.py
+│   ├── api.py
+│   ├── apps.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   └── 0002_alter_bylawchapter_table_alter_bylawclause_table_and_more.py
+│   ├── models.py
+│   ├── signals.py
+│   ├── urls.py
+│   └── views.py
+├── CHANGELOG.md
+├── CODEOWNERS
+├── communications
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── api
+│   ├── apps.py
+│   ├── domain
+│   │   ├── contracts
+│   │   │   ├── compliance_policies.py
+│   │   │   ├── governance_overrides.py
+│   │   │   ├── moderation_decisions.py
+│   │   │   ├── moderation_policies.py
+│   │   │   └── routing_rules.py
+│   │   ├── entities
+│   │   │   ├── channel.py
+│   │   │   ├── context.py
+│   │   │   ├── message.py
+│   │   │   ├── participant.py
+│   │   │   ├── scope.py
+│   │   │   └── thread.py
+│   │   ├── policies
+│   │   ├── rules
+│   │   └── workflows
+│   ├── engines
+│   │   ├── communication_engine.py
+│   │   ├── compliance_engine.py
+│   │   ├── moderation_engine.py
+│   │   ├── role_routing_engine.py
+│   │   ├── routing_engine.py
+│   │   └── workflow_engine.py
+│   ├── governance_hooks
+│   │   ├── audit_adapter.py
+│   │   ├── enforcement_adapter.py
+│   │   ├── policy_adapter.py
+│   │   └── versioning_adapter.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   └── 0001_initial.py
+│   ├── models.py
+│   ├── platform.py
+│   ├── services
+│   │   ├── archival_service.py
+│   │   ├── escalation_service.py
+│   │   ├── governed_messaging_service.py
+│   │   └── lifecycle_service.py
+│   ├── signals
+│   ├── tests.py
+│   └── views.py
+├── core
+│   ├── __init__.py
+│   ├── asgi.py
+│   ├── context
+│   │   └── society_context.py
+│   ├── managers
+│   │   └── society_manager.py
+│   ├── middleware
+│   │   ├── __init__.py
+│   │   └── society_middleware.py
+│   ├── querysets
+│   │   └── society_queryset.py
+│   ├── settings.py
+│   ├── templates
+│   │   └── core
+│   │       ├── case_dashboard.html
+│   │       ├── case_form.html
+│   │       ├── case_initiation.html
+│   │       ├── decision_workspace.html
+│   │       ├── stage_checklist.html
+│   │       └── status_selection.html
+│   ├── urls.py
+│   ├── views.py
+│   └── wsgi.py
+├── db_dump.20260224T223857.sql
+├── db.sqlite3.bak.20260219235629
+├── db.sqlite3.bak.20260224T223857
+├── deployments
+│   └── .gitkeep
+├── docs
+│   └── .gitkeep
+├── governance
+│   ├── __init__.py
+│   ├── admin_guard.py
+│   ├── admin.py
+│   ├── api_permissions.py
+│   ├── apps.py
+│   ├── audit
+│   │   ├── __init__.py
+│   │   └── emitter.py
+│   ├── enforcement
+│   │   ├── __init__.py
+│   │   ├── bridge.py
+│   │   ├── enforcer.py
+│   │   ├── exceptions.py
+│   │   └── resolver.py
+│   ├── management
+│   │   ├── __init__.py
+│   │   └── commands
+│   │       ├── __init__.py
+│   │       └── seed_governance.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   └── 0001_initial.py
+│   ├── models
+│   │   ├── __init__.py
+│   │   ├── assignments.py
+│   │   ├── control.py
+│   │   ├── decision_log.py
+│   │   ├── policy.py
+│   │   └── rules.py
+│   ├── models_old.py
+│   ├── services
+│   │   ├── __init__.py
+│   │   ├── control_plane.py
+│   │   ├── decision_recorder.py
+│   │   ├── policy_assignment.py
+│   │   ├── policy_engine.py
+│   │   ├── policy_guard.py
+│   │   ├── policy_rollback.py
+│   │   ├── policy_types.py
+│   │   ├── policy_versioning.py
+│   │   └── service_guard.py
+│   ├── simulation
+│   │   ├── __init__.py
+│   │   ├── context.py
+│   │   ├── decision.py
+│   │   ├── evaluator.py
+│   │   └── simulator.py
+│   ├── tests.py
+│   └── views.py
+├── infra
+│   └── .gitkeep
+├── manage.py
+├── MIGRATIONS.md
+├── owners.xlsx
+├── project_tree_latest.txt
+├── pyproject.toml
+├── pytest.ini
+├── README.md
+├── RELEASE.md
+├── scripts
+│   └── .gitkeep
+├── society
+│   ├── __init__.py
+│   ├── .DS_Store
+│   ├── admin.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── .gitkeep
+│   │   ├── serializers
+│   │   │   ├── __init__.py
+│   │   │   └── audit.py
+│   │   ├── urls.py
+│   │   └── views
+│   │       ├── __init__.py
+│   │       ├── audit_verification.py
+│   │       └── audit.py
+│   ├── apps.py
+│   ├── audit_emitter.py
+│   ├── audit_verifier.py
+│   ├── compliance
+│   │   └── .gitkeep
+│   ├── constants.py
+│   ├── core
+│   │   ├── __init__.py
+│   │   ├── .gitkeep
+│   │   ├── bootstrap.py
+│   │   ├── cli.py
+│   │   ├── context.py
+│   │   ├── env.py
+│   │   ├── events.py
+│   │   ├── governance.py
+│   │   ├── kernel.py
+│   │   ├── lifecycle.py
+│   │   ├── orchestrator.py
+│   │   ├── registry.py
+│   │   ├── router.py
+│   │   ├── runner.py
+│   │   ├── runtime.py
+│   │   ├── state.py
+│   │   └── test_governance.py
+│   ├── domain_services
+│   │   ├── __init__.py
+│   │   └── audit.py
+│   ├── engines
+│   │   └── .gitkeep
+│   ├── governance
+│   │   └── .gitkeep
+│   ├── infra
+│   ├── intelligence
+│   │   ├── __init__.py
+│   │   ├── .gitkeep
+│   │   ├── behaviors
+│   │   ├── bootstrap.py
+│   │   ├── compliance.py
+│   │   ├── core
+│   │   │   ├── memory.py
+│   │   │   ├── policies.py
+│   │   │   ├── prediction.py
+│   │   │   ├── routing.py
+│   │   │   └── scoring.py
+│   │   ├── decision.py
+│   │   ├── engine.py
+│   │   ├── escalation.py
+│   │   ├── governance.py
+│   │   ├── human_loop.py
+│   │   ├── influence
+│   │   │   ├── __init__.py
+│   │   │   └── engine.py
+│   │   ├── learning
+│   │   │   ├── __init__.py
+│   │   │   ├── engine.py
+│   │   │   ├── interfaces.py
+│   │   │   ├── memory_adapter.py
+│   │   │   ├── models.py
+│   │   │   └── registry.py
+│   │   ├── observability.py
+│   │   ├── orchestrator.py
+│   │   ├── persistence
+│   │   │   ├── __init__.py
+│   │   │   ├── analytics.py
+│   │   │   ├── models.py
+│   │   │   ├── replay.py
+│   │   │   └── repository.py
+│   │   ├── policy.py
+│   │   ├── risk.py
+│   │   ├── sla.py
+│   │   └── trust.py
+│   ├── legal
+│   │   ├── __init__.py
+│   │   ├── apps.py
+│   │   ├── compliance
+│   │   │   ├── __init__.py
+│   │   │   ├── engines
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── compliance_engine.py
+│   │   │   │   ├── enforcement_engine.py
+│   │   │   │   ├── scoring_engine.py
+│   │   │   │   └── violation_engine.py
+│   │   │   ├── models
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── compliance_record.py
+│   │   │   │   ├── legal_state.py
+│   │   │   │   └── violation.py
+│   │   │   ├── services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── compliance_service.py
+│   │   │   │   ├── enforcement_service.py
+│   │   │   │   └── violation_service.py
+│   │   │   ├── state
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── compliance_state.py
+│   │   │   │   ├── legal_state.py
+│   │   │   │   └── violation_state.py
+│   │   │   └── workflows
+│   │   │       ├── __init__.py
+│   │   │       ├── arbitration_trigger.py
+│   │   │       ├── escalation_flow.py
+│   │   │       └── remediation_flow.py
+│   │   ├── constitution
+│   │   │   ├── __init__.py
+│   │   │   ├── apps.py
+│   │   │   ├── models
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── authority_graph.py
+│   │   │   │   ├── authority.py
+│   │   │   │   ├── bylaw.py
+│   │   │   │   ├── canon.py
+│   │   │   │   └── document.py
+│   │   │   ├── ontology
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── domains.py
+│   │   │   │   └── normative.py
+│   │   │   ├── policies
+│   │   │   └── services
+│   │   │       ├── __init__.py
+│   │   │       ├── authority_graph.py
+│   │   │       ├── bylaw_engine.py
+│   │   │       ├── canon_registry.py
+│   │   │       └── document_registry.py
+│   │   ├── disputes
+│   │   │   ├── appeals
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── models
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── appeal.py
+│   │   │   │   │   └── review.py
+│   │   │   │   └── services
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── appeal_service.py
+│   │   │   │       └── review_service.py
+│   │   │   ├── arbitration
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── engines
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── arbitration_engine.py
+│   │   │   │   │   ├── hearing_engine.py
+│   │   │   │   │   └── ruling_engine.py
+│   │   │   │   └── workflows
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── appeal_flow.py
+│   │   │   │       ├── arbitration_flow.py
+│   │   │   │       └── judgement_flow.py
+│   │   │   ├── cases
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── models
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── case.py
+│   │   │   │   │   ├── claim.py
+│   │   │   │   │   ├── hearing.py
+│   │   │   │   │   ├── judgement.py
+│   │   │   │   │   └── party.py
+│   │   │   │   └── services
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── case_service.py
+│   │   │   │       ├── claim_service.py
+│   │   │   │       ├── hearing_service.py
+│   │   │   │       └── party_service.py
+│   │   │   ├── evidence
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── models
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   ├── chain_of_custody.py
+│   │   │   │   │   ├── evidence_version.py
+│   │   │   │   │   └── evidence.py
+│   │   │   │   └── services
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── evidence_service.py
+│   │   │   │       ├── integrity_service.py
+│   │   │   │       └── verification_service.py
+│   │   │   └── reasoning
+│   │   │       ├── __init__.py
+│   │   │       └── engines
+│   │   │           ├── __init__.py
+│   │   │           ├── legal_reasoner.py
+│   │   │           ├── norm_reasoner.py
+│   │   │           └── precedent_engine.py
+│   │   ├── integration
+│   │   │   ├── authority
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── engines
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── authority_resolver.py
+│   │   │   │       ├── conflict_resolver.py
+│   │   │   │       ├── delegation_resolver.py
+│   │   │   │       ├── jurisdiction_resolver.py
+│   │   │   │       ├── legitimacy_validator.py
+│   │   │   │       └── supremacy_resolver.py
+│   │   │   ├── events
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── models
+│   │   │   │   │   ├── __init__.py
+│   │   │   │   │   └── legal_event.py
+│   │   │   │   └── services
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── event_audit.py
+│   │   │   │       ├── event_router.py
+│   │   │   │       ├── event_signer.py
+│   │   │   │       ├── event_validator.py
+│   │   │   │       └── legal_event_store.py
+│   │   │   ├── platform
+│   │   │   │   ├── __init__.py
+│   │   │   │   └── services
+│   │   │   │       ├── __init__.py
+│   │   │   │       ├── legal_action_gateway.py
+│   │   │   │       ├── legal_orchestrator.py
+│   │   │   │       ├── legal_pipeline.py
+│   │   │   │       └── legal_platform_core.py
+│   │   │   └── state
+│   │   │       ├── __init__.py
+│   │   │       ├── models
+│   │   │       │   ├── __init__.py
+│   │   │       │   └── legal_state.py
+│   │   │       └── services
+│   │   │           ├── __init__.py
+│   │   │           ├── state_conflict_resolver.py
+│   │   │           ├── state_projection.py
+│   │   │           ├── state_store.py
+│   │   │           └── state_sync_engine.py
+│   │   ├── migrations
+│   │   │   ├── __init__.py
+│   │   │   └── 0001_initial.py
+│   │   └── models.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_societyofficebearer.py
+│   │   ├── 0003_wing.py
+│   │   ├── 0004_floor.py
+│   │   ├── 0005_flat_floor_ref_flat_wing_ref.py
+│   │   ├── 0006_societymember.py
+│   │   ├── 0007_committeemembership.py
+│   │   ├── 0008_societyofficebearer_committee_membership_ref.py
+│   │   ├── 0009_person_user.py
+│   │   ├── 0010_case_society.py
+│   │   ├── 0011_alter_society_registration_number.py
+│   │   ├── 0012_softonboardingtracker.py
+│   │   ├── 0013_flat_flat_type_alter_flat_floor_alter_flat_wing.py
+│   │   └── 0014_remove_flatowner_flatowner_requires_person_or_entity_and_more.py
+│   ├── migrations_backup
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_society_legal_status.py
+│   │   ├── 0003_shareownership.py
+│   │   ├── 0004_delete_shareownership.py
+│   │   ├── 0005_flat_flatownership_flatowner.py
+│   │   ├── 0006_alter_flatowner_user_and_more.py
+│   │   ├── 0007_amenity.py
+│   │   ├── 0008_parkingslot_parkingallocation.py
+│   │   ├── 0009_remove_amenity_charge_type_and_more.py
+│   │   ├── 0010_amenitychargerule.py
+│   │   ├── 0011_flatoccupancy_maintenanceaccount.py
+│   │   ├── 0012_chargetype_maintenanceaccount_balance_due_and_more.py
+│   │   ├── 0013_maintenancebill_flatmaintenancebill_and_more.py
+│   │   ├── 0014_payment.py
+│   │   ├── 0017_societyrule.py
+│   │   ├── 0018_noticelog.py
+│   │   ├── 0019_noticelog_interest_amount.py
+│   │   ├── 0020_alter_noticelog_notice_type_and_more.py
+│   │   ├── 0021_flatrecoverystatus_recoveryactionlog.py
+│   │   ├── 0022_remove_society_date_of_registration_and_more.py
+│   │   ├── 0023_chartofaccount.py
+│   │   └── 0024_alter_chartofaccount_options_and_more.py
+│   ├── models_backup_before_cleanup.py
+│   ├── models.py
+│   ├── services
+│   │   ├── .gitkeep
+│   │   ├── audit.py
+│   │   └── ledger.py
+│   ├── services.py
+│   ├── tests
+│   │   ├── __init__.py
+│   │   └── test_audit_immutability.py
+│   ├── ui
+│   │   └── .gitkeep
+│   ├── views.py
+│   └── workflows
+│       └── .gitkeep
+├── society_product
+│   ├── __init__.py
+│   ├── api
+│   │   ├── domains
+│   │   │   ├── administration_api.py
+│   │   │   ├── auditor_api.py
+│   │   │   ├── communications_api.py
+│   │   │   ├── complaints_api.py
+│   │   │   ├── compliance_api.py
+│   │   │   ├── disputes_api.py
+│   │   │   ├── documents_api.py
+│   │   │   ├── finance_api.py
+│   │   │   ├── governance_api.py
+│   │   │   ├── insights_api.py
+│   │   │   ├── members_api.py
+│   │   │   ├── operations_api.py
+│   │   │   └── properties_api.py
+│   │   └── gateway
+│   │       ├── audit_hooks.py
+│   │       ├── authorization.py
+│   │       ├── compliance_hooks.py
+│   │       ├── context.py
+│   │       ├── governance_hooks.py
+│   │       ├── identity.py
+│   │       ├── response.py
+│   │       └── router.py
+│   ├── base.py
+│   ├── context.py
+│   ├── contracts.py
+│   ├── engines
+│   │   ├── administration_engine.py
+│   │   ├── auditor_engine.py
+│   │   ├── communications_engine.py
+│   │   ├── complaints_engine.py
+│   │   ├── compliance_engine.py
+│   │   ├── disputes_engine.py
+│   │   ├── documents_engine.py
+│   │   ├── finance_engine.py
+│   │   ├── governance_engine.py
+│   │   ├── insights_engine.py
+│   │   ├── members_engine.py
+│   │   ├── operations_engine.py
+│   │   └── properties_engine.py
+│   ├── exceptions.py
+│   ├── models
+│   │   ├── events.py
+│   │   ├── identity.py
+│   │   ├── permissions.py
+│   │   ├── product_context.py
+│   │   ├── product_state.py
+│   │   └── workflow.py
+│   ├── services
+│   │   ├── domains
+│   │   │   ├── administration_service.py
+│   │   │   ├── auditor_service.py
+│   │   │   ├── communications_service.py
+│   │   │   ├── complaints_service.py
+│   │   │   ├── compliance_service.py
+│   │   │   ├── disputes_service.py
+│   │   │   ├── documents_service.py
+│   │   │   ├── finance_service.py
+│   │   │   ├── governance_service.py
+│   │   │   ├── insights_service.py
+│   │   │   ├── members_service.py
+│   │   │   ├── operations_service.py
+│   │   │   └── properties_service.py
+│   │   ├── orchestration
+│   │   │   ├── compliance_orchestrator.py
+│   │   │   ├── event_orchestrator.py
+│   │   │   ├── governance_orchestrator.py
+│   │   │   ├── policy_orchestrator.py
+│   │   │   ├── process_orchestrator.py
+│   │   │   └── state_orchestrator.py
+│   │   ├── state
+│   │   │   ├── context_state.py
+│   │   │   ├── lifecycle_state.py
+│   │   │   ├── product_state.py
+│   │   │   └── workflow_state.py
+│   │   └── workflows
+│   │       ├── asset_lifecycle.py
+│   │       ├── audit_workflow.py
+│   │       ├── complaint_lifecycle.py
+│   │       ├── compliance_workflow.py
+│   │       ├── dispute_lifecycle.py
+│   │       ├── election_workflow.py
+│   │       ├── emergency_response.py
+│   │       ├── financial_lifecycle.py
+│   │       ├── governance_decision_workflow.py
+│   │       ├── member_lifecycle.py
+│   │       ├── onboarding_workflow.py
+│   │       └── society_setup_workflow.py
+│   └── workflow_engine
+│       ├── audit_binding.py
+│       ├── compensation.py
+│       ├── conditions.py
+│       ├── engine.py
+│       ├── escalation.py
+│       ├── execution_dispatcher.py
+│       ├── overrides.py
+│       ├── process_graph.py
+│       ├── rollback.py
+│       ├── state_machine.py
+│       ├── timeout.py
+│       └── transitions.py
+├── societyos.egg-info
+│   ├── dependency_links.txt
+│   ├── entry_points.txt
+│   ├── PKG-INFO
+│   ├── SOURCES.txt
+│   └── top_level.txt
+├── SPRINT.md
+├── statutory
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── api.py
+│   ├── apps.py
+│   ├── cockpit.py
+│   ├── control_room_engine.py
+│   ├── health_engine.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   ├── 0001_initial.py
+│   │   ├── 0002_alter_bylawchapter_unique_together_and_more.py
+│   │   ├── 0003_registrarsubmission.py
+│   │   └── 0004_societyregistrationapproval.py
+│   ├── models.py
+│   ├── onboarding
+│   │   ├── __init__.py
+│   │   └── engine.py
+│   ├── preregistration
+│   │   ├── __init__.py
+│   │   ├── actions.py
+│   │   ├── completion.py
+│   │   ├── documents.py
+│   │   ├── pack_builder.py
+│   │   ├── registrar_pack.py
+│   │   ├── snapshot.py
+│   │   └── status.py
+│   ├── services.py
+│   ├── Templates
+│   │   └── Documents
+│   │       ├── bylaws
+│   │       │   ├── draft_workspace.html
+│   │       │   └── viewer.html
+│   │       └── share_certificate.html
+│   ├── tests.py
+│   ├── urls.py
+│   └── views.py
+├── test_env.py
+├── test_lifecycle_governance_smoke.py
+├── tests
+│   ├── __init__.py
+│   ├── .gitkeep
+│   ├── intelligence
+│   │   ├── test_influence.py
+│   │   ├── test_intelligence_smoke.py
+│   │   └── test_memory_persistence.py
+│   ├── product
+│   │   ├── __init__.py
+│   │   └── product_smoke_test.py
+│   ├── statutory
+│   │   ├── __init__.py
+│   │   ├── test_bylaw_draft_rendering.py
+│   │   ├── test_form_a_rendering.py
+│   │   ├── test_onboarding_engine_smoke.py
+│   │   └── test_provisional_committee_resolution.py
+│   ├── test_bylaws_seed.py
+│   └── workflow
+│       ├── __init__.py
+│       └── test_workflow_engine_smoke.py
+├── tooling
+│   └── .gitkeep
+├── tree.txt
+└── ui
+    └── prereg-ui
+        ├── .env
+        ├── .gitignore
+        ├── eslint.config.js
+        ├── index.html
+        ├── package-lock.json
+        ├── package.json
+        ├── public
+        │   └── vite.svg
+        ├── README.md
+        ├── src
+        │   ├── api
+        │   │   ├── preregistration.ts
+        │   │   └── societies.ts
+        │   ├── App.css
+        │   ├── App.tsx
+        │   ├── assets
+        │   │   └── react.svg
+        │   ├── components
+        │   │   ├── BlockersPanel.tsx
+        │   │   ├── ChecklistTable.tsx
+        │   │   ├── SocietySelector.tsx
+        │   │   └── StatusBanner.tsx
+        │   ├── context
+        │   │   └── SocietyContext.tsx
+        │   ├── index.css
+        │   ├── main.tsx
+        │   ├── pages
+        │   │   ├── BylawDecisionWorkspace.tsx
+        │   │   └── PreRegistrationReadinessPage.tsx
+        │   └── types
+        │       └── preregistration.ts
+        ├── tsconfig.app.json
+        ├── tsconfig.json
+        ├── tsconfig.node.json
+        └── vite.config.ts
+
+136 directories, 541 files

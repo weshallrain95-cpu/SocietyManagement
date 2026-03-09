@@ -5,7 +5,6 @@ from decimal import Decimal
 from society.models import SocietyRule, LedgerEntry
 from society.constants import TransactionType
 
-
 CATEGORY_PRIORITY = {
     # Core monthly operations
     "SERVICE_CHARGE": 1,
@@ -126,78 +125,90 @@ def transfer_parking_on_flat_transfer(*, flat):
             allocated_on=timezone.now().date(),
             is_active=True,
         )
+
 from decimal import Decimal
-from django.db import transaction
 from datetime import date
-from society.models import MaintenanceBill
+from django.db import transaction
+
+from society.models import MaintenanceBill, FlatMaintenanceBill, Flat
+from society.constants import TransactionType
+from society.services import record_transaction
+
+
+@transaction.atomic
 def generate_monthly_maintenance_bill(*, society, billing_month):
-    from society.models import MaintenanceBill  # 👈 ADD THIS LINE
+    """
+    Generates maintenance bills for all flats.
 
-    bill, created = MaintenanceBill.objects.get_or_create(
+    Creates:
+    - MaintenanceBill (batch)
+    - FlatMaintenanceBill (per flat)
+    - Ledger entries via record_transaction()
+
+    Immutable billing snapshot.
+    """
+
+    # 🚨 Prevent duplicate billing
+    if MaintenanceBill.objects.filter(
         society=society,
-        billing_month=billing_month,
-        defaults={"total_amount": Decimal("0.00")},
-    )
-
-    return bill
-    # later: add line items here
-
-    return bill
-    # Continue building bill items here (if any)
-
-    return bill
-    """
-    Generates immutable maintenance bills.
-    No penalties. No enforcement.
-    """
-
-    from society.models import (
-        MaintenanceBill,
-        FlatMaintenanceBill,
-        LedgerEntry,
-        Flat,
-    )
-
-    with transaction.atomic():
-        bill = MaintenanceBill.objects.create(
-            society=society,
-            billing_month=billing_month,
-            total_amount=Decimal("0.00"),
+        billing_month=billing_month
+    ).exists():
+        raise ValueError(
+            f"Maintenance bill already generated for {billing_month}"
         )
 
-        total_society_amount = Decimal("0.00")
+    # Create batch bill
+    bill = MaintenanceBill.objects.create(
+        society=society,
+        billing_month=billing_month,
+        generated_on=date.today(),
+        total_amount=Decimal("0.00"),
+    )
 
-        for flat in Flat.objects.filter(society=society):
-            base = Decimal("2000.00")  # placeholder
-            noc = Decimal("0.00")
+    total_society_amount = Decimal("0.00")
 
-            if flat.occupancy.occupancy_type == "RENTED":
-                noc = base * Decimal("0.10")  # cap respected
+    flats = Flat.objects.filter(society=society)
 
-            total = base + noc
+    for flat in flats:
 
-            flat_bill = FlatMaintenanceBill.objects.create(
-                bill=bill,
-                flat=flat,
-                base_amount=base,
-                non_occupancy_charge=noc,
-                total_payable=total,
-            )
+        base = Decimal("2000.00")
+        noc = Decimal("0.00")
 
-            LedgerEntry.objects.create(
-                flat=flat,
-                bill=flat_bill,
-                entry_type="DEBIT",
-                amount=total,
-                description=f"Maintenance bill for {billing_month}",
-            )
+        # Optional Non-Occupancy Charge
+        occupancy = getattr(flat, "occupancy", None)
+        if occupancy and occupancy.occupancy_type == "RENTED":
+            noc = (base * Decimal("0.10")).quantize(Decimal("0.01"))
 
-            total_society_amount += total
+        total = base + noc
 
-        bill.total_amount = total_society_amount
-        bill.save(update_fields=["total_amount"])
+        # Create per-flat bill
+        FlatMaintenanceBill.objects.create(
+            bill=bill,
+            flat=flat,
+            base_amount=base,
+            non_occupancy_charge=noc,
+            total_payable=total,
+        )
+
+        # Post accounting transaction
+        record_transaction(
+            society=society,
+            transaction_type=TransactionType.MAINTENANCE_BILL,
+            amount=total,
+            description=f"Maintenance bill {billing_month} - Flat {flat.flat_number}",
+            source_type="MAINTENANCE_BILL",
+            source_ref=f"{billing_month}-{flat.id}",
+        )
+
+        total_society_amount += total
+
+    # Update batch total
+    bill.total_amount = total_society_amount
+    bill.save(update_fields=["total_amount"])
 
     return bill
+
+
 from society.models import Payment, LedgerEntry
 from decimal import Decimal
 from django.utils import timezone
@@ -641,9 +652,6 @@ def get_flat_statement_report(
     }
 
 from decimal import Decimal
-from society.models import NoticeLog
-from society.services import get_flat_balance
-
 
 from society.models import NoticeLog
 from decimal import Decimal
@@ -844,7 +852,6 @@ def get_society_income_expenditure(
         "surplus": income - expense,
     }
 from society.models import Flat
-from society.services import get_flat_balance
 
 
 def get_flat_balances_for_society(society):
@@ -1112,8 +1119,6 @@ from django.db import transaction
 
 from society.models import LedgerEntry, ChartOfAccount
 from society.constants import TransactionType
-from society.services import post_double_entry
-from society.services import resolve_transaction_rule
 
 
 @transaction.atomic
@@ -1135,7 +1140,6 @@ def record_transaction(
     """
 
     from django.utils import timezone
-    from society.services import post_double_entry
 
     if entry_date is None:
         entry_date = timezone.now().date()
