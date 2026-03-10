@@ -1114,6 +1114,8 @@ class ChartOfAccount(models.Model):
     def __str__(self):
         return f"{self.code} - {self.name}"
 
+
+
 from django.db import models
 from decimal import Decimal
 from django.utils import timezone

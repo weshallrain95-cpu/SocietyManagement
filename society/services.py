@@ -132,7 +132,6 @@ from django.db import transaction
 
 from society.models import MaintenanceBill, FlatMaintenanceBill, Flat
 from society.constants import TransactionType
-from society.services import record_transaction
 
 
 @transaction.atomic
@@ -191,11 +190,14 @@ def generate_monthly_maintenance_bill(*, society, billing_month):
         )
 
         # Post accounting transaction
+        # Post accounting transaction
         record_transaction(
             society=society,
+            flat=flat,
             transaction_type=TransactionType.MAINTENANCE_BILL,
             amount=total,
             description=f"Maintenance bill {billing_month} - Flat {flat.flat_number}",
+            entry_date=date.today(),   # ← ADD THIS
             source_type="MAINTENANCE_BILL",
             source_ref=f"{billing_month}-{flat.id}",
         )
@@ -246,6 +248,7 @@ def record_payment(
     )
 
     return payment
+
 def get_flat_outstanding_balance(flat):
     """
     Returns net outstanding = total debits - total credits
@@ -272,20 +275,28 @@ from society.models import LedgerEntry
 
 def get_flat_balance(flat) -> Decimal:
     """
-    Returns net outstanding:
-    +ve  => amount payable by flat
-    -ve  => advance balance
+    Returns net outstanding balance for a flat.
+
+    +ve  → amount payable by flat
+    -ve  → advance balance
     """
 
-    totals = LedgerEntry.objects.filter(flat=flat).aggregate(
-        total_debit=Sum("debit_amount"),
-        total_credit=Sum("credit_amount"),
+    debits = (
+        LedgerEntry.objects
+        .filter(flat=flat, debit_account__code="PAYABLE")
+        .aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
     )
 
-    debit = totals["total_debit"] or Decimal("0.00")
-    credit = totals["total_credit"] or Decimal("0.00")
+    credits = (
+        LedgerEntry.objects
+        .filter(flat=flat, credit_account__code="PAYABLE")
+        .aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
 
-    return debit - credit
+    return debits - credits
+
 from django.db import transaction
 from decimal import Decimal
 from society.models import LedgerEntry
@@ -1014,6 +1025,7 @@ def seed_default_coa_for_society(*, society):
         "created": created,
         "skipped": skipped,
     }
+
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
@@ -1025,6 +1037,7 @@ from society.models import LedgerEntry, ChartOfAccount
 def post_double_entry(
     *,
     society,
+    flat=None,
     debit_account_code,
     credit_account_code,
     amount,
@@ -1046,6 +1059,7 @@ def post_double_entry(
 
     return LedgerEntry.objects.create(
         society=society,
+        flat=flat,
         debit_account=debit_account,
         credit_account=credit_account,
         amount=amount,
@@ -1098,22 +1112,30 @@ def resolve_transaction_rule(*, society, transaction_type):
 from society.constants import TransactionType
 from society.models import TransactionRule
 
-
 DEFAULT_TRANSACTION_RULES = {
-    TransactionType.MAINTENANCE_RECEIPT: ("BANK", "MAINT"),
-    TransactionType.MAINTENANCE_BILL: ("MAINT", "PAYABLE"),
 
+    # Billing
+    TransactionType.MAINTENANCE_BILL: ("PAYABLE", "MAINT"),
+
+    # Member payment
+    TransactionType.MAINTENANCE_RECEIPT: ("BANK", "PAYABLE"),
+
+    # Expenses
     TransactionType.ELECTRICITY_BILL_PAYMENT: ("ELEC", "BANK"),
     TransactionType.SALARY_PAYMENT: ("SAL", "BANK"),
 
+    # Cash movement
     TransactionType.BANK_DEPOSIT: ("BANK", "CASH"),
     TransactionType.BANK_WITHDRAWAL: ("CASH", "BANK"),
 
+    # Investments
     TransactionType.FD_CREATION: ("FD", "BANK"),
     TransactionType.FD_INTEREST_RECEIVED: ("BANK", "INTEREST_INC"),
 
-    TransactionType.PENALTY_CHARGED: ("PENALTY", "MAINT"),
+    # Penalty
+    TransactionType.PENALTY_CHARGED: ("PAYABLE", "PENALTY"),
 }
+
 from decimal import Decimal
 from django.db import transaction
 
@@ -1125,6 +1147,7 @@ from society.constants import TransactionType
 def record_transaction(
     *,
     society,
+    flat=None,
     transaction_type,
     amount,
     description,
@@ -1148,13 +1171,37 @@ def record_transaction(
         society=society,
         transaction_type=transaction_type,
     )
+    
+        # SAFEGUARD: Ensure rule accounts exist in Chart of Accounts
+    from society.models import ChartOfAccount
+
+    if not ChartOfAccount.objects.filter(
+        society=society,
+        code=rule.debit_account_code
+    ).exists():
+        raise ValueError(
+            f"Invalid debit account '{rule.debit_account_code}' "
+            f"for transaction rule {transaction_type}"
+        )
+
+    if not ChartOfAccount.objects.filter(
+        society=society,
+        code=rule.credit_account_code
+    ).exists():
+        raise ValueError(
+            f"Invalid credit account '{rule.credit_account_code}' "
+            f"for transaction rule {transaction_type}"
+        )
+
+    # Ensure accounting period is open
     assert_open_accounting_period(
-    society=society,
-    entry_date=entry_date,
+        society=society,
+        entry_date=entry_date,
     )
 
-    return post_double_entry(
+    entry = post_double_entry(
         society=society,
+        flat=flat,
         debit_account_code=rule.debit_account_code,
         credit_account_code=rule.credit_account_code,
         amount=amount,
@@ -1164,6 +1211,12 @@ def record_transaction(
         source_ref=source_ref,
         created_by=created_by,
     )
+
+    # Ledger integrity check
+    from society.finance.ledger_integrity import verify_ledger_integrity
+    verify_ledger_integrity(society)
+
+    return entry
 
 
 from django.utils import timezone
