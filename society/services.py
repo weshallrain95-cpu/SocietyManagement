@@ -5,6 +5,14 @@ from decimal import Decimal
 from society.models import SocietyRule, LedgerEntry
 from society.constants import TransactionType
 
+from society.models import (
+    Flat,
+    MaintenanceBill,
+    FlatMaintenanceBill,
+    FlatMaintenanceBillLine,
+    MemberReceivable,
+)
+
 CATEGORY_PRIORITY = {
     # Core monthly operations
     "SERVICE_CHARGE": 1,
@@ -164,52 +172,103 @@ def generate_monthly_maintenance_bill(*, society, billing_month):
         total_amount=Decimal("0.00"),
     )
 
+from decimal import Decimal
+from datetime import date
+
+from society.models import MaintenanceBill, FlatMaintenanceBill, Flat
+from society.finance.maintenance.maintenance_engine import calculate_flat_maintenance
+
+def generate_monthly_maintenance_bill(society, billing_month):
+
+    # Prevent duplicate billing
+    if MaintenanceBill.objects.filter(
+        society=society,
+        billing_month=billing_month
+    ).exists():
+        raise ValueError(
+            f"Maintenance bill already generated for {billing_month}"
+        )
+
+    # Create batch bill
+    bill = MaintenanceBill.objects.create(
+        society=society,
+        billing_month=billing_month,
+        generated_on=date.today(),
+        total_amount=Decimal("0.00"),
+    )
+
     total_society_amount = Decimal("0.00")
 
     flats = Flat.objects.filter(society=society)
 
     for flat in flats:
 
-        base = Decimal("2000.00")
-        noc = Decimal("0.00")
+        # Calculate maintenance using rule engine
+        rows, base_amount = calculate_flat_maintenance(flat)
 
-        # Optional Non-Occupancy Charge
+        # Default non-occupancy charge
+        non_occ = Decimal("0.00")
+
         occupancy = getattr(flat, "occupancy", None)
+
         if occupancy and occupancy.occupancy_type == "RENTED":
-            noc = (base * Decimal("0.10")).quantize(Decimal("0.01"))
+            non_occ = (base_amount * Decimal("0.10")).quantize(Decimal("0.01"))
 
-        total = base + noc
+        total = base_amount + non_occ
 
-        # Create per-flat bill
-        FlatMaintenanceBill.objects.create(
+        # Create flat bill
+        flat_bill = FlatMaintenanceBill.objects.create(
             bill=bill,
             flat=flat,
-            base_amount=base,
-            non_occupancy_charge=noc,
+            base_amount=base_amount,
+            non_occupancy_charge=non_occ,
             total_payable=total,
         )
 
-        # Post accounting transaction
-        # Post accounting transaction
-        record_transaction(
+        from society.services import record_charge
+        record_charge(
+            flat=flat,
+            amount=total,
+            category="MAINTENANCE",
+            description=f"Maintenance bill {billing_month}",
+        )
+
+        # 🔵 CREATE RECEIVABLE HERE
+        MemberReceivable.objects.create(
             society=society,
             flat=flat,
-            transaction_type=TransactionType.MAINTENANCE_BILL,
+            bill=flat_bill,
             amount=total,
-            description=f"Maintenance bill {billing_month} - Flat {flat.flat_number}",
-            entry_date=date.today(),   # ← ADD THIS
-            source_type="MAINTENANCE_BILL",
-            source_ref=f"{billing_month}-{flat.id}",
+            outstanding_amount=total,
         )
+
+        NotificationEvent.objects.create(
+            society=society,
+            flat=flat,
+            event_type="MAINTENANCE_BILL",
+            reference_id=str(flat_bill.id),
+            payload={
+                "flat": str(flat),
+                "amount": str(total),
+                "billing_month": str(billing_month),
+            },
+        )
+
+        # Create bill line items
+        for r in rows:
+            FlatMaintenanceBillLine.objects.create(
+                bill=flat_bill,
+                charge_code=r["charge_code"],
+                charge_name=r["charge_name"],
+                amount=r["amount"],
+            )
 
         total_society_amount += total
 
-    # Update batch total
     bill.total_amount = total_society_amount
     bill.save(update_fields=["total_amount"])
 
     return bill
-
 
 from society.models import Payment, LedgerEntry
 from decimal import Decimal
@@ -248,6 +307,17 @@ def record_payment(
     )
 
     return payment
+
+    NotificationEvent.objects.create(
+        society=receivable.society,
+        flat=receivable.flat,
+        event_type="PAYMENT_RECEIPT",
+        reference_id=str(receipt.id),
+        payload={
+            "amount": str(amount),
+            "receipt_number": receipt.receipt_number,
+        },
+    )
 
 def get_flat_outstanding_balance(flat):
     """
@@ -369,19 +439,25 @@ from django.utils import timezone
 from society.models import LedgerEntry
 
 
+from society.models import ChartOfAccount, LedgerEntry
+
 def record_charge(*, flat, amount: Decimal, category: str, description: str):
     """
-    Records a DEBIT entry (maintenance, parking, NOC, etc.)
+    Records a DEBIT entry for a flat using double-entry accounting.
     """
+
+    receivable_account = ChartOfAccount.objects.get(code="MEMBER_RECEIVABLE")
+    income_account = ChartOfAccount.objects.get(code="MAINTENANCE_INCOME")
+
     return LedgerEntry.objects.create(
         society=flat.society,
         flat=flat,
-        entry_type="DEBIT",
-        category=category,
-        debit_amount=amount,
-        credit_amount=Decimal("0.00"),
+        debit_account=receivable_account,
+        credit_account=income_account,
+        amount=amount,
         description=description,
         entry_date=timezone.now().date(),
+        source_type="MAINTENANCE_BILL",
     )
 
 def get_outstanding_breakup(flat):
@@ -882,9 +958,92 @@ def get_flat_balances_for_society(society):
         })
 
     return report
+
+
+from society.models import VendorPayable
+def create_vendor_payable(vendor_bill):
+
+    return VendorPayable.objects.create(
+        society=vendor_bill.society,
+        vendor_bill=vendor_bill,
+        amount=vendor_bill.amount,
+        outstanding_amount=vendor_bill.amount,
+    )
+
+
+from decimal import Decimal
+from django.utils import timezone
+
+from society.models import VendorPayment, LedgerEntry
+from society.models import ChartOfAccount
+
+def record_vendor_payment(
+    *,
+    payable,
+    amount,
+    payment_method,
+    reference_number=None,
+):
+
+    if amount <= 0:
+        raise ValueError("Payment amount must be positive")
+
+    if payable.status == "PAID":
+        raise ValueError("This payable is already fully paid")
+
+    if amount > payable.outstanding_amount:
+        raise ValueError("Payment exceeds outstanding payable")
+
+    # Create payment record
+    payment = VendorPayment.objects.create(
+        society=payable.society,
+        vendor_payable=payable,
+        amount=amount,
+        payment_method=payment_method,
+        reference_number=reference_number,
+        payment_date=timezone.now(),
+    )
+
+    # Update outstanding amount
+    payable.outstanding_amount -= Decimal(amount)
+
+    if payable.outstanding_amount == Decimal("0.00"):
+        payable.status = "PAID"
+    else:
+        payable.status = "PARTIALLY_PAID"
+
+    payable.save()
+
+    from society.models import LedgerEntry, ChartOfAccount
+
+    bank_account = ChartOfAccount.objects.get(code="BANK")
+    vendor_payable_account = ChartOfAccount.objects.get(code="VENDOR_PAYABLE")
+    
+    LedgerEntry.objects.create(
+        society=payable.society,
+        debit_account=vendor_payable_account,
+        credit_account=bank_account,
+        amount=amount,
+        description=f"Vendor payment - {payable.vendor.name}",
+        source_type="VENDOR_PAYMENT",
+        source_ref=str(payment.id),
+    )
+
+    # Ledger posting
+    LedgerEntry.objects.create(
+        society=payable.society,
+        flat=None,
+        debit_account_id=PAYABLE_ACCOUNT_ID,
+        credit_account_id=BANK_ACCOUNT_ID,
+        amount=Decimal(amount),
+        description=f"Vendor payment: {payable.vendor_bill.vendor.name}",
+        entry_date=timezone.now().date(),
+    )
+    return payment
+
+
 from datetime import date
 from calendar import monthrange
-
 
 def get_monthly_society_snapshot(*, society, year, month):
     start = date(year, month, 1)
@@ -1396,7 +1555,32 @@ def generate_flat_number(
 
     raise ValueError(f"Unsupported flat numbering style: {style}")
 
+def generate_structure_dispatcher(*, society, mode, **kwargs):
 
+    if mode == "STANDARD":
+        return generate_society_structure(
+            society=society,
+            total_wings=kwargs["total_wings"],
+            floors_per_wing=kwargs["floors_per_wing"],
+            floor_layout=kwargs["floor_layout"],
+            flat_numbering_style=kwargs.get("style", "A-101"),
+        )
+
+    elif mode == "GROUP":
+        from society.services_group_engine import generate_grouped_structure
+
+        return generate_grouped_structure(
+            society=society,
+            total_wings=kwargs["total_wings"],
+            floors_per_wing=kwargs["floors_per_wing"],
+            groups=kwargs["groups"],
+            flat_numbering_style=kwargs.get("style", "A-101"),
+        )
+
+    else:
+        raise ValueError("Invalid structure mode")
+
+        
 @transaction.atomic
 def generate_society_structure(
     *,

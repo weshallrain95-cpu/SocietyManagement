@@ -1,14 +1,21 @@
 from datetime import date
+from decimal import Decimal
+
 from django.db import transaction
 
 from society.models import (
-    AccountGroup,
     ChartOfAccount,
+    AccountGroup,
     AccountingPeriod,
 )
 
+from society.services import post_double_entry
+from society.finance.ledger_integrity import verify_ledger_integrity
+from society.finance.trial_balance import generate_trial_balance
+
+
 # -------------------------------------------------------------------
-# 1. ACCOUNT GROUP SEEDING
+# 1. ACCOUNT GROUPS
 # -------------------------------------------------------------------
 
 ACCOUNT_GROUPS = [
@@ -17,11 +24,12 @@ ACCOUNT_GROUPS = [
     {"code": "LIABILITY", "name": "Liabilities", "category": "LIABILITY"},
     {"code": "INCOME", "name": "Income", "category": "INCOME"},
     {"code": "EXPENSE", "name": "Expenses", "category": "EXPENSE"},
-    {"code": "FUND", "name": "Society Funds", "category": "LIABILITY"},
+
     {"code": "RECEIVABLE", "name": "Receivables", "category": "ASSET"},
     {"code": "PAYABLE", "name": "Payables", "category": "LIABILITY"},
-    {"code": "SYSTEM", "name": "System Accounts", "category": "LIABILITY"},
+    {"code": "FUND", "name": "Society Funds", "category": "LIABILITY"},
 
+    {"code": "SYSTEM", "name": "System Accounts", "category": "LIABILITY"},
 ]
 
 
@@ -39,55 +47,80 @@ def seed_account_groups():
 
 
 # -------------------------------------------------------------------
-# 2. MASTER CHART OF ACCOUNTS
-# (Derived from the reference society financial statement)
+# 2. MASTER CHART OF ACCOUNTS (PHASE-1)
 # -------------------------------------------------------------------
 
 MASTER_COA = [
 
-    # ---- ASSETS ----
+    # ---------- ASSETS ----------
 
-    {"code": "BANK", "name": "Bank Account", "group": "ASSET"},
-    {"code": "CASH", "name": "Cash In Hand", "group": "ASSET"},
-    {"code": "FIXED_DEPOSIT", "name": "Fixed Deposits", "group": "ASSET"},
+    {"code": "1000", "name": "Bank Account", "group": "ASSET"},
+    {"code": "1010", "name": "Cash", "group": "ASSET"},
+    {"code": "1020", "name": "Fixed Deposits", "group": "ASSET"},
 
-    # ---- RECEIVABLES ----
+    {"code": "1100", "name": "Maintenance Receivable", "group": "RECEIVABLE"},
+    {"code": "1110", "name": "Interest Receivable", "group": "RECEIVABLE"},
+    {"code": "1120", "name": "Other Receivable", "group": "RECEIVABLE"},
 
-    {"code": "MAINT_RECEIVABLE", "name": "Maintenance Receivable", "group": "RECEIVABLE"},
-    {"code": "INTEREST_RECEIVABLE", "name": "Interest Receivable", "group": "RECEIVABLE"},
+    {"code": "1200", "name": "Member Advances", "group": "ASSET"},
 
-    # ---- FUNDS ----
+    {"code": "1300", "name": "Building Asset", "group": "ASSET"},
+    {"code": "1310", "name": "Lift Asset", "group": "ASSET"},
+    {"code": "1320", "name": "Electrical Asset", "group": "ASSET"},
+    {"code": "1330", "name": "CCTV Asset", "group": "ASSET"},
+    {"code": "1340", "name": "Computer Asset", "group": "ASSET"},
+    {"code": "1350", "name": "Fire System Asset", "group": "ASSET"},
 
-    {"code": "SINKING_FUND", "name": "Sinking Fund", "group": "FUND"},
-    {"code": "REPAIR_FUND", "name": "Repair Fund", "group": "FUND"},
-    {"code": "BUILDING_FUND", "name": "Building Fund", "group": "FUND"},
-    {"code": "SECURITY_DEPOSIT", "name": "Security Deposits", "group": "LIABILITY"},
-    {"code": "SHARE_CAPITAL", "name": "Share Capital", "group": "LIABILITY"},
+    # ---------- LIABILITIES ----------
 
-    # ---- INCOME ----
+    {"code": "2000", "name": "Maintenance Payable", "group": "PAYABLE"},
 
-    {"code": "MAINT_INCOME", "name": "Maintenance Charges", "group": "INCOME"},
-    {"code": "INTEREST_INCOME", "name": "Interest Income", "group": "INCOME"},
-    {"code": "PARKING_INCOME", "name": "Parking Charges", "group": "INCOME"},
-    {"code": "TRANSFER_FEES", "name": "Transfer Fees", "group": "INCOME"},
+    {"code": "2100", "name": "Share Capital", "group": "FUND"},
+    {"code": "2110", "name": "Building Fund", "group": "FUND"},
+    {"code": "2120", "name": "Sinking Fund", "group": "FUND"},
+    {"code": "2130", "name": "Repair Fund", "group": "FUND"},
+    {"code": "2140", "name": "Education Fund", "group": "FUND"},
+    {"code": "2150", "name": "Election Fund", "group": "FUND"},
 
-    # ---- EXPENSES (from the PDF structure) ----
+    {"code": "2200", "name": "Member Security Deposits", "group": "LIABILITY"},
+    {"code": "2210", "name": "Vendor Payables", "group": "PAYABLE"},
+    {"code": "2220", "name": "Audit Fees Payable", "group": "PAYABLE"},
 
-    {"code": "ELECTRICITY_EXPENSE", "name": "Electricity Expenses", "group": "EXPENSE"},
-    {"code": "SECURITY_EXPENSE", "name": "Security Expenses", "group": "EXPENSE"},
-    {"code": "HOUSEKEEPING_EXPENSE", "name": "Housekeeping Expenses", "group": "EXPENSE"},
-    {"code": "GARDEN_EXPENSE", "name": "Garden Expenses", "group": "EXPENSE"},
-    {"code": "REPAIR_EXPENSE", "name": "Repair & Maintenance", "group": "EXPENSE"},
-    {"code": "AUDIT_FEES", "name": "Audit Fees", "group": "EXPENSE"},
-    {"code": "SALARY_EXPENSE", "name": "Salary & Staff Expenses", "group": "EXPENSE"},
-    {"code": "LEGAL_EXPENSE", "name": "Legal / Professional Fees", "group": "EXPENSE"},
-    {"code": "SOFTWARE_EXPENSE", "name": "Software Expenses", "group": "EXPENSE"},
-    {"code": "WEBSITE_EXPENSE", "name": "Website Expenses", "group": "EXPENSE"},
+    # ---------- INCOME ----------
 
-    # ---- SYSTEM ----
+    {"code": "3000", "name": "Maintenance Income", "group": "INCOME"},
+    {"code": "3010", "name": "Parking Income", "group": "INCOME"},
+    {"code": "3020", "name": "Interest Income", "group": "INCOME"},
+    {"code": "3030", "name": "Transfer Fees", "group": "INCOME"},
+    {"code": "3040", "name": "Late Fees", "group": "INCOME"},
+    {"code": "3050", "name": "Hall Booking Income", "group": "INCOME"},
+    {"code": "3060", "name": "Water Charges Recovery", "group": "INCOME"},
+    {"code": "3070", "name": "Electricity Charges Recovery", "group": "INCOME"},
+    {"code": "3080", "name": "Misc Income", "group": "INCOME"},
 
-    {"code": "OPENING_BALANCE_ADJUSTMENT", "name": "Opening Balance Adjustment", "group": "SYSTEM"},
-    {"code": "SUSPENSE_ACCOUNT", "name": "Suspense Account", "group": "SYSTEM"},
+    # ---------- EXPENSES ----------
+
+    {"code": "4000", "name": "Salary Expense", "group": "EXPENSE"},
+    {"code": "4010", "name": "Security Expense", "group": "EXPENSE"},
+    {"code": "4020", "name": "Electricity Expense", "group": "EXPENSE"},
+    {"code": "4030", "name": "Water Expense", "group": "EXPENSE"},
+    {"code": "4040", "name": "Repair Expense", "group": "EXPENSE"},
+    {"code": "4050", "name": "Lift Maintenance", "group": "EXPENSE"},
+    {"code": "4060", "name": "Garden Expense", "group": "EXPENSE"},
+    {"code": "4070", "name": "Insurance Expense", "group": "EXPENSE"},
+    {"code": "4080", "name": "Bank Charges", "group": "EXPENSE"},
+    {"code": "4090", "name": "Legal & Professional", "group": "EXPENSE"},
+    {"code": "4100", "name": "Software Expense", "group": "EXPENSE"},
+    {"code": "4110", "name": "Printing & Stationery", "group": "EXPENSE"},
+    {"code": "4120", "name": "Office Expense", "group": "EXPENSE"},
+    {"code": "4130", "name": "Telephone Expense", "group": "EXPENSE"},
+    {"code": "4140", "name": "Diesel Expense", "group": "EXPENSE"},
+    {"code": "4150", "name": "Postage & Courier", "group": "EXPENSE"},
+
+    # ---------- SYSTEM ----------
+
+    {"code": "9998", "name": "Opening Balance Adjustment", "group": "SYSTEM"},
+    {"code": "9999", "name": "Suspense Account", "group": "SYSTEM"},
 ]
 
 
@@ -103,6 +136,7 @@ def seed_chart_of_accounts(society):
             defaults={
                 "name": account["name"],
                 "group": group,
+                "is_system": True,
             },
         )
 
@@ -125,40 +159,14 @@ def create_financial_year(society, year_start):
 
 
 # -------------------------------------------------------------------
-# 4. MASTER INITIALIZATION ENTRY POINT
+# 4. OPENING BALANCES
 # -------------------------------------------------------------------
-
-@transaction.atomic
-def initialize_finance(society, financial_year):
-
-    """
-    Bootstraps full finance structure for a society.
-    """
-
-    seed_account_groups()
-
-    seed_chart_of_accounts(society)
-
-    create_financial_year(society, financial_year)
-
-    society.finance_initialized = True
-    society.save(update_fields=["finance_initialized"])
-
-
-from decimal import Decimal
-
-from society.services import post_double_entry
-
 
 def create_opening_balances(society, opening_data):
 
-    """
-    Converts opening balances into ledger entries.
-    """
-
     adjustment_account = ChartOfAccount.objects.get(
         society=society,
-        code="OPENING_BALANCE_ADJUSTMENT",
+        code="9998",
     )
 
     for account_code, amount in opening_data.items():
@@ -173,8 +181,7 @@ def create_opening_balances(society, opening_data):
             code=account_code,
         )
 
-        # Asset accounts → Debit
-        if amount > 0:
+        if account.group.category == "ASSET":
 
             post_double_entry(
                 society=society,
@@ -186,7 +193,6 @@ def create_opening_balances(society, opening_data):
                 source_ref="OPENING_BALANCE",
             )
 
-        # Liability accounts → Credit
         else:
 
             post_double_entry(
@@ -199,27 +205,22 @@ def create_opening_balances(society, opening_data):
                 source_ref="OPENING_BALANCE",
             )
 
-@transaction.atomic
-def initialize_finance(society, financial_year, opening_data=None):
 
-    seed_account_groups()
+# -------------------------------------------------------------------
+# 5. MASTER INITIALIZATION
+# -------------------------------------------------------------------
 
-    seed_chart_of_accounts(society)
-
-    create_financial_year(society, financial_year)
-
-    if opening_data:
-        create_opening_balances(society, opening_data)
-
-    society.finance_initialized = True
-    society.save(update_fields=["finance_initialized"])
+from society.finance.balance_sanity import validate_opening_balances
 
 @transaction.atomic
 def initialize_finance(
     society,
     financial_year,
-    opening_data=None
+    opening_data=None,
 ):
+
+    if society.finance_initialized:
+        raise Exception("Finance already initialized for this society")
 
     seed_account_groups()
 
@@ -228,36 +229,17 @@ def initialize_finance(
     create_financial_year(society, financial_year)
 
     if opening_data:
+        validate_opening_balances(society, opening_data)
         create_opening_balances(society, opening_data)
 
-    from society.finance.ledger_integrity import verify_ledger_integrity
-
     verify_ledger_integrity(society)
-
-    opening_tb = generate_opening_trial_balance(society)
-
-    society.finance_initialized = True
-    society.save(update_fields=["finance_initialized"])
-
-    return opening_tb
-
-
-from society.finance.trial_balance import generate_trial_balance
-
-def generate_opening_trial_balance(society):
-
-    """
-    Generates a trial balance immediately after initialization
-    to verify opening ledger correctness.
-    """
 
     tb = generate_trial_balance(society)
 
     if not tb["is_balanced"]:
+        raise Exception("Opening Trial Balance failed")
 
-        raise Exception(
-            "Opening Trial Balance failed. Ledger is not balanced."
-        )
+    society.finance_initialized = True
+    society.save(update_fields=["finance_initialized"])
 
     return tb
-

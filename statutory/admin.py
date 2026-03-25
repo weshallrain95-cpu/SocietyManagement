@@ -24,7 +24,7 @@ class LegalStageAdmin(admin.ModelAdmin):
 
 @admin.register(LegalObligation)
 class LegalObligationAdmin(admin.ModelAdmin):
-    list_display = ("title", "legal_stage", "mandatory")
+    list_display = ("id", "title", "is_mandatory", "sequence_order")
     list_filter = ("legal_stage",)
 
 

@@ -48,6 +48,8 @@ class Society(models.Model):
         default="MH",
         help_text="Legal jurisdiction state code (MH, KA, DL, etc.)"
     )
+    
+    district = models.CharField(max_length=120, null=True, blank=True)
 
     LEGAL_STATUS_CHOICES = [
         ("DRAFT", "Draft"),
@@ -384,6 +386,7 @@ class FlatOccupancy(models.Model):
 
     def __str__(self):
         return f"{self.flat} – {self.occupancy_type}"
+
 class MaintenanceAccount(models.Model):
     flat = models.OneToOneField(
         "Flat",
@@ -620,6 +623,7 @@ class Amenity(models.Model):
 
     def __str__(self):
         return f"{self.society.name} – {self.name}"
+
 class AmenityChargeRule(models.Model):
     CHARGE_TYPE_CHOICES = [
         ("FREE", "Free"),
@@ -665,6 +669,7 @@ def create_flat_defaults(sender, instance, created, **kwargs):
     if created:
         FlatOccupancy.objects.get_or_create(flat=instance)
         MaintenanceAccount.objects.get_or_create(flat=instance)
+
 class ChargeType(models.Model):
     """
     Defines types of charges a society can levy.
@@ -702,6 +707,7 @@ class ChargeType(models.Model):
 
     def __str__(self):
         return self.name
+
 class SocietyChargeRule(models.Model):
     society = models.ForeignKey(
         "society.Society",
@@ -732,6 +738,7 @@ class SocietyChargeRule(models.Model):
 
     def __str__(self):
         return f"{self.society} – {self.charge_type}"
+
 class MaintenanceBill(models.Model):
     society = models.ForeignKey(
         Society,
@@ -758,7 +765,9 @@ class MaintenanceBill(models.Model):
 
     def __str__(self):
         return f"{self.society.name} — {self.billing_month}"
+
 class FlatMaintenanceBill(models.Model):
+
     bill = models.ForeignKey(
         MaintenanceBill,
         on_delete=models.CASCADE,
@@ -770,18 +779,52 @@ class FlatMaintenanceBill(models.Model):
         on_delete=models.CASCADE,
     )
 
-    base_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    non_occupancy_charge = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0
+    base_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
     )
 
-    total_payable = models.DecimalField(max_digits=10, decimal_places=2)
+    non_occupancy_charge = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0
+    )
+
+    total_payable = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ("bill", "flat")
 
     def __str__(self):
         return f"{self.flat} — {self.total_payable}"
+
+class FlatMaintenanceBillLine(models.Model):
+
+    bill = models.ForeignKey(
+        "FlatMaintenanceBill",
+        on_delete=models.CASCADE,
+        related_name="lines"
+    )
+
+    charge_code = models.CharField(max_length=50)
+
+    charge_name = models.CharField(max_length=255)
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.charge_name} - {self.amount}"
+
 
 from decimal import Decimal
 from django.utils import timezone
@@ -975,6 +1018,7 @@ class RecoveryStage(models.TextChoices):
     REGISTRAR = "REGISTRAR", "Filed with Registrar"
     LEGAL = "LEGAL", "Legal Proceedings"
     CLOSED = "CLOSED", "Recovered / Closed"
+
 class FlatRecoveryStatus(models.Model):
     flat = models.OneToOneField(
         "Flat",
@@ -1000,6 +1044,7 @@ class FlatRecoveryStatus(models.Model):
 
     def __str__(self):
         return f"{self.flat} | {self.stage}"
+
 class RecoveryActionLog(models.Model):
     flat = models.ForeignKey(
         "Flat",
@@ -1024,23 +1069,72 @@ class RecoveryActionLog(models.Model):
 
     def __str__(self):
         return f"{self.flat} → {self.stage}"
+
+class AccountGroup(models.Model):
+
+    CATEGORY_CHOICES = [
+        ("ASSET", "Asset"),
+        ("LIABILITY", "Liability"),
+        ("INCOME", "Income"),
+        ("EXPENSE", "Expense"),
+    ]
+
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+    )
+
+    name = models.CharField(
+        max_length=255,
+    )
+
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+    )
+
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="children",
+    )
+
+    is_system = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
 # society/models.py
 
 from django.db import models
 
 class ChartOfAccount(models.Model):
+
     ACCOUNT_TYPE_CHOICES = [
         ("ASSET", "Asset"),
         ("LIABILITY", "Liability"),
         ("INCOME", "Income"),
         ("EXPENSE", "Expense"),
-        ("EQUITY", "Equity"),
+        ("RESERVE", "Reserve"),
     ]
 
     society = models.ForeignKey(
         "Society",
         on_delete=models.CASCADE,
         related_name="chart_of_accounts",
+    )
+
+    group = models.ForeignKey(
+        "AccountGroup",
+        on_delete=models.PROTECT,
+        related_name="accounts",
+        null=True,
+        blank=True,
     )
 
     code = models.CharField(
@@ -1050,12 +1144,23 @@ class ChartOfAccount(models.Model):
 
     name = models.CharField(
         max_length=255,
-        help_text="Account name (e.g. Maintenance Charges)",
+        help_text="Account name",
     )
 
     account_type = models.CharField(
         max_length=20,
         choices=ACCOUNT_TYPE_CHOICES,
+    )
+
+    opening_balance = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0,
+    )
+
+    is_system = models.BooleanField(
+        default=False,
+        help_text="System-generated account (cannot be deleted)",
     )
 
     is_active = models.BooleanField(default=True)
@@ -1070,50 +1175,9 @@ class ChartOfAccount(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.name}"
-        def can_be_deleted(self):
-            return not self.ledger_entries.exists()
 
-class ChartOfAccount(models.Model):
-    society = models.ForeignKey(
-        Society,
-        on_delete=models.CASCADE,
-        related_name="chart_of_accounts",
-    )
-
-    code = models.CharField(max_length=20)
-    name = models.CharField(max_length=255)
-    account_type = models.CharField(
-        max_length=20,
-        choices=[
-            ("ASSET", "Asset"),
-            ("LIABILITY", "Liability"),
-            ("INCOME", "Income"),
-            ("EXPENSE", "Expense"),
-            ("RESERVE", "Reserve"),
-        ],
-    )
-
-    opening_balance = models.DecimalField(
-        max_digits=14,
-        decimal_places=2,
-        default=0,
-    )
-
-    is_system = models.BooleanField(
-        default=False,
-        help_text="System-generated account (do not delete)",
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    objects = SocietyManager()
-
-    class Meta:
-        unique_together = ("society", "code")
-
-    def __str__(self):
-        return f"{self.code} - {self.name}"
-
+    def can_be_deleted(self):
+        return not self.ledger_entries.exists()
 
 
 from django.db import models
@@ -1281,6 +1345,7 @@ def clean(self):
 def save(self, *args, **kwargs):
     self.full_clean()
     super().save(*args, **kwargs)
+
 class AccountingPeriod(models.Model):
     society = models.ForeignKey(
         "society.Society",
@@ -1364,6 +1429,201 @@ class PendingTransaction(models.Model):
     class Meta:
         ordering = ["-created_at"]
 # society/models.py
+
+class Vendor(models.Model):
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="vendors"
+    )
+
+    name = models.CharField(max_length=255)
+
+    contact_person = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True
+    )
+
+    email = models.EmailField(
+        blank=True,
+        null=True
+    )
+
+    gst_number = models.CharField(
+        max_length=30,
+        blank=True,
+        null=True
+    )
+
+    bank_account_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True
+    )
+
+    bank_account_number = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True
+    )
+
+    bank_ifsc = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name}"
+
+class VendorBill(models.Model):
+
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("PARTIALLY_PAID", "Partially Paid"),
+        ("PAID", "Paid"),
+    ]
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="vendor_bills"
+    )
+
+    vendor = models.ForeignKey(
+        Vendor,
+        on_delete=models.CASCADE,
+        related_name="bills"
+    )
+
+    bill_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    bill_date = models.DateField()
+
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.vendor} - ₹{self.amount}"
+
+class VendorPayable(models.Model):
+
+    STATUS_CHOICES = [
+        ("OPEN", "Open"),
+        ("PARTIALLY_PAID", "Partially Paid"),
+        ("PAID", "Paid"),
+    ]
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="vendor_payables",
+    )
+
+    vendor_bill = models.OneToOneField(
+        "VendorBill",
+        on_delete=models.CASCADE,
+        related_name="payable",
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Total amount of the bill",
+    )
+
+    outstanding_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Remaining unpaid amount",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="OPEN",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.vendor_bill.vendor} ₹{self.outstanding_amount}"
+
+class VendorPayment(models.Model):
+
+    PAYMENT_METHOD_CHOICES = [
+        ("BANK_TRANSFER", "Bank Transfer"),
+        ("UPI", "UPI"),
+        ("CHEQUE", "Cheque"),
+        ("CASH", "Cash"),
+    ]
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="vendor_payments",
+    )
+
+    vendor_payable = models.ForeignKey(
+        "VendorPayable",
+        on_delete=models.CASCADE,
+        related_name="payments",
+    )
+
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2
+    )
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_METHOD_CHOICES
+    )
+
+    reference_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True
+    )
+
+    payment_date = models.DateTimeField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.vendor_payable.vendor_bill.vendor} ₹{self.amount}"
+           
 
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -1680,6 +1940,19 @@ class SoftOnboardingTracker(models.Model):
             "overall_soft_ready": structure_ready and finance_ready,
         }
 
+    def get_onboarding_stage(self) -> str:
+        if not self.is_structure_ready():
+            return "SOCIETY_SETUP"
+
+        if self.is_structure_ready() and not self.is_finance_ready():
+            return "STRUCTURE_DEFINED"
+
+        if self.is_finance_ready():
+            return "FINANCE_READY"
+
+        return "SOCIETY_SETUP"
+
+
     def __str__(self):
         return f"SoftOnboardingTracker - {self.society.name}"
 
@@ -1705,3 +1978,142 @@ def evaluate_structure_on_change(sender, instance, **kwargs):
         tracker.evaluate_and_initialize()
     except SoftOnboardingTracker.DoesNotExist:
         pass
+
+class MaintenanceCharge(models.Model):
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="maintenance_charges",
+    )
+
+    code = models.CharField(max_length=50)
+
+    name = models.CharField(max_length=255)
+
+    basis = models.CharField(
+        max_length=50,
+        choices=[
+            ("EQUAL", "Equal Per Flat"),
+            ("AREA", "Per Square Foot"),
+            ("PER_SLOT", "Per Parking Slot"),
+            ("PER_INLET", "Per Water Inlet"),
+            ("PERCENT_MAINT", "% of Maintenance"),
+        ],
+    )
+
+    rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    effective_from = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class MemberReceivable(models.Model):
+
+    society = models.ForeignKey("Society", on_delete=models.CASCADE)
+
+    flat = models.ForeignKey("Flat", on_delete=models.CASCADE)
+
+    bill = models.ForeignKey(
+        "FlatMaintenanceBill",
+        on_delete=models.CASCADE,
+        related_name="receivable"
+    )
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    outstanding_amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    due_date = models.DateField(null=True, blank=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ("OPEN", "Open"),
+            ("PARTIAL", "Partially Paid"),
+            ("PAID", "Paid"),
+        ],
+        default="OPEN"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class PaymentTransaction(models.Model):
+
+    society = models.ForeignKey("Society", on_delete=models.CASCADE)
+
+    flat = models.ForeignKey("Flat", on_delete=models.CASCADE)
+
+    receivable = models.ForeignKey(
+        "MemberReceivable",
+        on_delete=models.CASCADE,
+        related_name="payments"
+    )
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    payment_method = models.CharField(
+        max_length=20,
+        choices=[
+            ("UPI", "UPI"),
+            ("BANK", "Bank Transfer"),
+            ("CASH", "Cash"),
+            ("CHEQUE", "Cheque"),
+        ]
+    )
+
+    reference_number = models.CharField(max_length=100, blank=True)
+
+    payment_date = models.DateTimeField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class PaymentReceipt(models.Model):
+
+    society = models.ForeignKey("Society", on_delete=models.CASCADE)
+
+    payment = models.OneToOneField(
+        "PaymentTransaction",
+        on_delete=models.CASCADE,
+        related_name="receipt"
+    )
+
+    receipt_number = models.CharField(max_length=50)
+
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+class NotificationEvent(models.Model):
+
+    EVENT_TYPES = [
+        ("MAINTENANCE_BILL", "Maintenance Bill Generated"),
+        ("PAYMENT_RECEIPT", "Payment Receipt Generated"),
+        ("NOTICE", "Legal Notice"),
+    ]
+
+    society = models.ForeignKey("Society", on_delete=models.CASCADE)
+
+    flat = models.ForeignKey("Flat", on_delete=models.CASCADE)
+
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES)
+
+    reference_id = models.CharField(max_length=100)
+
+    payload = models.JSONField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(
+        max_length=20,
+        default="PENDING"
+    )

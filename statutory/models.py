@@ -29,11 +29,24 @@ class LegalStage(models.Model):
 
 
 class LegalObligation(models.Model):
-    legal_stage = models.ForeignKey(LegalStage, on_delete=models.CASCADE)
+
+    legal_stage = models.ForeignKey(
+        LegalStage,
+        on_delete=models.CASCADE,
+        related_name="obligations"
+    )
+
     title = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
-    mandatory = models.BooleanField(default=True)
-    reference_law = models.CharField(max_length=255, blank=True)
+
+    description = models.TextField()
+
+    reference_law = models.CharField(max_length=255)
+
+    purpose = models.TextField(blank=True, null=True)
+
+    is_mandatory = models.BooleanField(default=True)
+
+    sequence_order = models.IntegerField(default=0)
 
     def __str__(self):
         return self.title
@@ -94,6 +107,62 @@ class LegalArtifactTemplate(models.Model):
 
     def __str__(self):
         return f"{self.artifact_code} ({self.get_artifact_type_display()})"
+
+from django.db import models
+
+class SocietyConsent(models.Model):
+
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE
+    )
+
+    flat = models.ForeignKey(
+        "society.Flat",
+        on_delete=models.CASCADE
+    )
+
+    owner = models.ForeignKey(
+        "society.Person",
+        on_delete=models.CASCADE
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="PENDING"
+    )
+
+    consent_document = models.FileField(
+        upload_to="consent_letters/",
+        null=True,
+        blank=True
+    )
+
+    token = models.CharField(
+        max_length=64,
+        unique=True
+    )
+
+    requested_at = models.DateTimeField(auto_now_add=True)
+
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        unique_together = ("society", "flat")
+
+    def __str__(self):
+        return f"{self.society.name} – Flat {self.flat_id}"
+
 
 
 class SocietyLegalProgress(models.Model):

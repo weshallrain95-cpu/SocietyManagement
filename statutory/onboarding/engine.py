@@ -69,22 +69,29 @@ ARTIFACT_CONTEXT_CONTRACTS = {
     # Provisional Managing Committee Resolution (MH)
     # --------------------------------------------------
     "PROVISIONAL_COMMITTEE_RESOLUTION_MH": {
+
         "required": [
             "society_name",
             "meeting_date",
             "meeting_place",
             "resolution_number",
-            "chairman_name",
-            "secretary_name",
-            "committee_members",   # List[{name, role}]
-            "resolution_text",
-            "signatories",         # List[{name, role}]
+            "chief_promoter_name",
+            "committee_members",
+            "signatories",
         ],
-        "optional": [],
-        "rules": {},
+
+        "optional": [
+            "project_name",
+            "society_address",
+        ],
+
+        "rules": {
+            "committee_members": ">=3",
+        },
+
         "description": (
-            "Resolution appointing Provisional Managing Committee "
-            "prior to society registration (Maharashtra)"
+            "Resolution appointing provisional managing committee "
+            "for society registration."
         ),
     },
 
@@ -418,7 +425,7 @@ class StatutoryOnboardingEngine:
                 ObligationDTO(
                     id=obligation.id,
                     title=obligation.title,
-                    mandatory=obligation.mandatory,
+                    mandatory=obligation.is_mandatory,
                     status="PENDING",  # TODO: derive from SocietyObligationStatus
                     checklist=checklist_dtos,
                 )

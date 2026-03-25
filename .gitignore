@@ -20,4 +20,10 @@ db.sqlite3.bak*
 # Local test data
 owners.xlsx
 
-tree.txt
+tree.txt.DS_Store
+
+.DS_Store
+*.log
+*.xlsx
+data/
+media/

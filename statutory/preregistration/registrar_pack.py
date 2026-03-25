@@ -71,7 +71,7 @@ def generate_registrar_pack(society: Society) -> Dict:
             completed_obligations.append({
                 "obligation_id": obligation.id,
                 "title": obligation.title,
-                "mandatory": obligation.mandatory,
+                "mandatory": obligation.is_mandatory,
             })
 
         # attach uploaded files

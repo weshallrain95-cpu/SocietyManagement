@@ -1,29 +1,32 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-type Society = {
-  id: number;
-  name: string;
-};
+const SocietyContext = createContext<any>(null);
 
-type SocietyContextType = {
-  society: Society | null;
-  setSociety: (s: Society) => void;
-};
+export function SocietyProvider({ children }: any) {
+  const [society, setSociety] = useState<any>(null);
 
-const SocietyContext = createContext<SocietyContextType | undefined>(undefined);
+  // 🔁 Load from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem("society");
+    if (stored) {
+      setSociety(JSON.parse(stored));
+    }
+  }, []);
 
-export function SocietyProvider({ children }: { children: ReactNode }) {
-  const [society, setSociety] = useState<Society | null>(null);
+  // 💾 Save to localStorage
+  const updateSociety = (data: any) => {
+    setSociety(data);
+    localStorage.setItem("society", JSON.stringify(data));
+  };
 
   return (
-    <SocietyContext.Provider value={{ society, setSociety }}>
+    <SocietyContext.Provider value={{ society, updateSociety }}>
       {children}
     </SocietyContext.Provider>
   );
 }
 
+// HOOK
 export function useSociety() {
-  const ctx = useContext(SocietyContext);
-  if (!ctx) throw new Error("useSociety must be used within SocietyProvider");
-  return ctx;
+  return useContext(SocietyContext);
 }

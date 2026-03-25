@@ -168,3 +168,8 @@ class AuditEventAdmin(admin.ModelAdmin):
 from .models import Person
 
 admin.site.register(Person)
+
+from .models import Vendor, VendorBill
+
+admin.site.register(Vendor)
+admin.site.register(VendorBill)

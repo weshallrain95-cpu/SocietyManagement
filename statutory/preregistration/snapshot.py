@@ -110,7 +110,7 @@ def preregistration_readiness_snapshot(society: Society) -> Dict:
         # completion state
         is_completed = obligation.id not in incomplete_obligation_ids
 
-        if obligation.mandatory:
+        if obligation.is_mandatory:
             total_mandatory += 1
             if is_completed:
                 completed_mandatory += 1
@@ -144,7 +144,7 @@ def preregistration_readiness_snapshot(society: Society) -> Dict:
             "id": obligation.id,
             "code": f"OBL-{obligation.id}",
             "title": obligation.title,
-            "mandatory": obligation.mandatory,
+            "mandatory": obligation.is_mandatory,
             "status": "COMPLETED" if is_completed else "PENDING",
             "evidence_required": templates_exist,
             "document_uploaded": uploaded_doc is not None,
