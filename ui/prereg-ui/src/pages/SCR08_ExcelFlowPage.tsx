@@ -58,19 +58,38 @@ export default function ExcelFlowPage() {
         }
       );
 
-      const data = await res.json();
+      let data;
+
+      try {
+        data = await res.json();
+      } catch (err) {
+        console.error("JSON parse error:", err);
+        throw new Error("Server response error");
+      }
 
       if (!res.ok) {
-        throw new Error(data?.message || "Upload failed");
+        console.error("Upload failed response:", data);
+
+        // 🔥 HANDLE BOTH CASES
+        if (data?.errors && Array.isArray(data.errors)) {
+          throw new Error(data.errors.slice(0, 3).join("\n")); // show top 3 errors
+        }
+
+        if (data?.message) {
+          throw new Error(data.message);
+        }
+
+        throw new Error("Upload failed");
       }
 
       alert("Structure + ownership successfully created");
 
-      console.log("UPLOAD SUCCESS", data);
+      // 🔥 REDIRECT TO REFINEMENT STEP
+      window.location.href = "/ownership-refinement";
 
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Upload failed");
+      alert("Upload Failed:\n\n" + err.message)
     } finally {
       setLoading(false);
     }

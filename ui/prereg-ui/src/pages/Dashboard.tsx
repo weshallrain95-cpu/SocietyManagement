@@ -8,114 +8,113 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<any>(null);
 
-  // ✅ SAFETY REDIRECT
+  /* ================= FETCH STATUS ================= */
+
   useEffect(() => {
     if (!society) {
       navigate("/login");
       return;
     }
 
-    fetch(
-      `http://127.0.0.1:8000/api/society/onboarding-status/${society.id}/`
-    )
+    fetch(`/api/society/onboarding/status/?society_id=${society.id}`)
       .then((res) => res.json())
       .then((data) => setStatus(data))
       .catch(() => console.warn("Status fetch failed"));
   }, [society, navigate]);
 
+  const isComplete = status?.stage === "ONBOARDING_COMPLETE";
+
+  /* ================= UI ================= */
+
   return (
     <AppShell>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <div style={container}>
         
         {/* HEADER */}
-        <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 600 }}>
-            {society?.name || "Your Society"}
-          </h1>
+        <div style={header}>
+          <div>
+            <h1 style={title}>{society?.name || "Your Society"}</h1>
+            <p style={subtitle}>
+              Manage governance, operations and compliance seamlessly
+            </p>
+          </div>
 
-          <p style={{ color: "#6b7280" }}>
-            Manage your society operations, governance and compliance
-          </p>
+          <div style={badge}>
+            {isComplete ? "System Ready" : "Setup in Progress"}
+          </div>
         </div>
 
-        {/* 🚨 REGISTRATION STATUS BANNER */}
+        {/* ALERT */}
         {society?.legal_status === "NOT_REGISTERED" && (
-            <div
-                style={{
-                background: "#fff7ed",
-                border: "1px solid #fdba74",
-                padding: 15,
-                borderRadius: 10,
-                marginBottom: 25,
-                color: "#9a3412",
-                fontSize: 14,
-                fontWeight: 500,
-                }}
-            >
-                ⚠ Your Society is not yet registered — complete setup to unlock the registration process
-            </div>
-            )}
-
-        {/* ✅ ONBOARDING STATUS */}
-        <div
-          style={{
-            background: "white",
-            padding: 20,
-            borderRadius: 12,
-            border: "1px solid #e5e7eb",
-            marginBottom: 30,
-          }}
-        >
-          <div style={{ fontWeight: 600 }}>System Readiness</div>
-
-          <div style={{ marginTop: 10, fontSize: 14, color: "#6b7280" }}>
-            Structure: {status?.structure_ready ? "Ready" : "Pending"}
+          <div style={alert}>
+            ⚠ Your society is not registered — complete setup to proceed with registration
           </div>
+        )}
 
-          <div style={{ fontSize: 14, color: "#6b7280" }}>
-            Finance: {status?.finance_ready ? "Ready" : "Pending"}
-          </div>
+        {/* STATUS PANEL */}
+        <div style={statusPanel}>
+          <StatusItem
+            label="Structure"
+            value={isComplete ? "Complete" : "Pending"}
+            success={isComplete}
+          />
+          <StatusItem
+            label="Ownership"
+            value={isComplete ? "Configured" : "Pending"}
+            success={isComplete}
+          />
+          <StatusItem
+            label="Finance"
+            value="Pending"
+            success={false}
+          />
         </div>
 
-        {/* QUICK CARDS */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))",
-            gap: 20,
-          }}
-        >
+        {/* STATS */}
+        <div style={statsGrid}>
           <StatCard title="Members" value="—" />
           <StatCard title="Flats" value="—" />
           <StatCard title="Pending Tasks" value="—" />
         </div>
 
-        {/* MODULE GRID */}
-        <div
-          style={{
-            marginTop: 30,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-            gap: 20,
-          }}
-        >
+        {/* MODULES */}
+        <div style={moduleGrid}>
+          
           <ModuleCard
             title="Society Setup"
-            active={!status?.structure_ready}
+            status={isComplete ? "Completed" : "Continue Setup"}
+            locked={isComplete}
+            onClick={() => {
+              if (isComplete) return;
+              navigate("/structure");
+            }}
           />
 
           <ModuleCard
             title="Members & Governance"
-            locked={!status?.structure_ready}
+            status={isComplete ? "Available" : "Locked"}
+            locked={!isComplete}
           />
 
           <ModuleCard
             title="Finance"
-            locked={!status?.finance_ready}
+            status="Locked"
+            locked
           />
 
-          <ModuleCard title="Operations" locked />
-          <ModuleCard title="Compliance" locked />
+          <ModuleCard
+            title="Operations"
+            status={isComplete ? "Start Now" : "Locked"}
+            locked={!isComplete}
+            highlight={isComplete}
+          />
+
+          <ModuleCard
+            title="Compliance"
+            status="Locked"
+            locked
+          />
+
         </div>
 
       </div>
@@ -123,38 +122,35 @@ export default function Dashboard() {
   );
 }
 
-/* COMPONENTS */
+/* ================= COMPONENTS ================= */
 
-function ModuleCard({ title, active = false, locked = false }: any) {
+function ModuleCard({ title, status, locked = false, onClick, highlight = false }: any) {
   return (
     <div
       onClick={() => {
-        if (locked) {
-          alert("Complete previous steps to unlock this module");
-        }
+        if (locked) return;
+        onClick && onClick();
       }}
       style={{
-        padding: 20,
-        borderRadius: 14,
-        background: "white",
-        border: "1px solid #e5e7eb",
-        cursor: "pointer",
+        padding: 22,
+        borderRadius: 16,
+        background: highlight ? "#ecfdf5" : "white",
+        border: highlight ? "1px solid #10b981" : "1px solid #e5e7eb",
+        cursor: locked ? "not-allowed" : "pointer",
         opacity: locked ? 0.5 : 1,
         transition: "all 0.2s ease",
       }}
       onMouseEnter={(e) => {
-        if (!locked) e.currentTarget.style.transform = "translateY(-2px)";
+        if (!locked) e.currentTarget.style.transform = "translateY(-4px)";
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = "translateY(0px)";
       }}
     >
-      <div style={{ fontWeight: 600 }}>{title}</div>
+      <div style={{ fontWeight: 600, fontSize: 15 }}>{title}</div>
 
-      <div style={{ fontSize: 13, color: "#6b7280", marginTop: 5 }}>
-        {locked && "Locked"}
-        {!locked && active && "Continue setup"}
-        {!locked && !active && "Available"}
+      <div style={{ fontSize: 13, marginTop: 6, color: "#6b7280" }}>
+        {status}
       </div>
     </div>
   );
@@ -162,16 +158,112 @@ function ModuleCard({ title, active = false, locked = false }: any) {
 
 function StatCard({ title, value }: any) {
   return (
-    <div
-      style={{
-        background: "white",
-        padding: 20,
-        borderRadius: 14,
-        border: "1px solid #e5e7eb",
-      }}
-    >
-      <div style={{ fontSize: 13, color: "#6b7280" }}>{title}</div>
-      <div style={{ fontSize: 20, fontWeight: 600 }}>{value}</div>
+    <div style={statCard}>
+      <div style={statTitle}>{title}</div>
+      <div style={statValue}>{value}</div>
     </div>
   );
 }
+
+function StatusItem({ label, value, success }: any) {
+  return (
+    <div style={statusItem}>
+      <div style={{ fontSize: 13, color: "#6b7280" }}>{label}</div>
+      <div
+        style={{
+          fontWeight: 600,
+          color: success ? "#16a34a" : "#ef4444",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/* ================= STYLES ================= */
+
+const container = {
+  maxWidth: 1200,
+  margin: "0 auto",
+};
+
+const header = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 25,
+};
+
+const title = {
+  fontSize: 28,
+  fontWeight: 700,
+};
+
+const subtitle = {
+  color: "#6b7280",
+  marginTop: 5,
+};
+
+const badge = {
+  background: "#eef2ff",
+  padding: "8px 14px",
+  borderRadius: 20,
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const alert = {
+  background: "#fff7ed",
+  border: "1px solid #fdba74",
+  padding: 14,
+  borderRadius: 10,
+  marginBottom: 25,
+  color: "#9a3412",
+  fontSize: 14,
+};
+
+const statusPanel = {
+  display: "flex",
+  gap: 30,
+  background: "white",
+  padding: 18,
+  borderRadius: 14,
+  border: "1px solid #e5e7eb",
+  marginBottom: 30,
+};
+
+const statusItem = {
+  display: "flex",
+  flexDirection: "column" as const,
+};
+
+const statsGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+  gap: 20,
+};
+
+const statCard = {
+  background: "white",
+  padding: 20,
+  borderRadius: 14,
+  border: "1px solid #e5e7eb",
+};
+
+const statTitle = {
+  fontSize: 13,
+  color: "#6b7280",
+};
+
+const statValue = {
+  fontSize: 22,
+  fontWeight: 600,
+};
+
+const moduleGrid = {
+  marginTop: 30,
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+  gap: 20,
+};

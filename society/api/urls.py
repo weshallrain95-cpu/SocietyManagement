@@ -10,6 +10,10 @@ from society.api.views.user_societies import get_user_societies
 from society.api.views.structure import generate_structure
 from society.api.views.excel import download_structure_excel
 from society.api.views.ownership_upload import upload_ownership_excel
+from society.api.views.onboarding_status import get_onboarding_status
+from .views.flats import get_flats
+from .views.ownership import get_ownership, update_ownership
+from society.api.views.onboarding_complete import complete_onboarding
 
 router = DefaultRouter()
 router.register("audit-events", AuditEventViewSet, basename="audit-events")
@@ -32,6 +36,13 @@ urlpatterns = [
 
     # ✅ SINGLE UPLOAD ENDPOINT
     path("structure/upload-ownership/", upload_ownership_excel),
+
+    path("onboarding/status/", get_onboarding_status),
+    path("flats/", get_flats),
+    path("ownership/", get_ownership),
+    path("ownership/update/", update_ownership),
+    path("onboarding/complete/", complete_onboarding),
+
 ]
 
 urlpatterns += router.urls

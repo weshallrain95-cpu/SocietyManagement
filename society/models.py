@@ -17,6 +17,16 @@ class Society(models.Model):
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True)
 
+    onboarding_stage = models.CharField(
+        max_length=50,
+        choices=[
+            ("STRUCTURE_PENDING", "Structure Pending"),
+            ("STRUCTURE_CREATED", "Structure Created"),
+            ("OWNERSHIP_PENDING", "Ownership Pending"),
+            ("ONBOARDING_COMPLETE", "Onboarding Complete"),
+        ],
+        default="STRUCTURE_PENDING"
+    )
     # -----------------------------
     # Legal / Registrar Identity
     # -----------------------------

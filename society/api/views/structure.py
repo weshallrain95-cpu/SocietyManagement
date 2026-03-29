@@ -85,6 +85,12 @@ def generate_structure(request):
                 flat_numbering_style=numbering_style,
             )
 
+            # =============================
+            # ✅ NEW: UPDATE ONBOARDING STAGE
+            # =============================
+            society.onboarding_stage = "STRUCTURE_CREATED"
+            society.save(update_fields=["onboarding_stage"])
+
             return Response({
                 "status": "success",
                 "engine": "standard",
@@ -104,6 +110,12 @@ def generate_structure(request):
                 groups=data.get("groups"),
                 flat_numbering_style=data.get("flat_numbering_style", "A-101"),
             )
+
+            # =============================
+            # ✅ NEW: UPDATE ONBOARDING STAGE
+            # =============================
+            society.onboarding_stage = "STRUCTURE_CREATED"
+            society.save(update_fields=["onboarding_stage"])
 
             return Response({
                 "status": "success",
