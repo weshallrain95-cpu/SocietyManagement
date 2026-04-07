@@ -19,7 +19,7 @@ const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
         const res = await fetch(
           `/api/society/onboarding/status/?society_id=${societyId}`
         );
-
+        
         const data = await res.json();
         const stage = data.stage;
 
@@ -27,9 +27,20 @@ const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
 
         // 🔥 CENTRALIZED ROUTING RULES
 
-        // STRUCTURE_PENDING → /structure
-        if (stage === "STRUCTURE_PENDING" && !path.includes("/structure")) {
-          navigate("/structure");
+        if (stage === "STRUCTURE_PENDING") {
+          const allowedPaths = [
+            "/structure",
+            "/structure-groups"
+          ];
+
+          const isAllowed = allowedPaths.some((p) => path.startsWith(p));
+
+          if (!isAllowed) {
+            navigate("/structure", { replace: true });
+            return;
+          }
+
+          setReady(true);
           return;
         }
 
@@ -39,6 +50,17 @@ const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
           !path.includes("/excel-upload-placeholder")
         ) {
           navigate("/excel-upload-placeholder");
+          return;
+        }
+
+        // 🔥 OWNERSHIP UPLOAD (DATA-DRIVEN)
+        if (data.allowed_actions.can_upload_ownership) {
+          if (!path.includes("/excel-upload-placeholder")) {
+            navigate("/excel-upload-placeholder");
+            return;
+          }
+
+          setReady(true);
           return;
         }
 

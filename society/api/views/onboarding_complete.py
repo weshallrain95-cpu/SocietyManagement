@@ -19,3 +19,28 @@ def complete_onboarding(request):
     society.save()
 
     return Response({"status": "completed"})
+
+@api_view(["POST"])
+def mark_governance_complete(request):
+    society_id = request.data.get("society_id")
+
+    if not society_id:
+        return Response({"error": "society_id required"}, status=400)
+
+    try:
+        society = Society.objects.get(id=society_id)
+
+        # move to operations stage
+        society.onboarding_stage = "OPERATIONS_PENDING"
+        society.save()
+
+        return Response({
+            "status": "governance_complete",
+            "next_stage": society.onboarding_stage
+        })
+
+    except Society.DoesNotExist:
+        return Response({"error": "Society not found"}, status=404)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)

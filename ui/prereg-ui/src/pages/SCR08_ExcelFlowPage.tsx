@@ -21,13 +21,22 @@ export default function ExcelFlowPage() {
     try {
       setLoading(true);
 
-      const societyId = structureData?.society_id;
+      // ✅ FIX — fallback to localStorage
+      const society =
+        structureData?.society_id
+          ? { id: structureData.society_id }
+          : JSON.parse(localStorage.getItem("society") || "{}");
 
-      const url = `http://localhost:8000/api/society/structure/download-excel/?society_id=${societyId}`;
+      if (!society?.id) {
+        alert("Society not found. Please restart onboarding.");
+        return;
+      }
+
+      const url = `http://localhost:8000/api/society/structure/download-excel/?society_id=${society.id}`;
 
       console.log("DOWNLOAD URL:", url);
 
-      // ✅ FIX — direct browser download (NO fetch)
+      // ✅ direct download
       window.open(url, "_blank");
 
     } catch (err) {
@@ -37,7 +46,7 @@ export default function ExcelFlowPage() {
       setLoading(false);
     }
   };
-
+  
   const handleUpload = async () => {
     if (!file) return;
 

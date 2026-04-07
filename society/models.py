@@ -24,9 +24,20 @@ class Society(models.Model):
             ("STRUCTURE_CREATED", "Structure Created"),
             ("OWNERSHIP_PENDING", "Ownership Pending"),
             ("ONBOARDING_COMPLETE", "Onboarding Complete"),
+
+            # 🔥 NEW — OPERATIONS LAYER
+            ("OPERATIONS_PENDING", "Operations Pending"),
+            ("OPERATIONS_COMPLETE", "Operations Complete"),
+
+            # 🔥 FUTURE
+            ("FINANCIAL_PENDING", "Financial Pending"),
+            ("FINANCIAL_COMPLETE", "Financial Complete"),
+
+            ("SYSTEM_LIVE", "System Live"),
         ],
         default="STRUCTURE_PENDING"
     )
+
     # -----------------------------
     # Legal / Registrar Identity
     # -----------------------------
@@ -129,6 +140,43 @@ class Floor(models.Model):
         return f"{self.wing} - Floor {self.number}"
 
 # ==========================================================
+# COMMITTEE (Tenure Layer)
+# ==========================================================
+
+class Committee(models.Model):
+    """
+    Represents a tenure-based governing committee.
+    Groups committee memberships into a defined term.
+    """
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="committees",
+    )
+
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-start_date"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["society"],
+                condition=models.Q(is_active=True),
+                name="unique_active_committee_per_society",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.society.name} Committee ({self.start_date})"
+
+# ==========================================================
 # SOCIETY OFFICE BEARER (Governance Identity Layer)
 # ==========================================================
 
@@ -160,7 +208,9 @@ class SocietyOfficeBearer(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,   # ✅ IMPORTANT CHANGE
+        null=True,                   # ✅ ALLOW NULL
+        blank=True,
         related_name="society_roles",
     )
 
@@ -195,6 +245,14 @@ class SocietyOfficeBearer(models.Model):
             models.Index(fields=["society", "role", "is_active"]),
         ]
 
+        constraints = [
+            models.UniqueConstraint(
+                fields=["society", "role"],
+                condition=models.Q(is_active=True),
+                name="unique_active_role_per_society",
+            )
+        ]
+        
     def clean(self):
         from django.core.exceptions import ValidationError
         from django.utils import timezone
@@ -235,18 +293,14 @@ class SocietyOfficeBearer(models.Model):
             # Identity binding enforcement
             member_person = self.committee_membership_ref.member.person
 
-            if not member_person.user:
-                raise ValidationError(
-                    "Committee member's Person record must be linked to a User."
-                )
-
-            if self.user != member_person.user:
+            # Optional user validation (only if provided)
+            if self.user and member_person.user and self.user != member_person.user:
                 raise ValidationError(
                     "OfficeBearer user must match Committee Member's linked User."
                 )
 
     def __str__(self):
-        return f"{self.user} — {self.role} — {self.society.name}"
+        return f"{self.role} — {self.society.name}"
 
 
 from django.db import models
@@ -1757,6 +1811,15 @@ class SocietyMember(models.Model):
         return f"{self.person} ({self.member_number})"
 
 class CommitteeMembership(models.Model):
+    
+    committee = models.ForeignKey(
+        "society.Committee",
+        on_delete=models.CASCADE,
+        related_name="memberships",
+        null=True,
+        blank=True,
+    )
+    
     society = models.ForeignKey(
         "society.Society",
         on_delete=models.CASCADE,

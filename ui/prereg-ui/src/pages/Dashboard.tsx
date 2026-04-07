@@ -11,7 +11,9 @@ export default function Dashboard() {
   /* ================= FETCH STATUS ================= */
 
   useEffect(() => {
-    if (!society) {
+    if (society === null) return; // wait for context to load
+
+    if (!society?.id) {
       navigate("/login");
       return;
     }
@@ -22,7 +24,28 @@ export default function Dashboard() {
       .catch(() => console.warn("Status fetch failed"));
   }, [society, navigate]);
 
-  const isComplete = status?.stage === "ONBOARDING_COMPLETE";
+  const isComplete = [
+    "ONBOARDING_COMPLETE",
+    "OPERATIONS_PENDING",
+    "OPERATIONS_COMPLETE",
+    "FINANCIAL_PENDING",
+    "FINANCIAL_COMPLETE",
+    "SYSTEM_LIVE",
+  ].includes(status?.stage);
+
+  // 🔥 ADD THIS (surgical fix)
+  const structureLocked = status
+    ? [
+        "STRUCTURE_CREATED",
+        "OWNERSHIP_PENDING",
+        "ONBOARDING_COMPLETE",
+        "OPERATIONS_PENDING",
+        "OPERATIONS_COMPLETE",
+        "FINANCIAL_PENDING",
+        "FINANCIAL_COMPLETE",
+        "SYSTEM_LIVE",
+      ].includes(status.stage)
+    : true; // default lock until status loads
 
   /* ================= UI ================= */
 
@@ -83,17 +106,17 @@ export default function Dashboard() {
           <ModuleCard
             title="Society Setup"
             status={isComplete ? "Completed" : "Continue Setup"}
-            locked={isComplete}
+            locked={structureLocked}
             onClick={() => {
-              if (isComplete) return;
+              if (structureLocked) return;
               navigate("/structure");
             }}
           />
 
           <ModuleCard
             title="Members & Governance"
-            status={isComplete ? "Available" : "Locked"}
-            locked={!isComplete}
+            status={status?.has_committee ? "Completed" : "Pending"}
+            locked={!status?.has_committee}
           />
 
           <ModuleCard
@@ -103,10 +126,14 @@ export default function Dashboard() {
           />
 
           <ModuleCard
-            title="Operations"
-            status={isComplete ? "Start Now" : "Locked"}
+            title="Start Operations Onboarding"
+            status={isComplete ? "Next Step" : "Locked"}
             locked={!isComplete}
             highlight={isComplete}
+            onClick={() => {
+              if (!isComplete) return;
+              navigate("/operations");
+            }}
           />
 
           <ModuleCard

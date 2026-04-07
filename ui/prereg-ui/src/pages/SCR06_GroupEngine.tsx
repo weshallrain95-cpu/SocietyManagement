@@ -83,7 +83,7 @@ export default function GroupEnginePage() {
     return Object.values(map);
   };
 
-  /* ================= FINAL ACTION ================= */
+  // ================= FINAL ACTION =================
 
   const handleSubmit = async () => {
     if (!allFloorsCovered) return;
@@ -94,9 +94,8 @@ export default function GroupEnginePage() {
       const payload = {
         society_id: society?.id,
 
-        // ✅ FIX — THIS WAS MISSING
-        structure_type:
-          structureType === "SINGLE" ? "SINGLE" : "GROUP",
+        // ✅ REQUIRED FIX
+        structure_type: "GROUP",
 
         mode: "GROUP",
         total_wings: 1,
@@ -109,6 +108,15 @@ export default function GroupEnginePage() {
 
         flat_numbering_style: "A-101",
       };
+
+      const isInvalid = groups.some((g) =>
+        g.flats.some((f) => !f.type || !f.area)
+      );
+
+      if (isInvalid) {
+        alert("Please complete all flat details before proceeding");
+        return;
+      }
 
       const res = await axios.post(
         "http://localhost:8000/api/society/structure/generate/",
@@ -123,13 +131,14 @@ export default function GroupEnginePage() {
           groups,
           floors,
           structureType,
-          society_id: society?.id, // ✅ ADDED
+          society_id: society?.id,
         },
       });
 
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.error || "Structure generation failed");
+      return;
     }
   };
 

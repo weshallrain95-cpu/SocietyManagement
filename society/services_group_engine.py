@@ -57,6 +57,7 @@ def generate_grouped_structure(
     created_floors = 0
     created_flats = 0
 
+    
     # -----------------------------------
     # VALIDATION — floor coverage
     # -----------------------------------
@@ -92,10 +93,18 @@ def generate_grouped_structure(
         # -----------------------------------
         for group in groups:
 
-            floors = group["floors"]
+            # ✅ FIX 1 — sanitize floors
+            floors = [f for f in group.get("floors", []) if f is not None]
+
+            if not floors:
+                raise ValueError("Group has no valid floors")
+
             layout = group["layout"]
 
             for floor_number in floors:
+
+                # ✅ FIX 2 — enforce int (critical)
+                floor_number = int(floor_number)
 
                 floor = Floor.objects.create(
                     wing=wing,
@@ -118,10 +127,10 @@ def generate_grouped_structure(
                     for _ in range(count):
 
                         flat_number = generate_flat_number(
-                            wing_name,
+                            wing_name or "",
                             floor_number,
                             flat_index_counter,
-                            flat_numbering_style,
+                            flat_numbering_style or "A-101",
                         )
 
                         Flat.objects.create(

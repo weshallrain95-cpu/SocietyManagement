@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from society.models import Society, FlatOwnership
+from society.models import Society, FlatOwnership, Committee
 
 
 @api_view(["GET"])
@@ -26,6 +26,14 @@ def get_onboarding_status(request):
     ).exists()
 
     # ----------------------------
+    # GOVERNANCE FLAG (NEW)
+    # ----------------------------
+    has_committee = Committee.objects.filter(
+        society=society,
+        is_active=True
+    ).exists()
+
+    # ----------------------------
     # STAGE (SOURCE OF TRUTH)
     # ----------------------------
     stage = society.onboarding_stage
@@ -38,13 +46,14 @@ def get_onboarding_status(request):
         "stage": stage,
         "has_structure": has_structure,
         "has_ownership": has_ownership,
+        "has_committee": has_committee,
         "allowed_actions": {
             "can_generate_structure": stage == "STRUCTURE_PENDING",
 
             # Upload only allowed BEFORE refinement
-            "can_upload_ownership": stage in ["STRUCTURE_CREATED"],
+            "can_upload_ownership": has_structure and not has_ownership,
 
-            # 🔥 NEW
+            # Ownership refinement
             "needs_refinement": stage == "OWNERSHIP_REFINEMENT_PENDING",
 
             "is_complete": stage == "ONBOARDING_COMPLETE",

@@ -11,11 +11,19 @@ import GroupEnginePage from "./pages/SCR06_GroupEngine";
 import StructurePreviewPage from "./pages/SCR07_StructurePreviewPage";
 import ExcelFlowPage from "./pages/SCR08_ExcelFlowPage";
 import OwnershipRefinementPage from "./pages/SCR09_OwnershipRefinementPage";
+import CommitteeSetupPage from "./pages/SCR11CommitteeSetup";
+import SCR10OperationsHub from "./pages/SCR10OperationsHub";
+import SCR12_BylawsEngine from "./pages/SCR12_BylawsEngine";
+import SCR13_BylawsPreview from "./pages/SCR13_BylawsPreview";
+import SCR14_BylawsGenerate from "./pages/SCR14_BylawsGenerate";
+import SCR15_BylawsUpload from "./pages/SCR15_BylawsUpload";
 
 import { SocietyProvider } from "./context/SocietyContext";
 
 // ✅ NEW IMPORT
 import OnboardingGuard from "./guards/OnboardingGuard";
+
+
 
 function App() {
   return (
@@ -30,6 +38,13 @@ function App() {
           <Route path="/verify" element={<OTPPage />} />
           <Route path="/select-society" element={<SelectSociety />} />
           <Route path="/ownership-refinement" element={<OwnershipRefinementPage />} />
+          <Route path="/committee/setup" element={<CommitteeSetupPage />} />
+          <Route path="/operations" element={<SCR10OperationsHub />} />
+          <Route path="/bylaws-test" element={<SCR12_BylawsEngine />} />
+          <Route path="/bylaws/preview" element={<SCR13_BylawsPreview />} />
+          <Route path="/bylaws/generate" element={<SCR14_BylawsGenerate />} />
+          <Route path="/bylaws-upload" element={<SCR15_BylawsUpload />} />
+
           {/* 🔒 PROTECTED ROUTES (WITH GUARD) */}
           <Route
             path="/dashboard"

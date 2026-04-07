@@ -518,3 +518,72 @@ class SocietyRegistrationApproval(models.Model):
 
     def __str__(self):
         return f"{self.society.name} — {self.status}"
+
+# ==========================================================
+# SOCIETY BY-LAWS (FINAL STORAGE + VERSION CONTROL)
+# ==========================================================
+
+class SocietyBylaws(models.Model):
+    """
+    Stores generated and signed by-laws per society.
+    This is the FINAL legal record of the society's by-laws.
+    """
+
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("GENERATED", "Generated"),
+        ("SIGNED", "Signed"),
+        ("ACTIVE", "Active"),
+        ("SUPERSEDED", "Superseded"),
+    )
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="society_bylaws",
+    )
+
+    version_number = models.PositiveIntegerField()
+
+    generated_document_path = models.CharField(
+        max_length=500,
+        help_text="Path to generated (soft copy) bylaws",
+    )
+
+    signed_document_path = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text="Path to signed (uploaded) bylaws",
+    )
+
+    governance_hooks_json = models.JSONField(
+        help_text="Snapshot of governance decisions at time of generation",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    approved_by = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="approved_bylaws",
+    )
+
+    approved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-version_number"]
+        indexes = [
+            models.Index(fields=["society", "status"]),
+        ]
+
+    def __str__(self):
+        return f"{self.society.name} - v{self.version_number} ({self.status})"

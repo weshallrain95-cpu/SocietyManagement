@@ -18,8 +18,33 @@ export default function SelectSociety() {
 
     // ✅ AUTO REDIRECT IF ONLY ONE (extra safety)
     if (societies.length === 1) {
-      updateSociety(societies[0]);
-      navigate("/dashboard");
+      const s = societies[0];
+
+      (async () => {
+        try {
+          const res = await fetch(
+            `/api/society/onboarding/status/?society_id=${s.id}`
+          );
+          const status = await res.json();
+
+          const updatedSociety = {
+            ...s,
+            onboarding: {
+              ...s.onboarding,
+              stage: status.stage,
+            },
+          };
+
+          updateSociety(updatedSociety);
+          navigate("/dashboard");
+        } catch (err) {
+          console.error("Failed to fetch onboarding status", err);
+
+          // fallback (original behavior)
+          updateSociety(s);
+          navigate("/dashboard");
+        }
+      })();
     }
   }, [societies, navigate, updateSociety]);
 
@@ -68,9 +93,30 @@ export default function SelectSociety() {
         {societies.map((s: any) => (
           <div
             key={s.id}
-            onClick={() => {
-              updateSociety(s); // ✅ GLOBAL CONTEXT
-              navigate("/dashboard");
+            onClick={async () => {
+              try {
+                const res = await fetch(
+                  `/api/society/onboarding/status/?society_id=${s.id}`
+                );
+                const status = await res.json();
+
+                const updatedSociety = {
+                  ...s,
+                  onboarding: {
+                    ...s.onboarding,
+                    stage: status.stage,
+                  },
+                };
+
+                updateSociety(updatedSociety);
+                navigate("/dashboard");
+              } catch (err) {
+                console.error("Failed to fetch onboarding status", err);
+
+                // fallback (original behavior)
+                updateSociety(s);
+                navigate("/dashboard");
+              }
             }}
             style={{
               padding: 15,

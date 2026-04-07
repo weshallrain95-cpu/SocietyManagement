@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 from openpyxl import load_workbook
 from datetime import date
+from society.models import SocietyMember
 
 from society.models import Society, Flat, FlatOwnership, FlatOwner, Person
 
@@ -185,12 +186,45 @@ def upload_ownership_excel(request):
             # ---------- OWNER CREATION ----------
             if item["entity"] == "INDIVIDUAL":
 
-                person, _ = Person.objects.get_or_create(
-                    phone=item["phone"],
-                    defaults={
-                        "full_name": item["owner_name"]
-                    }
-                )
+                if item["phone"]:
+                    person, _ = Person.objects.get_or_create(
+                        phone=item["phone"],
+                        defaults={"full_name": item["owner_name"]}
+                    )
+                else:
+                    person = Person.objects.create(
+                        full_name=item["owner_name"]
+                    )
+
+                # ✅ CHECK FIRST (avoid duplicate creation)
+                member = SocietyMember.objects.filter(
+                    society_id=society.id,
+                    person_id=person.id,
+                    is_active=True
+                ).first()
+
+                if not member:
+                    # 🔥 GENERATE MEMBER NUMBER
+                    last_member = SocietyMember.objects.filter(
+                        society_id=society.id
+                    ).order_by("-member_number").first()
+
+                    if last_member and last_member.member_number:
+                        last_num = int(last_member.member_number.replace("M", ""))
+                        next_number = last_num + 1
+                    else:
+                        next_number = 1
+
+                    member_number = f"M{str(next_number).zfill(4)}"   # M0001, M0002...
+
+                    SocietyMember.objects.create(
+                        society_id=society.id,
+                        person_id=person.id,
+                        membership_type="REGULAR",
+                        is_active=True,
+                        admitted_on=date.today(),
+                        member_number=member_number,   # ✅ CRITICAL FIX
+                    )
 
                 FlatOwner.objects.create(
                     ownership=ownership,

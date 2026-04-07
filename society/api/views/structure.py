@@ -45,9 +45,10 @@ def expand_flat_structure(flat_structure):
 # =============================
 @api_view(["POST"])
 def generate_structure(request):
-
+    print("🔥 ACTUAL REQUEST DATA:", request.data)
     data = request.data
-
+    
+    
     society_id = data.get("society_id")
     structure_type = data.get("structure_type")
 
@@ -97,16 +98,37 @@ def generate_structure(request):
                 "data": result,
             })
 
+        
+        # =========================================
+        # ✅ GROUP FLOW (FIXED — SINGLE + GROUP SAFE)
+        # =========================================
 
-        # =========================================
-        # ✅ GROUP FLOW (UNCHANGED — ALREADY CORRECT)
-        # =========================================
         elif structure_type == "GROUP":
 
+            total_wings = data.get("total_wings") or 1
+            floors_per_wing = data.get("floors_per_wing") or data.get("floors")
+
+            print("DEBUG RAW DATA:", data)
+            print("DEBUG GROUPS:", data.get("groups"))
+
+            # 🔥 FINAL FIX — derive from groups if still None
+            if not floors_per_wing:
+                groups = data.get("groups", [])
+                all_floors = set()
+
+                for g in groups:
+                    all_floors.update(g.get("floors", []))
+
+                if not all_floors:
+                    return Response({"error": "No floors defined in groups"}, status=400)
+
+                floors_per_wing = max(all_floors)
+
+            
             result = generate_grouped_structure(
                 society=society,
-                total_wings=data.get("total_wings"),
-                floors_per_wing=data.get("floors_per_wing"),
+                total_wings=total_wings,
+                floors_per_wing=floors_per_wing,
                 groups=data.get("groups"),
                 flat_numbering_style=data.get("flat_numbering_style", "A-101"),
             )

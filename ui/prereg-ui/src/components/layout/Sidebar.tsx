@@ -72,7 +72,11 @@ export default function Sidebar() {
       <Section title="SOCIETY SETUP">
         <SidebarItem label="Society Details" collapsed={collapsed} />
 
-        <SidebarItem label="Structure" collapsed={collapsed} />
+        <SidebarItem
+          label="Structure"
+          collapsed={collapsed}
+          locked={stage !== "STRUCTURE_PENDING"}
+        />
 
         <SidebarItem
           label="Members"
