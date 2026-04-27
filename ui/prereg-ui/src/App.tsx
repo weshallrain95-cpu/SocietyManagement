@@ -33,7 +33,8 @@ import SCR27RegistrarSubmission from "./pages/SCR27RegistrarSubmission";
 import { SocietyProvider } from "./context/SocietyContext";
 
 // ✅ NEW IMPORT
-import OnboardingGuard from "./guards/OnboardingGuard";
+import _OnboardingGuard from "./guards/OnboardingGuard";
+
 
 
 
@@ -68,6 +69,7 @@ function App() {
           <Route path="/documents/BANK_ACCOUNT_LETTER_MH" element={<SCR25BankAccountLetter />}/>
           <Route path="/documents/FIRST_GENERAL_MEETING_MINUTES_MH" element={<SCR26FirstGeneralMeeting />}/> 
           <Route path="/documents/REGISTRAR_SUBMISSION_LETTER_MH" element={<SCR27RegistrarSubmission />}/>
+          
          {/* 🔒 PROTECTED ROUTES (GUARD REMOVED TEMPORARILY) */}
 
         <Route path="/dashboard" element={<Dashboard />} />
