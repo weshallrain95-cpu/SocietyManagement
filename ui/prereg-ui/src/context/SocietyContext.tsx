@@ -31,8 +31,17 @@ export function SocietyProvider({ children }: any) {
               const updatedSociety = {
                 ...parsed,
                 onboarding: {
-                  ...parsed.onboarding,
                   stage: status.stage,
+
+                  can_upload_ownership: status.allowed_actions?.can_upload_ownership,
+                  needs_refinement: status.allowed_actions?.needs_refinement,
+                  can_create_committee: status.allowed_actions?.can_create_committee,
+                  can_generate_bylaws: status.allowed_actions?.can_generate_bylaws,
+                  can_access_share_certificates: status.allowed_actions?.can_access_share_certificates,
+                  can_generate_share_certificates: status.allowed_actions?.can_generate_share_certificates,
+                  can_issue_share_certificates: status.allowed_actions?.can_issue_share_certificates,
+                  can_configure_operational_rules: status.allowed_actions?.can_configure_operational_rules,
+                  is_complete: status.allowed_actions?.is_complete,
                 },
               };
 
@@ -59,6 +68,7 @@ export function SocietyProvider({ children }: any) {
   const updateSociety = async (data: any) => {
     try {
       if (!data?.id) return;
+      
 
       // 🔄 Fetch latest onboarding stage from backend
       const res = await fetch(
@@ -70,15 +80,27 @@ export function SocietyProvider({ children }: any) {
       // 🔥 Override stage with backend truth
       const updatedSociety = {
         ...data,
+        // ✅ REQUIRED
         onboarding: {
-          ...data.onboarding,
           stage: status.stage,
-        },
+
+          can_upload_ownership: status.allowed_actions?.can_upload_ownership,
+          needs_refinement: status.allowed_actions?.needs_refinement,
+          can_create_committee: status.allowed_actions?.can_create_committee,
+          can_generate_bylaws: status.allowed_actions?.can_generate_bylaws,
+          can_access_share_certificates: status.allowed_actions?.can_access_share_certificates,
+          can_generate_share_certificates: status.allowed_actions?.can_generate_share_certificates,
+          can_issue_share_certificates: status.allowed_actions?.can_issue_share_certificates,
+          can_configure_operational_rules: status.allowed_actions?.can_configure_operational_rules,
+          is_complete: status.allowed_actions?.is_complete,
+        }
       };
 
       setSociety(updatedSociety);
       localStorage.setItem("society", JSON.stringify(updatedSociety));
       localStorage.setItem("society_id", data.id);
+
+      return updatedSociety;   // ✅ ADD THIS
 
     } catch (err) {
       console.error("Society save error:", err);
@@ -87,6 +109,8 @@ export function SocietyProvider({ children }: any) {
       setSociety(data);
       localStorage.setItem("society", JSON.stringify(data));
       localStorage.setItem("society_id", data?.id);
+
+      return data;   // ✅ ADD THIS
     }
   };
 

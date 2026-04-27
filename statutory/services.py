@@ -1,5 +1,6 @@
 from datetime import date
 from django.utils import timezone
+import time
 from statutory.models import (
     SocietyLegalProgress,
     SocietyLegalDocument,
@@ -149,10 +150,26 @@ def finalize_society_if_allowed(society):
     society.save(update_fields=["legal_status"])
 
     return True, None
-def build_share_certificate_context(*, society, member):
+
+# --------------------------------------------------
+# SHARE CERTIFICATE GENERATION PIPELINE
+# --------------------------------------------------
+
+def build_share_certificate_context(
+    *,
+    society,
+    flat,
+    owners,
+    certificate_number,
+    share_count,
+    share_value,
+):
     """
-    Phase-1 Share Certificate context.
-    Ownership history has a single row.
+    Production-grade context builder for share certificate.
+    Supports:
+    - Flat-based ownership
+    - Multiple owners
+    - Legal traceability
     """
 
     return {
@@ -162,47 +179,84 @@ def build_share_certificate_context(*, society, member):
             "address": society.address,
         },
         "certificate": {
+            "certificate_number": certificate_number,
             "issued_on": timezone.now().date(),
-            "certificate_number": f"SC-{society.id}-{member.id}",
+            "share_count": share_count,
+            "share_value": share_value,
         },
-        "ownership_history": [
+        "flat": {
+            "flat_number": flat.flat_number,
+        },
+        "owners": [
             {
-                "sr_no": 1,
-                "member_name": member.get_full_name(),
-                "from_date": timezone.now().date(),
-                "to_date": None,
+                "name": owner.person.full_name
+                if owner.person else owner.legal_entity_name
             }
+            for owner in owners
         ],
     }
+
+
 from django.template.loader import render_to_string
-
-
-def render_share_certificate_html(*, society, member):
+def render_share_certificate_html(
+    *,
+    society,
+    flat,
+    owners,
+    certificate_number,
+    share_count,
+    share_value,
+):
     context = build_share_certificate_context(
         society=society,
-        member=member,
+        flat=flat,
+        owners=owners,
+        certificate_number=certificate_number,
+        share_count=share_count,
+        share_value=share_value,
     )
 
     return render_to_string(
         "documents/share_certificate.html",
         context,
     )
+
+
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from django.conf import settings
 import os
-from django.utils import timezone
+import time
 
+def generate_share_certificate_pdf(
+    *,
+    society,
+    flat,
+    owners,
+    certificate_number,
+    share_count,
+    share_value,
+    share_number_from,
+    share_number_to,
+):
+    """
+    Production-grade PDF generator.
+    Flat-based, multi-owner aware.
+    """
 
-def generate_share_certificate_pdf(*, society, member):
     output_dir = os.path.join(
         settings.MEDIA_ROOT,
         "generated",
         "share_certificates",
+        str(society.id),
     )
     os.makedirs(output_dir, exist_ok=True)
 
-    filename = f"share_certificate_soc_{society.id}_mem_{member.id}.pdf"
+    safe_certificate_number = certificate_number.replace("/", "_")
+    filename = f"{safe_certificate_number}_{int(time.time())}.pdf"
+    
+    print("FILENAME:", filename)
+
     file_path = os.path.join(output_dir, filename)
 
     c = canvas.Canvas(file_path, pagesize=A4)
@@ -215,86 +269,124 @@ def generate_share_certificate_pdf(*, society, member):
 
     y -= 40
     c.setFont("Helvetica", 12)
+
     c.drawString(80, y, f"Society: {society.name}")
+    y -= 20
 
-    y -= 25
-    c.drawString(80, y, f"Member: {member.get_full_name()}")
+    c.drawString(80, y, f"Flat: {flat.flat_number}")
+    y -= 20
 
-    y -= 25
-    c.drawString(80, y, f"Issued on: {timezone.now().date()}")
+    owner_names = ", ".join([
+        o.person.full_name if o.person else o.legal_entity_name
+        for o in owners
+    ])
+    c.drawString(80, y, f"Owners: {owner_names}")
+    y -= 20
 
-    y -= 40
-    c.drawString(80, y, "This certifies that the above member holds shares")
+    c.drawString(80, y, f"Share Numbers: {share_number_from} to {share_number_to}")
+    y -= 20
+
+    c.drawString(80, y, f"Share Value: ₹{share_value}")
+    y -= 20
+
+    c.drawString(80, y, f"Certificate No: {certificate_number}")
+    y -= 20
+
+    c.drawString(80, y, f"Issued On: {timezone.now().date()}")
 
     c.showPage()
     c.save()
 
     return file_path
+
+
 from statutory.models import SocietyLegalDocument, LegalArtifactTemplate
-from django.utils import timezone
 
-
-def generate_and_attach_share_certificate(*, society, member):
+def attach_share_certificate_document(
+    *,
+    society,
+    file_path,
+    flat,
+    certificate_number,
+):
     """
-    Generates ONE share certificate per society.
-    Idempotent and legally safe.
+    Attaches generated certificate to legal document system.
     """
 
-    # 🔒 Step 1: Block duplicates
-    existing = SocietyLegalDocument.objects.filter(
-        society=society,
-        template__artifact_type="SHARE_CERTIFICATE",
-        status__in=["Generated", "Uploaded"],
+    template = LegalArtifactTemplate.objects.filter(
+        artifact_code="SHARE_CERTIFICATE"
     ).first()
 
-    if existing:
-        return existing, "ALREADY_EXISTS"
+    if not template:
+        raise ValueError("SHARE_CERTIFICATE template not configured")
 
-    # 📄 Step 2: Fetch template
-    template = LegalArtifactTemplate.objects.get(
-        artifact_type="SHARE_CERTIFICATE"
+    relative_path = file_path.replace(
+        str(settings.MEDIA_ROOT) + "/", ""
     )
 
-    # 🧠 Step 3: Generate PDF
-    pdf_path = generate_share_certificate_pdf(
-        society=society,
-        member=member,
-    )
-
-    # 📎 Step 4: Attach document
-    document = SocietyLegalDocument.objects.create(
+    document = SocietyLegalDocument.objects.filter(
         society=society,
         template=template,
-        file=str(pdf_path).replace(str(settings.MEDIA_ROOT) + "/", ""),
-        status="Generated",
-        uploaded_at=timezone.now(),
-    )
-
-    return document, "CREATED"
-from statutory.models import ShareOwnership
-from django.utils import timezone
-
-
-def transfer_shares(*, society, from_member, to_member, shares=1):
-    """
-    Transfers shares safely.
-    Preserves full ownership history.
-    """
-
-    # 🔍 Find active ownership
-    current = ShareOwnership.objects.filter(
-        society=society,
-        member=from_member,
-        is_active=True,
     ).first()
 
-    if not current:
-        raise ValueError("No active shares to transfer")
+    if not document:
+        document = SocietyLegalDocument.objects.create(
+            society=society,
+            template=template,
+            file=relative_path,
+            status="GENERATED",
+            uploaded_at=timezone.now(),
+        )
+    else:
+        # update existing document instead of creating new
+        document.file = relative_path
+        document.status = "GENERATED"
+        document.uploaded_at = timezone.now()
+        document.save(update_fields=["file", "status", "uploaded_at"])
 
-    # 🔒 Close current ownership
-    current.is_active = False
-    current.relinquished_on = timezone.now().date()
-    current.save()
+    return document
+
+def generate_share_certificate_artifact(
+    *,
+    society,
+    flat,
+    owners,
+    certificate_number,
+    share_count,
+    share_value,
+    share_number_from,
+    share_number_to,
+):
+    """
+    Master orchestration function.
+    Generates:
+    - PDF
+    - Legal document
+    Returns document instance
+    """
+
+    pdf_path = generate_share_certificate_pdf(
+        society=society,
+        flat=flat,
+        owners=owners,
+        certificate_number=certificate_number,
+        share_count=share_count,
+        share_value=share_value,
+        share_number_from=share_number_from,
+        share_number_to=share_number_to,
+    )
+
+    document = attach_share_certificate_document(
+        society=society,
+        file_path=pdf_path,
+        flat=flat,
+        certificate_number=certificate_number,
+    )
+
+    return document
+
+
+from statutory.models import ShareOwnership
 
 
 def transfer_shares(*, society, from_member, to_member, shares=1):
@@ -366,7 +458,6 @@ def transfer_shares(*, society, from_member, to_member, shares=1):
 
     return new_ownership
 from statutory.models import SocietyLegalDocument
-from django.utils import timezone
 
 
 def supersede_existing_share_certificate(*, society, reason=None):
@@ -397,10 +488,8 @@ def regenerate_share_certificate_after_transfer(*, society, new_owner):
     after a share transfer.
     """
 
-    doc, status = generate_and_attach_share_certificate(
-        society=society,
-        member=new_owner,
-        reason="Regenerated after share transfer",
-    )
-
+    # TODO: Rebuild using new flat-based engine
+    doc = None
+    status = "REQUIRES_REGENERATION_PIPELINE"
+    
     return doc, status

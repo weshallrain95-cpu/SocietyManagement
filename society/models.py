@@ -17,6 +17,17 @@ class Society(models.Model):
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True)
 
+    # -----------------------------
+    # Financial Definition
+    # -----------------------------
+    authorized_share_capital = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Maximum share capital the society is authorized to raise"
+    )
+    
     onboarding_stage = models.CharField(
         max_length=50,
         choices=[
@@ -1855,6 +1866,41 @@ class CommitteeMembership(models.Model):
     def __str__(self):
         return f"{self.member} - Committee"
 
+class SocietyManager(models.Model):
+
+    society = models.OneToOneField(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="manager",
+    )
+
+    # 🔐 System Access (critical)
+    user = models.OneToOneField(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Linked platform user account for manager access",
+    )
+
+    # 👤 Identity
+    name = models.CharField(max_length=255)
+    phone = models.CharField(max_length=20)
+    email = models.EmailField()
+
+    # 🪪 Government ID
+    aadhaar_number = models.CharField(max_length=20)
+
+    # ⚙️ Operational
+    is_active = models.BooleanField(default=True)
+    appointed_on = models.DateField(null=True, blank=True)
+
+    # 🧾 Audit
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.society} - Manager ({self.name})"
+
 class Case(models.Model):
     """
     Represents a society formation / governance / legal case.
@@ -2190,3 +2236,255 @@ class NotificationEvent(models.Model):
         max_length=20,
         default="PENDING"
     )
+
+
+
+from django.db import models
+
+class ShareCertificate(models.Model):
+    
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("ISSUED", "Issued"),
+    ]
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="share_certificates",
+    )
+
+    flat = models.ForeignKey(
+        "society.Flat",
+        on_delete=models.CASCADE,
+        related_name="share_certificates",
+    )
+
+    certificate_number = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+    )
+    
+    share_number_from = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    share_number_to = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+    
+    share_count = models.PositiveIntegerField()
+
+    share_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    issued_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+    )
+
+    document = models.ForeignKey(
+        "statutory.SocietyLegalDocument",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="share_certificates",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("society", "flat")
+        ordering = ["flat"]
+
+    def __str__(self):
+        return f"{self.flat} - {self.status}"
+
+class OperationalRule(models.Model):
+
+    APPROVAL_AUTHORITY_CHOICES = [
+        ("COMMITTEE", "Committee"),
+        ("DUAL_COMMITTEE", "Dual Committee Approval"),
+        ("GENERAL_BODY", "General Body (AGM/SGM)"),
+    ]
+
+    APPROVAL_MODE_CHOICES = [
+        ("SINGLE", "Single Approval"),
+        ("DUAL", "Dual Approval"),
+        ("FULL_COMMITTEE", "Full Committee Approval"),
+    ]
+
+    society = models.OneToOneField(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="operational_rule",
+    )
+
+    # 🔷 Spend Control
+    max_spend_without_approval = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Max amount allowed without approval",
+    )
+
+    approval_required_above = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Amount above which approval is required",
+    )
+
+    # 🔷 Authority Control
+    approval_authority = models.CharField(
+        max_length=20,
+        choices=APPROVAL_AUTHORITY_CHOICES,
+        default="COMMITTEE",
+    )
+
+    # 🔷 Committee Limit
+    committee_approval_limit = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Max amount committee can approve",
+    )
+
+    # 🔷 Member / General Body Trigger
+    member_approval_required_above = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Amount above which general body approval is required",
+    )
+
+    # 🔷 Approval Mode
+    approval_mode = models.CharField(
+        max_length=20,
+        choices=APPROVAL_MODE_CHOICES,
+        default="SINGLE",
+    )
+
+    max_cash_spend_allowed = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Maximum amount allowed for cash transactions",
+    )
+
+    # ================= SCR18 — MEMBER & GOVERNANCE =================
+
+    billing_target = models.CharField(
+        max_length=20,
+        choices=[
+            ("OWNER", "Owner"),
+            ("TENANT", "Tenant"),
+            ("BOTH", "Both"),
+        ],
+        default="OWNER"
+    )
+
+    vacant_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("FULL", "Full Charges"),
+            ("REDUCED", "Reduced Charges"),
+            ("NONE", "No Charges"),
+        ],
+        default="FULL"
+    )
+
+    vacant_value = models.FloatField(null=True, blank=True)
+
+    dispute_enabled = models.BooleanField(default=False)
+    dispute_hold_bill = models.BooleanField(default=False)
+    dispute_apply_interest = models.BooleanField(default=True)
+
+    waiver_authority = models.CharField(
+        max_length=20,
+        choices=[
+            ("COMMITTEE", "Committee"),
+            ("CHAIRMAN", "Chairman"),
+            ("TREASURER", "Treasurer"),
+        ],
+        default="COMMITTEE"
+    )
+
+    manager_enabled = models.BooleanField(default=False)
+
+    # ================= SCR19 — FINANCIAL CONTROLS =================
+
+    financial_controls_configured = models.BooleanField(
+        default=False,
+        help_text="Set to True when financial controls (SCR19) are completed",
+    )
+
+
+    # 🔷 System
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.society} - Operational Rules"
+
+
+class BillingRule(models.Model):
+
+    BILLING_CYCLE_CHOICES = [
+        ("MONTHLY", "Monthly"),
+        ("QUARTERLY", "Quarterly"),
+    ]
+
+    society = models.OneToOneField(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="billing_rule",
+    )
+
+    billing_cycle = models.CharField(
+        max_length=20,
+        choices=BILLING_CYCLE_CHOICES,
+        default="MONTHLY",
+    )
+
+    due_day = models.IntegerField(default=10)
+    grace_days = models.IntegerField(default=5)
+
+    billing_start_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date from which billing should start for the society",
+    )
+
+    # 🔥 Charge Heads
+    charges = models.JSONField(default=list, blank=True)
+
+    # 🔥 Interest Rules
+    interest_rules = models.JSONField(default=dict, blank=True)
+
+    # 🔥 Penalty Rules
+    penalty_rules = models.JSONField(default=dict, blank=True)
+
+    # 🔷 System
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.society} - Billing Rules"

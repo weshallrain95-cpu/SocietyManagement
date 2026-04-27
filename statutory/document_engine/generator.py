@@ -1,5 +1,6 @@
 from datetime import date
 import re
+from statutory.document_engine.context_builder import build_template_context
 
 from django.core.files.base import ContentFile
 from django.utils import timezone
@@ -111,14 +112,15 @@ class DocumentGenerator:
     @staticmethod
     def build_context(society, extra=None):
 
-        context = {
-            "society_name": society.name,
-            "date": date.today(),
-            "state": getattr(society, "state_code", ""),
-        }
+        # 🔹 Build full context using new engine
+        context = build_template_context(
+        society=society,
+        ux_payload=extra or {}
+    )
 
-        if extra:
-            context.update(extra)
+        # 🔹 Add system defaults (if needed)
+        context["date"] = date.today()
+        context["state"] = getattr(society, "state_code", "")
 
         return context
 

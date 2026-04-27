@@ -12,7 +12,7 @@ export default function SCR13_BylawsPreview() {
   const { society_id, formData, governance_hooks } = location.state || {};
 
   const [fields, setFields] = useState<any[]>([]);
-  const [values, setValues] = useState<Record<number, any>>({});
+  const [values, setValues] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [openInfo, setOpenInfo] = useState<number | null>(null);
 
@@ -59,6 +59,16 @@ export default function SCR13_BylawsPreview() {
       }
     });
 
+    // 🔥 CREATE CLEAN COPY FOR BACKEND ONLY
+    const normalizedHooks = { ...mappedHooks };
+
+    if (normalizedHooks["non_occupancy_mode"] === "fixed") {
+      normalizedHooks["non_occupancy_charge_percent"] =
+        normalizedHooks["non_occupancy_charge_fixed"] || 0;
+    }
+
+    // ❌ DO NOT DELETE ORIGINAL KEYS
+
     console.log("STEP 2: mappedHooks", mappedHooks);
 
     console.log("STEP 3: navigating...");
@@ -67,7 +77,8 @@ export default function SCR13_BylawsPreview() {
       state: {
         society_id,
         formData,
-        governance_hooks: mappedHooks,
+        governance_hooks: mappedHooks,        // 👈 UI truth
+        normalized_hooks: normalizedHooks,    // 👈 backend truth
       },
     });
 

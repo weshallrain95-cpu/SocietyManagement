@@ -17,6 +17,18 @@ import SCR12_BylawsEngine from "./pages/SCR12_BylawsEngine";
 import SCR13_BylawsPreview from "./pages/SCR13_BylawsPreview";
 import SCR14_BylawsGenerate from "./pages/SCR14_BylawsGenerate";
 import SCR15_BylawsUpload from "./pages/SCR15_BylawsUpload";
+import SCR16_ShareCertificates from "./pages/SCR16_ShareCertificates";
+import SCR17OperationalRules from "./pages/SCR17OperationalRules";
+import SCR18MemberGovernanceRules from "./pages/SCR18MemberGovernanceRules";
+import SCR19FinancialControls from "./pages/SCR19FinancialControls";
+import SCR20RegistrationTracker from "./pages/SCR20RegistrationTracker";
+import SCR21FormA from "./pages/SCR21FormA";
+import SCR22ProvisionalResolution from "./pages/SCR22ProvisionalResolution";
+import SCR23PromoterConsent from "./pages/SCR23PromoterConsent";
+import SCR24BuilderNotice from "./pages/SCR24BuilderNotice";
+import SCR25BankAccountLetter from "./pages/SCR25BankAccountLetter";
+import SCR26FirstGeneralMeeting from "./pages/SCR26FirstGeneralMeeting";
+import SCR27RegistrarSubmission from "./pages/SCR27RegistrarSubmission";
 
 import { SocietyProvider } from "./context/SocietyContext";
 
@@ -44,52 +56,30 @@ function App() {
           <Route path="/bylaws/preview" element={<SCR13_BylawsPreview />} />
           <Route path="/bylaws/generate" element={<SCR14_BylawsGenerate />} />
           <Route path="/bylaws-upload" element={<SCR15_BylawsUpload />} />
+          <Route path="/share-certificates" element={<SCR16_ShareCertificates />} />
+          <Route path="/operational-rules" element={<SCR17OperationalRules />} />
+          <Route path="/member-governance-rules" element={<SCR18MemberGovernanceRules />} />
+          <Route path="/financial-controls" element={<SCR19FinancialControls />} />
+          <Route path="/registration-tracker" element={<SCR20RegistrationTracker />} />
+          <Route path="/documents/FORM_A_MH" element={<SCR21FormA />} />
+          <Route path="/provisional-resolution"element={<SCR22ProvisionalResolution />}/>
+          <Route path="/documents/PROMOTER_CONSENT_LETTER_MH" element={<SCR23PromoterConsent />} />
+          <Route path="/documents/BUILDER_DOCUMENT_NOTICE_MH" element={<SCR24BuilderNotice />}/>
+          <Route path="/documents/BANK_ACCOUNT_LETTER_MH" element={<SCR25BankAccountLetter />}/>
+          <Route path="/documents/FIRST_GENERAL_MEETING_MINUTES_MH" element={<SCR26FirstGeneralMeeting />}/> 
+          <Route path="/documents/REGISTRAR_SUBMISSION_LETTER_MH" element={<SCR27RegistrarSubmission />}/>
+         {/* 🔒 PROTECTED ROUTES (GUARD REMOVED TEMPORARILY) */}
 
-          {/* 🔒 PROTECTED ROUTES (WITH GUARD) */}
-          <Route
-            path="/dashboard"
-            element={
-              <OnboardingGuard>
-                <Dashboard />
-              </OnboardingGuard>
-            }
-          />
+        <Route path="/dashboard" element={<Dashboard />} />
 
-          <Route
-            path="/structure"
-            element={
-              <OnboardingGuard>
-                <StructurePage />
-              </OnboardingGuard>
-            }
-          />
+        <Route path="/structure" element={<StructurePage />} />
 
-          <Route
-            path="/structure-groups"
-            element={
-              <OnboardingGuard>
-                <GroupEnginePage />
-              </OnboardingGuard>
-            }
-          />
+        <Route path="/structure-groups" element={<GroupEnginePage />} />
 
-          <Route
-            path="/structure-preview"
-            element={
-              <OnboardingGuard>
-                <StructurePreviewPage />
-              </OnboardingGuard>
-            }
-          />
+        <Route path="/structure-preview" element={<StructurePreviewPage />} />
 
-          <Route
-            path="/excel-upload-placeholder"
-            element={
-              <OnboardingGuard>
-                <ExcelFlowPage />
-              </OnboardingGuard>
-            }
-          />
+        <Route path="/excel-upload-placeholder" element={<ExcelFlowPage />} />
+        
 
         </Routes>
       </BrowserRouter>

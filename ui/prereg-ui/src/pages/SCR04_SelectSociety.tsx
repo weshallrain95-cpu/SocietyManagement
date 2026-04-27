@@ -14,33 +14,19 @@ export default function SelectSociety() {
   useEffect(() => {
     if (!societies || societies.length === 0) {
       navigate("/");
+      return;
     }
 
-    // ✅ AUTO REDIRECT IF ONLY ONE (extra safety)
+    // ✅ AUTO REDIRECT IF ONLY ONE
     if (societies.length === 1) {
       const s = societies[0];
 
       (async () => {
         try {
-          const res = await fetch(
-            `/api/society/onboarding/status/?society_id=${s.id}`
-          );
-          const status = await res.json();
-
-          const updatedSociety = {
-            ...s,
-            onboarding: {
-              ...s.onboarding,
-              stage: status.stage,
-            },
-          };
-
-          updateSociety(updatedSociety);
+          await updateSociety(s);
           navigate("/dashboard");
         } catch (err) {
           console.error("Failed to fetch onboarding status", err);
-
-          // fallback (original behavior)
           updateSociety(s);
           navigate("/dashboard");
         }
@@ -95,25 +81,10 @@ export default function SelectSociety() {
             key={s.id}
             onClick={async () => {
               try {
-                const res = await fetch(
-                  `/api/society/onboarding/status/?society_id=${s.id}`
-                );
-                const status = await res.json();
-
-                const updatedSociety = {
-                  ...s,
-                  onboarding: {
-                    ...s.onboarding,
-                    stage: status.stage,
-                  },
-                };
-
-                updateSociety(updatedSociety);
+                await updateSociety(s);
                 navigate("/dashboard");
               } catch (err) {
                 console.error("Failed to fetch onboarding status", err);
-
-                // fallback (original behavior)
                 updateSociety(s);
                 navigate("/dashboard");
               }
@@ -127,10 +98,10 @@ export default function SelectSociety() {
               transition: "all 0.2s ease",
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget.style.background = "#f9fafb");
+              e.currentTarget.style.background = "#f9fafb";
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget.style.background = "white");
+              e.currentTarget.style.background = "white";
             }}
           >
             <div style={{ fontWeight: 600 }}>{s.name}</div>

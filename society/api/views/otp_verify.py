@@ -12,24 +12,34 @@ def verify_otp(request):
 
     print("DEBUG OTP:", otp, type(otp))
 
-    # ✅ TEMP OTP
+    # ✅ STEP 0 — OTP VALIDATION
     if str(otp) != "123456":
         return Response(
             {"error": "Invalid OTP"},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # ✅ STEP 1 — FIND USER
-    try:
-        person = Person.objects.get(phone=mobile)
-    except Person.DoesNotExist:
-        return Response(
-            {"error": "User not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
+    # ==========================================================
+    # STEP 1 — RESOLVE PERSON (SUPPORT CREATE + LOGIN)
+    # ==========================================================
+    person = Person.objects.filter(phone=mobile).first()
 
-    # ✅ STEP 2 — GET SOCIETIES
-    memberships = SocietyMember.objects.filter(person=person).select_related("society")
+    # 🟠 CREATE FLOW (NEW USER)
+    if not person:
+        return Response({
+            "message": "OTP verified",
+            "user": None,
+            "societies": []
+        })
+
+    # ==========================================================
+    # STEP 2 — FETCH SOCIETIES (LOGIN FLOW)
+    # ==========================================================
+    memberships = (
+        SocietyMember.objects
+        .filter(person=person)
+        .select_related("society")
+    )
 
     societies = []
 
@@ -44,8 +54,7 @@ def verify_otp(request):
                 "stage": tracker.get_onboarding_stage(),
                 "readiness": tracker.readiness_snapshot(),
             }
-
-        except:
+        except Exception:
             onboarding = {
                 "stage": "SOCIETY_SETUP",
                 "readiness": {}
@@ -57,7 +66,9 @@ def verify_otp(request):
             "onboarding": onboarding
         })
 
-    # ✅ STEP 3 — RESPONSE
+    # ==========================================================
+    # STEP 3 — RESPONSE (LOGIN FLOW)
+    # ==========================================================
     return Response({
         "message": "OTP verified",
         "user": {

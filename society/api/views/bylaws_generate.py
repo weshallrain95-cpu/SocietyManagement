@@ -14,6 +14,9 @@ from statutory.document_engine.bylaw_generator import BylawDocumentGenerator
 # =============================
 @api_view(["POST"])
 def generate_bylaws(request):
+
+    print("🔥 RECEIVED HOOKS:", request.data)
+
     society_id = request.data.get("society_id")
 
     if not society_id:
@@ -102,10 +105,6 @@ def generate_bylaws(request):
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 
-
-# =============================
-# DOWNLOAD BYLAWS
-# =============================
 # =============================
 # DOWNLOAD BYLAWS
 # =============================

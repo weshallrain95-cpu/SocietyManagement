@@ -1,8 +1,10 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
 
-from society.models import Society, FlatOwnership, Committee
+from society.onboarding_state_engine import (
+    derive_onboarding_state,
+    derive_allowed_actions,
+)
 
 
 @api_view(["GET"])
@@ -13,49 +15,11 @@ def get_onboarding_status(request):
     if not society_id:
         return Response({"error": "society_id required"}, status=400)
 
-    society = get_object_or_404(Society, id=society_id)
+    state = derive_onboarding_state(society_id)
+    actions = derive_allowed_actions(society_id)
 
-    # ----------------------------
-    # BASIC FLAGS
-    # ----------------------------
-    has_structure = society.flats.exists()
-
-    has_ownership = FlatOwnership.objects.filter(
-        flat__society=society,
-        is_active=True
-    ).exists()
-
-    # ----------------------------
-    # GOVERNANCE FLAG (NEW)
-    # ----------------------------
-    has_committee = Committee.objects.filter(
-        society=society,
-        is_active=True
-    ).exists()
-
-    # ----------------------------
-    # STAGE (SOURCE OF TRUTH)
-    # ----------------------------
-    stage = society.onboarding_stage
-
-    # ----------------------------
-    # RESPONSE
-    # ----------------------------
     return Response({
-        "society_id": society.id,
-        "stage": stage,
-        "has_structure": has_structure,
-        "has_ownership": has_ownership,
-        "has_committee": has_committee,
-        "allowed_actions": {
-            "can_generate_structure": stage == "STRUCTURE_PENDING",
-
-            # Upload only allowed BEFORE refinement
-            "can_upload_ownership": has_structure and not has_ownership,
-
-            # Ownership refinement
-            "needs_refinement": stage == "OWNERSHIP_REFINEMENT_PENDING",
-
-            "is_complete": stage == "ONBOARDING_COMPLETE",
-        }
+        "society_id": society_id,
+        "stage": state,
+        "allowed_actions": actions,
     })

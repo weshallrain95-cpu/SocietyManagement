@@ -2,6 +2,45 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 
+/* ================= STYLES ================= */
+
+const wrapper = {
+  minHeight: "100vh",
+  background: "#f5f7fb",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 20,
+};
+
+const card = {
+  width: "100%",
+  maxWidth: 420,
+  background: "white",
+  padding: 30,
+  borderRadius: 14,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+};
+
+const input = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: 8,
+  border: "1px solid #d1d5db",
+};
+
+const button = {
+  width: "100%",
+  marginTop: 20,
+  padding: "12px",
+  background: "#f97316",
+  color: "white",
+  border: "none",
+  borderRadius: 8,
+  cursor: "pointer",
+  fontWeight: 500,
+};
+
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -11,58 +50,20 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm();
 
-  const onSubmit = async (data: any) => {
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/society/mobile-exists/?mobile=${data.mobile}`
-      );
-
-      let result: any = {};
-
-      try {
-        result = await response.json();
-      } catch {}
-
-      if (!response.ok) {
-        alert("Server error. Try again.");
-        return;
-      }
-
-      if (!result.mobile_exists) {
-        alert("No account found. Please create a society first.");
-        return;
-      }
-
-      // ✅ PASS MOBILE TO OTP PAGE
-      navigate("/verify", { state: { mobile: data.mobile } });
-
-    } catch (err) {
-      console.error(err);
-      alert("Something went wrong");
-    }
+  // ✅ CLEAN SUBMIT (NO API CALL)
+  const onSubmit = (data: any) => {
+    navigate("/verify", {
+      state: {
+        mobile: data.mobile,
+        flow: "LOGIN",
+      },
+    });
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f5f7fb",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 20,
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 420,
-          background: "white",
-          padding: 30,
-          borderRadius: 14,
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-        }}
-      >
+    <div style={wrapper}>
+      <div style={card}>
+
         {/* LOGO */}
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <img src={logo} style={{ height: 42 }} />
@@ -84,17 +85,18 @@ export default function LoginPage() {
             fontSize: 14,
           }}
         >
-          Enter your registered mobile number to continue
+          Enter your mobile number to continue
         </p>
 
         {/* FORM */}
         <form onSubmit={handleSubmit(onSubmit)}>
 
-          <div className="field-label">
-            Mobile Number <span className="required">*</span>
+          <div style={{ marginBottom: 10 }}>
+            Mobile Number <span style={{ color: "red" }}>*</span>
           </div>
 
           <input
+            style={input}
             placeholder="Enter 10 digit mobile number"
             {...register("mobile", {
               required: "Mobile number is required",
@@ -106,23 +108,12 @@ export default function LoginPage() {
           />
 
           {errors.mobile && (
-            <p className="error">{errors.mobile.message as string}</p>
+            <p style={{ color: "red", fontSize: 13 }}>
+              {errors.mobile.message as string}
+            </p>
           )}
 
-          <button
-            type="submit"
-            style={{
-              width: "100%",
-              marginTop: 20,
-              padding: "12px",
-              background: "#f97316",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontWeight: 500,
-            }}
-          >
+          <button type="submit" style={button}>
             Continue →
           </button>
 
@@ -139,6 +130,7 @@ export default function LoginPage() {
         >
           New here? Create your society first.
         </div>
+
       </div>
     </div>
   );

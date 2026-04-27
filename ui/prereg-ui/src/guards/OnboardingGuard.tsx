@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const runGuard = async () => {
@@ -25,87 +27,99 @@ const OnboardingGuard = ({ children }: { children: React.ReactNode }) => {
 
         const path = window.location.pathname;
 
-        // 🔥 CENTRALIZED ROUTING RULES
+
+        // ===============================
+        // 🔥 LAYER 2 — ACCESS CONTROL
+        // ===============================
+
+        // Governance
+        if (!data.allowed_actions.can_create_committee) {
+          if (path.startsWith("/committee")) {
+            navigate("/operations", { replace: true });
+            return;
+          }
+        }
+
+        // Bylaws
+        if (!data.allowed_actions.can_generate_bylaws) {
+          if (path.startsWith("/bylaws")) {
+            navigate("/operations", { replace: true });
+            return;
+          }
+        }
+
+        // Share Certificates
+        if (
+          !data.allowed_actions.can_access_share_certificates &&
+          path.startsWith("/share-certificates")
+        ) {
+          navigate("/operations", { replace: true });
+          return;
+        }
+
+        // Operational Rules
+        if (
+          !data.allowed_actions.can_configure_operational_rules &&
+          path.startsWith("/operational-rules")
+        ) {
+          navigate("/operations", { replace: true });
+          return;
+        }
+
+        // ===============================
+        // 🔥 LAYER 1 — ENTRY ROUTING
+        // ===============================
 
         if (stage === "STRUCTURE_PENDING") {
-          const allowedPaths = [
-            "/structure",
-            "/structure-groups"
-          ];
-
-          const isAllowed = allowedPaths.some((p) => path.startsWith(p));
-
-          if (!isAllowed) {
+          if (!path.startsWith("/structure")) {
             navigate("/structure", { replace: true });
             return;
           }
-
-          setReady(true);
-          return;
         }
 
-        // STRUCTURE_CREATED → /excel-upload-placeholder
-        if (
-          stage === "STRUCTURE_CREATED" &&
-          !path.includes("/excel-upload-placeholder")
-        ) {
-          navigate("/excel-upload-placeholder");
-          return;
-        }
-
-        // 🔥 OWNERSHIP UPLOAD (DATA-DRIVEN)
-        if (data.allowed_actions.can_upload_ownership) {
+        if (stage === "OWNERSHIP_PENDING") {
           if (!path.includes("/excel-upload-placeholder")) {
-            navigate("/excel-upload-placeholder");
+            navigate("/excel-upload-placeholder", { replace: true });
             return;
           }
-
-          setReady(true);
-          return;
         }
 
         if (stage === "OWNERSHIP_REFINEMENT_PENDING") {
-            if (!path.includes("/ownership-refinement")) {
-                navigate("/ownership-refinement");
-                return;
-            }
-       }
-        
-        if (data.allowed_actions.needs_refinement) {
-            if (!path.includes("/ownership-refinement")) {
-                navigate("/ownership-refinement");
-                return;
-            }
-        }
-       
-        // ONBOARDING_COMPLETE → /dashboard
-        if (stage === "ONBOARDING_COMPLETE") {
-          const blockedPaths = [
-            "/structure",
-            "/structure-groups",
-            "/structure-preview",
-            "/excel-upload-placeholder",
-            "/onboarding/excel",
-            "/ownership"
-          ];
-
-          if (blockedPaths.some((p) => path.includes(p))) {
-            navigate("/dashboard");
+          if (!path.includes("/ownership-refinement")) {
+            navigate("/ownership-refinement", { replace: true });
             return;
           }
         }
 
-        // ✅ Allow access if already on correct page
+        // 🔥 Operations entry (covers everything post-committee)
+        if (
+          stage === "OPERATIONS_PENDING" ||
+          stage === "BYLAWS_PENDING" ||
+          stage === "SHARE_CERTIFICATES_PENDING" ||
+          stage === "OPERATIONAL_RULES_PENDING" ||
+          stage === "OPERATIONS_COMPLETE"
+        ) {
+          if (!path.startsWith("/operations")) {
+            navigate("/operations", { replace: true });
+            return;
+          }
+        }
+
+
+        // ===============================
+        // ✅ FINAL ALLOW
+        // ===============================
+
         setReady(true);
 
-      } catch (err) {
-        console.error("Onboarding guard error:", err);
-        setReady(true); // fail-safe
-      }
-    };
+            } catch (err) {
+              console.error("Onboarding guard error:", err);
+              setReady(true);
+            }
+          };
 
-    runGuard();
-  }, [navigate]);
+          runGuard();
+        }, [navigate, location.pathname]);
 
   // ⛔ Prevent flicker while checking
   if (!ready) return null;

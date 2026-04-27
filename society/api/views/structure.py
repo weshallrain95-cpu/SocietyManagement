@@ -61,8 +61,8 @@ def generate_structure(request):
         # =========================================
         if structure_type == "SINGLE":
 
-            total_wings = 1
-            floors = data.get("floors")
+            total_wings = data.get("total_wings") or 1
+            floors_per_wing = data.get("floors_per_wing") or data.get("floors")
             flat_structure = data.get("flat_structure", [])
             numbering_style = data.get("flat_numbering_style", "A-101")
 
@@ -81,7 +81,7 @@ def generate_structure(request):
             result = generate_society_structure(
                 society=society,
                 total_wings=total_wings,
-                floors_per_wing=floors,
+                floors_per_wing=floors_per_wing,
                 floor_layout=floor_layout,
                 flat_numbering_style=numbering_style,
             )

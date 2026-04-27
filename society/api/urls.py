@@ -24,6 +24,23 @@ from society.api.views.bylaws_schema import get_bylaw_schema
 from society.api.views.bylaws_generate import download_bylaws
 from society.api.views.bylaws_upload import upload_signed_bylaws
 from society.api.views.bylaws_status import bylaws_status
+from society.api.views.share_certificates import (
+    preview_share_certificates,
+    generate_share_certificates,
+)
+from society.api.views.operational_rules import (
+    get_operational_rules,
+    save_operational_rules,
+)
+from .views.billing_rules import get_billing_rules, save_billing_rules
+from society.api.views.share_certificates import issue_share_certificates
+from society.api.views.document_generation import generate_document
+from society.api.views.society_update import update_society
+from society.api.views.artifact_status import get_artifact_status
+from society.api.views.artifact_download import download_artifact
+from society.api.views.artifact_upload import upload_artifact
+from society.api.views.test_forma_access import test_forma_access
+
 
 router = DefaultRouter()
 router.register("audit-events", AuditEventViewSet, basename="audit-events")
@@ -62,6 +79,25 @@ urlpatterns = [
     path("bylaws/download/", download_bylaws),
     path("bylaws/upload/", upload_signed_bylaws),
     path("bylaws/status/", bylaws_status),
+    path(
+        "share-certificates/preview/",
+        preview_share_certificates
+    ),
+    path("share-certificates/generate/", generate_share_certificates),
+    path(
+        "share-certificates/issue/",
+        issue_share_certificates
+    ),
+    path("billing-rules/", get_billing_rules),
+    path("billing-rules/save/", save_billing_rules),
+    path("operational-rules/", get_operational_rules),
+    path("operational-rules/save/", save_operational_rules),
+    path("documents/generate/", generate_document),
+    path("update/", update_society),
+    path("artifacts/status/", get_artifact_status),
+    path("artifacts/download/", download_artifact),
+    path("artifacts/upload/", upload_artifact),
+    path("test-forma-access/", test_forma_access),
 ]
 
 urlpatterns += router.urls

@@ -9,7 +9,12 @@ export default function SCR14_BylawsGenerate() {
   console.log("SCR14 STATE:", location.state);
   const navigate = useNavigate();
 
-  const { society_id, formData, governance_hooks } = location.state || {};
+  const {
+    society_id,
+    formData,
+    governance_hooks,
+    normalized_hooks,
+  } = location.state || {};
 
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
@@ -37,8 +42,8 @@ export default function SCR14_BylawsGenerate() {
           },
           body: JSON.stringify({
             society_id,
-            ...formData,          // 🔥 flatten
-            ...governance_hooks,  // 🔥 flatten
+            ...formData,
+            ...(normalized_hooks || governance_hooks),
           }),
         }
       );
@@ -76,7 +81,7 @@ export default function SCR14_BylawsGenerate() {
         <div style={card}>
           <h3 style={sectionTitle}>Governance Configuration</h3>
 
-          {Object.entries(governance_hooks || {}).map(([key, val]) => (
+          {Object.entries(normalized_hooks || governance_hooks || {}).map(([key, val]) => (
             <div key={key} style={row}>
               <div style={label}>
                 {key.replaceAll("_", " ").toUpperCase()}

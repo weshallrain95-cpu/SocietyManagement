@@ -67,7 +67,9 @@ def upload_ownership_excel(request):
 
     # ---------- PARSE + VALIDATE ----------
     for index, row in enumerate(rows, start=2):
-
+        # 🔥 SKIP COMPLETELY EMPTY ROWS
+        if all(cell is None or str(cell).strip() == "" for cell in row):
+            continue
         try:
             if not row or len(row) < 10:
                 errors.append(f"Row {index}: Invalid row format")

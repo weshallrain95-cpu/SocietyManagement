@@ -8,7 +8,7 @@ import axios from "axios";
 export default function GroupEnginePage() {
   const location = useLocation();
   const navigate = useNavigate();
-
+  const { wings = [] } = location.state || {};
   const incomingFloors = location.state?.floors;
   const structureType = location.state?.structureType;
 
@@ -98,7 +98,7 @@ export default function GroupEnginePage() {
         structure_type: "GROUP",
 
         mode: "GROUP",
-        total_wings: 1,
+        total_wings: structureType === "MULTI" ? wings.length : 1,
         floors_per_wing: floors,
 
         groups: groups.map((g) => ({
@@ -109,8 +109,8 @@ export default function GroupEnginePage() {
         flat_numbering_style: "A-101",
       };
 
-      const isInvalid = groups.some((g) =>
-        g.flats.some((f) => !f.type || !f.area)
+      const isInvalid = groups.some((g: any) =>
+        g.flats.some((f: any) => !f.type || !f.area)
       );
 
       if (isInvalid) {

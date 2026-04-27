@@ -18,8 +18,6 @@ export default function StructurePage() {
     { display_name: string; code: string }[]
   >([]);
 
-  const [uniformWings, setUniformWings] = useState<boolean | null>(null);
-
   const [floors, setFloors] = useState(1);
   const [uniformFloors, setUniformFloors] = useState<boolean | null>(null);
 
@@ -34,9 +32,30 @@ export default function StructurePage() {
     if (!society) navigate("/login");
   }, [society, navigate]);
 
-  const totalSteps = structureType === "MULTI" ? 9 : 6;
+  const totalSteps = structureType === "MULTI" ? 8 : 6;
 
-  /* ================= NAVIGATION ================= */
+  /* ================= HELPERS ================= */
+
+  // 🔥 ONLY ADDITION (NON-GROUP FIX SUPPORT)
+  const buildFlatStructure = (baseFlats: any[]) => {
+    const map: Record<string, { type: string; area: number; count: number }> = {};
+
+    baseFlats.forEach((flat) => {
+      const key = `${flat.type}_${flat.area}`;
+
+      if (!map[key]) {
+        map[key] = {
+          type: flat.type,
+          area: flat.area,
+          count: 0,
+        };
+      }
+
+      map[key].count += 1;
+    });
+
+    return Object.values(map);
+  };
 
   const generateFlatNumber = (index: number) => {
     const floor = 1;
@@ -52,12 +71,33 @@ export default function StructurePage() {
 
   const next = () => {
     if (step >= totalSteps) return;
-
+    console.log("structureType:", structureType);
     if (step === 1 && !structureType) return;
 
+    // 🔥 GROUP FLOW REDIRECT (CRITICAL FIX)
+    if (
+      uniformFloors === false &&
+      (
+        (structureType === "SINGLE" && step === 3) ||
+        (structureType === "MULTI" && step === 5)
+      )
+    ) {
+      navigate("/structure-groups", {
+        state: {
+          structureType,
+          floors,
+          wings: structureType === "MULTI" ? wings : [{ display_name: "Main", code: "A" }],
+        },
+      });
+      return;
+    }
+    
     if (structureType === "MULTI") {
+
+      // Step 2 → Wing count
       if (step === 2 && wingCount < 2) return;
 
+      // Step 3 → Wing naming
       if (step === 3) {
         if (
           wings.length !== wingCount ||
@@ -65,35 +105,17 @@ export default function StructurePage() {
         ) return;
       }
 
-      if (step === 4 && uniformWings === null) return;
-    }
+      // ✅ Step 4 → Floors (shifted, no uniformWings)
+      if (step === 4 && floors < 1) return;
 
-    if (
-      ((structureType === "SINGLE" && step === 2) ||
-        (structureType === "MULTI" && step === 5))
-    ) {
-      if (floors < 1) return;
-    }
+      // ✅ Step 5 → Uniform floors decision
+      if (step === 5 && uniformFloors === null) return;
 
-    if (
-      ((structureType === "SINGLE" && step === 3) ||
-        (structureType === "MULTI" && step === 6))
-    ) {
-      if (uniformFloors === null) return;
-    }
+      // ✅ Step 6 → Flats per floor
+      if (step === 6 && flatsPerFloor < 1) return;
 
-    if (
-      ((structureType === "SINGLE" && step === 4) ||
-        (structureType === "MULTI" && step === 7))
-    ) {
-      if (flatsPerFloor < 1) return;
-    }
-
-    if (
-      ((structureType === "SINGLE" && step === 5) ||
-        (structureType === "MULTI" && step === 8))
-    ) {
-      if (baseFlats.length === 0) return;
+      // ✅ Step 7 → Base config
+      if (step === 7 && baseFlats.length === 0) return;
     }
 
     setStep(step + 1);
@@ -119,127 +141,83 @@ export default function StructurePage() {
           </div>
 
           <div style={card}>
-            {/* STEP 1 */}
-            {step === 1 && (
-              <OptionGroup
-                title="How is your society structured?"
-                options={[
-                  { label: "Single Building", value: "SINGLE" },
-                  { label: "Multiple Wings", value: "MULTI" },
-                ]}
-                value={structureType}
-                onChange={setStructureType}
-              />
-            )}
+            
+          {step === 1 && (
+            <OptionGroup
+              title="Select Structure Type"
+              options={[
+                { label: "Single Building", value: "SINGLE" },
+                { label: "Multiple Wings", value: "MULTI" },
+              ]}
+              value={structureType}
+              onChange={setStructureType}
+            />
+          )}
 
-            {/* MULTI FLOW */}
-            {structureType === "MULTI" && step === 2 && (
-              <InputBlock
-                title="Number of Wings"
-                value={wingCount}
-                onChange={setWingCount}
-              />
-            )}
+          {step === 2 && structureType === "MULTI" && (
+            <InputBlock
+              title="Number of Wings"
+              value={wingCount}
+              onChange={setWingCount}
+            />
+          )}
 
-            {structureType === "MULTI" && step === 3 && (
-              <WingNamingBlock
-                count={wingCount}
-                values={wings}
-                setValues={setWings}
-              />
-            )}
+          {step === 3 && structureType === "MULTI" && (
+            <WingNamingBlock
+              count={wingCount}
+              values={wings}
+              setValues={setWings}
+            />
+          )}
 
-            {structureType === "MULTI" && step === 4 && (
-              <OptionGroup
-                title="Is FLOOR + FLAT configuration identical across all wings?"
-                options={[
-                  { label: "Yes", value: true },
-                  { label: "No (use advanced setup)", value: false },
-                ]}
-                value={uniformWings}
-                onChange={(val: boolean) => {
-                  if (val === false) {
-                    alert(
-                      "For a complex user journey, use Excel Structure Upload."
-                    );
-                    navigate("/excel-upload-placeholder");
-                  } else {
-                    setUniformWings(val);
-                  }
-                }}
-              />
-            )}
+          {((structureType === "SINGLE" && step === 2) ||
+            (structureType === "MULTI" && step === 4)) && (
+            <InputBlock
+              title="Number of Floors"
+              value={floors}
+              onChange={setFloors}
+            />
+          )}
 
-            {/* FLOORS */}
-            {(
-              (structureType === "SINGLE" && step === 2) ||
-              (structureType === "MULTI" && step === 5)
-            ) && (
-              <InputBlock
-                title="Number of Floors"
-                value={floors}
-                onChange={setFloors}
-              />
-            )}
+          {((structureType === "SINGLE" && step === 3) ||
+            (structureType === "MULTI" && step === 5)) && (
+            <OptionGroup
+              title="Same configuration on all floors?"
+              options={[
+                { label: "Yes", value: true },
+                { label: "No", value: false },
+              ]}
+              value={uniformFloors}
+              onChange={setUniformFloors}
+            />
+          )}
 
-            {/* UNIFORM FLOORS */}
-            {(
-              (structureType === "SINGLE" && step === 3) ||
-              (structureType === "MULTI" && step === 6)
-            ) && (
-              <OptionGroup
-                title="Are ALL flats identical across floors?"
-                options={[
-                  { label: "Yes", value: true },
-                  { label: "No (use advanced setup)", value: false },
-                ]}
-                value={uniformFloors}
-                onChange={(val: boolean) => {
-                  if (val === false) {
-                    navigate("/structure-groups", {
-                      state: { floors, wings, structureType },
-                    });
-                  } else {
-                    setUniformFloors(val);
-                  }
-                }}
-              />
-            )}
+          {((structureType === "SINGLE" && step === 4) ||
+            (structureType === "MULTI" && step === 6)) && (
+            <InputBlock
+              title="Flats per Floor"
+              value={flatsPerFloor}
+              onChange={(val: number) => {
+                setFlatsPerFloor(val);
 
-            {/* FLATS PER FLOOR */}
-            {(
-              (structureType === "SINGLE" && step === 4) ||
-              (structureType === "MULTI" && step === 7)
-            ) && (
-              <InputBlock
-                title="Number of Flats per Floor"
-                value={flatsPerFloor}
-                onChange={(val: number) => {
-                  setFlatsPerFloor(val);
+                const generated = Array.from({ length: val }, (_, i) => ({
+                  flat_number: generateFlatNumber(i + 1),
+                  type: "",
+                  area: 0,
+                }));
 
-                  const generated = Array.from({ length: val }, (_, i) => ({
-                    index: i + 1,
-                    flat_number: generateFlatNumber(i + 1),
-                    type: "",
-                    area: 0,
-                  }));
+                setBaseFlats(generated);
+              }}
+            />
+          )}
 
-                  setBaseFlats(generated);
-                }}
-              />
-            )}
-
-            {/* BASE FLOOR CONFIG */}
-            {(
-              (structureType === "SINGLE" && step === 5) ||
-              (structureType === "MULTI" && step === 8)
-            ) && (
-              <BaseFloorConfigBlock
-                values={baseFlats}
-                setValues={setBaseFlats}
-              />
-            )}
-
+          {((structureType === "SINGLE" && step === 5) ||
+            (structureType === "MULTI" && step === 7)) && (
+            <BaseFloorConfigBlock
+              values={baseFlats}
+              setValues={setBaseFlats}
+            />
+          )}
             {/* CTA */}
             <div style={cta}>
               {step > 1 && (
@@ -252,7 +230,112 @@ export default function StructurePage() {
                 style={primaryBtn}
                 onClick={() => {
                   if (step === totalSteps) {
-                    navigate("/structure-preview", {
+
+                    // 🔥 ONLY FIX — NON-GROUP API CALL
+                    if (structureType === "SINGLE" && uniformFloors === true) {
+
+                      const flat_structure = buildFlatStructure(baseFlats);
+
+                      const payload = {
+                        society_id: society?.id,
+                        structure_type: "SINGLE",
+                        total_wings: 1,   // ✅ FIXED
+                        floors,
+                        flat_structure,
+                        flat_numbering_style: "A-101",
+                      };
+
+                      console.log("🚀 NON-GROUP PAYLOAD:", payload);
+
+                      fetch("/api/society/structure/generate/", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(payload),
+                      })
+                        .then(res => res.json())
+                        .then(data => {
+                          console.log("✅ STRUCTURE RESPONSE:", data);
+
+                          if (data.status === "success") {
+                            navigate("/structure-preview", {
+                              state: {
+                                mode: "STANDARD",
+                                floors,
+                                flatsPerFloor,
+                                baseFlats,
+                                wings: [{ display_name: "Main", code: "A" }],
+                              },
+                            });
+                          } else {
+                            alert("Structure generation failed");
+                          }
+                        })
+                        .catch(err => {
+                          console.error("❌ STRUCTURE ERROR:", err);
+                          alert("Something went wrong");
+                        });
+
+                      return;
+                    }
+                    
+                    if (structureType === "MULTI" && uniformFloors === true) {
+
+                      const flat_structure = buildFlatStructure(baseFlats);
+
+                      const payload = {
+                        society_id: society?.id,
+                        structure_type: "SINGLE",   // ✅ still SINGLE engine
+                        total_wings: wingCount,
+                        floors,
+                        flat_structure,
+                        flat_numbering_style: "A-101",
+                      };
+
+                      console.log("🚀 MULTI NON-GROUP PAYLOAD:", payload);
+
+                      fetch("/api/society/structure/generate/", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(payload),
+                      })
+                        .then(res => res.json())
+                        .then(data => {
+                          console.log("✅ STRUCTURE RESPONSE:", data);
+
+                          if (data.status === "success") {
+                            navigate("/structure-preview", {
+                              state: {
+                                mode: "STANDARD",
+                                floors,
+                                flatsPerFloor,
+                                baseFlats,
+                                wings,
+                              },
+                            });
+                          } else {
+                            alert("Structure generation failed");
+                          }
+                        })
+                        .catch(err => {
+                          console.error("❌ STRUCTURE ERROR:", err);
+                          alert("Something went wrong");
+                        });
+
+                      return;
+                    }
+                    
+                    // 🔁 ORIGINAL FLOW (UNCHANGED)
+                    let nextRoute = "/structure-preview";
+
+                    if (uniformFloors === false) {
+                      nextRoute = "/structure-groups";
+                    }
+
+                    navigate(nextRoute, {
                       state: {
                         mode: "STANDARD",
                         floors,
@@ -264,9 +347,11 @@ export default function StructurePage() {
                             : wings,
                       },
                     });
-                  } else {
-                    next();
+
+                    return;
                   }
+
+                  next();
                 }}
               >
                 {step === totalSteps ? "Confirm & Generate" : "Continue"}

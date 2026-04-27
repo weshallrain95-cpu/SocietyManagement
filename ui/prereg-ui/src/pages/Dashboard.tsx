@@ -1,147 +1,145 @@
 import AppShell from "../components/layout/AppShell";
 import { useSociety } from "../context/SocietyContext";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
 
 export default function Dashboard() {
   const { society } = useSociety();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<any>(null);
 
-  /* ================= FETCH STATUS ================= */
+  if (!society) return null;
 
-  useEffect(() => {
-    if (society === null) return; // wait for context to load
+  const stage = society?.onboarding?.stage;
 
-    if (!society?.id) {
-      navigate("/login");
-      return;
-    }
+  const next = getNextStep(stage);
 
-    fetch(`/api/society/onboarding/status/?society_id=${society.id}`)
-      .then((res) => res.json())
-      .then((data) => setStatus(data))
-      .catch(() => console.warn("Status fetch failed"));
-  }, [society, navigate]);
+  const progressMap: any = {
+    STRUCTURE_PENDING: 10,
+    OWNERSHIP_PENDING: 25,
+    OWNERSHIP_REFINEMENT_PENDING: 40,
+    OPERATIONS_PENDING: 55,
+    BYLAWS_PENDING: 70,
+    SHARE_CERTIFICATES_PENDING: 80,
+    OPERATIONAL_RULES_PENDING: 90,
+    OPERATIONS_COMPLETE: 100,
+  };
 
-  const isComplete = [
-    "ONBOARDING_COMPLETE",
-    "OPERATIONS_PENDING",
-    "OPERATIONS_COMPLETE",
-    "FINANCIAL_PENDING",
-    "FINANCIAL_COMPLETE",
-    "SYSTEM_LIVE",
-  ].includes(status?.stage);
+  const progress = progressMap[stage] || 0;
 
-  // 🔥 ADD THIS (surgical fix)
-  const structureLocked = status
-    ? [
-        "STRUCTURE_CREATED",
-        "OWNERSHIP_PENDING",
-        "ONBOARDING_COMPLETE",
-        "OPERATIONS_PENDING",
-        "OPERATIONS_COMPLETE",
-        "FINANCIAL_PENDING",
-        "FINANCIAL_COMPLETE",
-        "SYSTEM_LIVE",
-      ].includes(status.stage)
-    : true; // default lock until status loads
-
-  /* ================= UI ================= */
+  const isRegistered = society?.legal_status === "REGISTERED";
+  const onboarding = society?.onboarding;
+  const canAccessFinance = false; // placeholder (until backend ready)
 
   return (
     <AppShell>
-      <div style={container}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         
         {/* HEADER */}
         <div style={header}>
           <div>
-            <h1 style={title}>{society?.name || "Your Society"}</h1>
-            <p style={subtitle}>
-              Manage governance, operations and compliance seamlessly
-            </p>
+            <h1 style={title}>{society?.name}</h1>
+            <p style={subtitle}>System control dashboard</p>
           </div>
 
           <div style={badge}>
-            {isComplete ? "System Ready" : "Setup in Progress"}
+            {progress === 100 ? "System Ready" : "Setup in Progress"}
           </div>
         </div>
 
-        {/* ALERT */}
-        {society?.legal_status === "NOT_REGISTERED" && (
-          <div style={alert}>
-            ⚠ Your society is not registered — complete setup to proceed with registration
-          </div>
-        )}
+        {/* HERO: PROGRESS */}
+        <div style={heroCard}>
+          <div>
+            <h3>Onboarding Progress</h3>
+            <p style={{ marginTop: 8 }}>
+              Current Stage: <b>{stage}</b>
+            </p>
 
-        {/* STATUS PANEL */}
-        <div style={statusPanel}>
-          <StatusItem
-            label="Structure"
-            value={isComplete ? "Complete" : "Pending"}
-            success={isComplete}
-          />
-          <StatusItem
-            label="Ownership"
-            value={isComplete ? "Configured" : "Pending"}
-            success={isComplete}
-          />
-          <StatusItem
-            label="Finance"
-            value="Pending"
-            success={false}
-          />
+            <div style={progressBar}>
+              <div style={{ ...progressFill, width: `${progress}%` }} />
+            </div>
+
+            <button
+              style={primaryBtn}
+              onClick={() => navigate(next.route)}
+            >
+              {next.label}
+            </button>
+          </div>
+
+          {/* SPEEDOMETER STYLE */}
+          <div style={progressCircle}>
+            <div style={circleInner}>{progress}%</div>
+          </div>
         </div>
 
-        {/* STATS */}
-        <div style={statsGrid}>
-          <StatCard title="Members" value="—" />
+        {/* REGISTRATION */}
+        <div style={card}>
+          <h3>Registration Status</h3>
+
+          {isRegistered ? (
+            <div style={{ color: "#16a34a", fontWeight: 600 }}>
+              Registered ✔ — {society?.registration_number || "—"}
+            </div>
+          ) : (
+            <>
+              <div style={{ color: "#ea580c" }}>
+                Society Unregistered
+              </div>
+              <button
+                style={secondaryBtn}
+                onClick={() => navigate("/registration-tracker")}
+              >
+                Continue Registration
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* SNAPSHOT */}
+        <div style={grid}>
+          <StatCard title="Members Onboarding" value="—" />
           <StatCard title="Flats" value="—" />
-          <StatCard title="Pending Tasks" value="—" />
+          <StatCard title="Certificates" value="—" />
+          <StatCard title="Rules" value="—" />
         </div>
 
-        {/* MODULES */}
-        <div style={moduleGrid}>
+        {/* MODULE GRID */}
+        <div style={grid}>
+          <ModuleCard
+            title="Governance"
+            enabled={onboarding?.can_create_committee}
+            onClick={() => navigate("/committee/setup")}
+          />
+
+          <ModuleCard
+            title="By-laws"
+            enabled={onboarding?.can_generate_bylaws}
+            onClick={() => navigate("/bylaws")}
+          />
+
+          <ModuleCard
+            title="Share Certificates"
+            enabled={onboarding?.can_generate_share_certificates}
+            onClick={() => navigate("/operations")}
+          />
+
+          <ModuleCard
+            title="Operational Rules"
+            enabled={onboarding?.can_configure_operational_rules}
+            onClick={() => navigate("/operations")}
+          />
+
+          <ModuleCard
+            title="Finance Onboarding"
+            enabled={canAccessFinance}
+            onClick={() => navigate("/finance")}
+          />
+
+          <ModuleCard
+            title="Members Onboarding"
+            enabled={false}
+            onClick={() => navigate("/members")}
+          />
           
-          <ModuleCard
-            title="Society Setup"
-            status={isComplete ? "Completed" : "Continue Setup"}
-            locked={structureLocked}
-            onClick={() => {
-              if (structureLocked) return;
-              navigate("/structure");
-            }}
-          />
-
-          <ModuleCard
-            title="Members & Governance"
-            status={status?.has_committee ? "Completed" : "Pending"}
-            locked={!status?.has_committee}
-          />
-
-          <ModuleCard
-            title="Finance"
-            status="Locked"
-            locked
-          />
-
-          <ModuleCard
-            title="Start Operations Onboarding"
-            status={isComplete ? "Next Step" : "Locked"}
-            locked={!isComplete}
-            highlight={isComplete}
-            onClick={() => {
-              if (!isComplete) return;
-              navigate("/operations");
-            }}
-          />
-
-          <ModuleCard
-            title="Compliance"
-            status="Locked"
-            locked
-          />
-
         </div>
 
       </div>
@@ -151,33 +149,25 @@ export default function Dashboard() {
 
 /* ================= COMPONENTS ================= */
 
-function ModuleCard({ title, status, locked = false, onClick, highlight = false }: any) {
+function ModuleCard({ title, enabled, onClick }: any) {
   return (
     <div
       onClick={() => {
-        if (locked) return;
-        onClick && onClick();
+        if (!enabled) return;
+        onClick();
       }}
       style={{
-        padding: 22,
-        borderRadius: 16,
-        background: highlight ? "#ecfdf5" : "white",
-        border: highlight ? "1px solid #10b981" : "1px solid #e5e7eb",
-        cursor: locked ? "not-allowed" : "pointer",
-        opacity: locked ? 0.5 : 1,
-        transition: "all 0.2s ease",
-      }}
-      onMouseEnter={(e) => {
-        if (!locked) e.currentTarget.style.transform = "translateY(-4px)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0px)";
+        padding: 20,
+        borderRadius: 14,
+        background: "white",
+        border: "1px solid #e5e7eb",
+        cursor: enabled ? "pointer" : "not-allowed",
+        opacity: enabled ? 1 : 0.5,
       }}
     >
-      <div style={{ fontWeight: 600, fontSize: 15 }}>{title}</div>
-
-      <div style={{ fontSize: 13, marginTop: 6, color: "#6b7280" }}>
-        {status}
+      <div style={{ fontWeight: 600 }}>{title}</div>
+      <div style={{ fontSize: 12, color: "#6b7280", marginTop: 5 }}>
+        {enabled ? "Available" : "Locked"}
       </div>
     </div>
   );
@@ -185,35 +175,39 @@ function ModuleCard({ title, status, locked = false, onClick, highlight = false 
 
 function StatCard({ title, value }: any) {
   return (
-    <div style={statCard}>
-      <div style={statTitle}>{title}</div>
-      <div style={statValue}>{value}</div>
+    <div style={card}>
+      <div style={{ fontSize: 13, color: "#6b7280" }}>{title}</div>
+      <div style={{ fontSize: 22, fontWeight: 600 }}>{value}</div>
     </div>
   );
 }
 
-function StatusItem({ label, value, success }: any) {
-  return (
-    <div style={statusItem}>
-      <div style={{ fontSize: 13, color: "#6b7280" }}>{label}</div>
-      <div
-        style={{
-          fontWeight: 600,
-          color: success ? "#16a34a" : "#ef4444",
-        }}
-      >
-        {value}
-      </div>
-    </div>
-  );
+/* ================= HELPERS ================= */
+
+function getNextStep(stage: string) {
+  switch (stage) {
+    case "STRUCTURE_PENDING":
+      return { label: "Setup Structure", route: "/structure" };
+    case "OWNERSHIP_PENDING":
+      return { label: "Upload Ownership", route: "/excel-upload-placeholder" };
+    case "OWNERSHIP_REFINEMENT_PENDING":
+      return { label: "Fix Ownership", route: "/ownership-refinement" };
+    case "OPERATIONS_PENDING":
+      return { label: "Setup Committee", route: "/committee/setup" };
+    case "BYLAWS_PENDING":
+      return { label: "Generate By-laws", route: "/bylaws" };
+    case "SHARE_CERTIFICATES_PENDING":
+      return { label: "Manage Share Certificates", route: "/operations" };
+    case "OPERATIONAL_RULES_PENDING":
+      return { label: "Configure Operational Rules", route: "/operations" };
+    case "OPERATIONS_COMPLETE":
+      return { label: "Go to Operations Hub", route: "/operations" };
+    default:
+      return { label: "Dashboard", route: "/dashboard" };
+  }
 }
 
 /* ================= STYLES ================= */
-
-const container = {
-  maxWidth: 1200,
-  margin: "0 auto",
-};
 
 const header = {
   display: "flex",
@@ -222,75 +216,80 @@ const header = {
   marginBottom: 25,
 };
 
-const title = {
-  fontSize: 28,
-  fontWeight: 700,
-};
+const title = { fontSize: 28, fontWeight: 700 };
 
-const subtitle = {
-  color: "#6b7280",
-  marginTop: 5,
-};
+const subtitle = { color: "#6b7280" };
 
 const badge = {
   background: "#eef2ff",
   padding: "8px 14px",
   borderRadius: 20,
-  fontSize: 13,
-  fontWeight: 500,
 };
 
-const alert = {
-  background: "#fff7ed",
-  border: "1px solid #fdba74",
-  padding: 14,
-  borderRadius: 10,
-  marginBottom: 25,
-  color: "#9a3412",
-  fontSize: 14,
-};
-
-const statusPanel = {
+const heroCard = {
   display: "flex",
-  gap: 30,
+  justifyContent: "space-between",
   background: "white",
-  padding: 18,
-  borderRadius: 14,
+  padding: 24,
+  borderRadius: 16,
   border: "1px solid #e5e7eb",
-  marginBottom: 30,
 };
 
-const statusItem = {
+const progressBar = {
+  height: 10,
+  background: "#e5e7eb",
+  borderRadius: 10,
+  marginTop: 10,
+};
+
+const progressFill = {
+  height: 10,
+  background: "#22c55e",
+  borderRadius: 10,
+};
+
+const progressCircle = {
+  width: 100,
+  height: 100,
+  borderRadius: "50%",
+  background: "#ecfdf5",
   display: "flex",
-  flexDirection: "column" as const,
+  alignItems: "center",
+  justifyContent: "center",
+  fontWeight: 700,
 };
 
-const statsGrid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-  gap: 20,
-};
+const circleInner = { fontSize: 18 };
 
-const statCard = {
+const card = {
   background: "white",
   padding: 20,
-  borderRadius: 14,
+  borderRadius: 12,
   border: "1px solid #e5e7eb",
+  marginTop: 20,
 };
 
-const statTitle = {
-  fontSize: 13,
-  color: "#6b7280",
-};
-
-const statValue = {
-  fontSize: 22,
-  fontWeight: 600,
-};
-
-const moduleGrid = {
-  marginTop: 30,
+const grid = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
   gap: 20,
+  marginTop: 20,
+};
+
+const primaryBtn = {
+  marginTop: 15,
+  padding: "10px 16px",
+  background: "#111827",
+  color: "white",
+  borderRadius: 8,
+  border: "none",
+};
+
+const secondaryBtn = {
+  marginTop: 10,
+  padding: "8px 14px",
+  background: "#2563eb",
+  color: "white",
+  borderRadius: 8,
+  border: "none",
 };

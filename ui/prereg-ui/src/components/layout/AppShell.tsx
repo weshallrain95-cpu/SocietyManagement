@@ -8,10 +8,16 @@ export default function AppShell({ children }: any) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // 🔥 Clear React state
     updateSociety(null);
-    localStorage.removeItem("society");
 
-    // HARD RESET
+    // 🔥 Clear ALL persistent storage
+    localStorage.clear();
+
+    // 🔥 Clear tab storage (future-proof)
+    sessionStorage.clear();
+
+    // 🔥 Hard reset app
     window.location.href = "/";
   };
 

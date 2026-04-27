@@ -1,5 +1,5 @@
 from bylaws.models import BylawChapter, BylawClause
-
+import re
 
 class BylawDocumentGenerator:
 
@@ -39,9 +39,23 @@ class BylawDocumentGenerator:
         lines.append("GOVERNANCE PARAMETERS")
         lines.append("")
 
-        for key, value in hooks.items():
-            label = key.replace("_", " ").title()
-            lines.append(f"{label}: {value}")
+        # 🔥 FORCE SAME VALUES USED IN CLAUSES
+        def get_value(key, fallback=None):
+            val = hooks.get(key)
+            return val if val is not None else fallback
+
+        lines.append(f"Share Value: {get_value('share_value')}")
+        lines.append(f"Minimum Shares Per Member: {get_value('minimum_shares_per_member')}")
+        lines.append(f"Entrance Fee: {get_value('entrance_fee')}")
+        lines.append(f"Maintenance Charge Basis: {get_value('maintenance_charge_basis')}")
+        lines.append(f"Sinking Fund Percent: {get_value('sinking_fund_percent')}")
+        lines.append(f"Repair Fund Percent: {get_value('repair_fund_percent')}")
+        lines.append(f"Late Payment Interest Percent: {get_value('late_payment_interest_percent')}")
+        lines.append(f"Non Occupancy Charge Percent: {get_value('non_occupancy_charge_percent')}")
+        lines.append(f"Committee Size: {get_value('committee_size')}")
+        lines.append(f"Committee Term Years: {get_value('committee_term_years')}")
+        lines.append(f"Quorum General Body Percent: {get_value('quorum_general_body_percent')}")
+        lines.append(f"Redevelopment Consent Percent: {get_value('redevelopment_consent_percent')}")
 
         lines.append("")
         lines.append("=" * 60)
@@ -95,11 +109,42 @@ class BylawDocumentGenerator:
                 text = clause.legal_text
                 title = clause.title.strip().lower()
 
-                # 🔥 GOVERNANCE INJECTION (FINAL)
+                # 🔥 GOVERNANCE INJECTION — FIXED (REPLACE NOT APPEND)
 
+                
                 if title == "entrance fee and share capital":
-                    text += f"\n\nEntrance fee shall be Rs. {hooks.get('entrance_fee')} payable at the time of admission."
-                    text += f"\nEach share shall have a face value of Rs. {hooks.get('share_value')} and each member shall subscribe to a minimum of {hooks.get('minimum_shares_per_member')} shares."
+                    new_text = re.sub(
+                        r"Entrance fee.*shares\.",
+                        f"Entrance fee shall be Rs. {hooks.get('entrance_fee')} payable at the time of admission.\n"
+                        f"Each share shall have a face value of Rs. {hooks.get('share_value')} and each member shall subscribe to a minimum of {hooks.get('minimum_shares_per_member')} shares.",
+                        text,
+                        flags=re.DOTALL,
+                    )
+                    text = new_text if new_text != text else text + "\n\n" + \
+                        f"Entrance fee shall be Rs. {hooks.get('entrance_fee')} payable at the time of admission.\n" + \
+                        f"Each share shall have a face value of Rs. {hooks.get('share_value')} and each member shall subscribe to a minimum of {hooks.get('minimum_shares_per_member')} shares."
+
+                elif title in [
+                    "intimation of tenant occupation",
+                    "applicability of bye-laws to tenants",
+                ]:
+                    allowed = hooks.get("subletting_allowed")
+
+                    if allowed == "no":
+                        text += "\nSubletting of flats is not permitted without prior approval of the Society."
+                    elif allowed == "yes":
+                        text += "\nSubletting of flats is permitted subject to Society rules and intimation requirements."
+
+                elif title == "transfer of shares and interest":
+                    fee = hooks.get("transfer_fee")
+                    if fee:
+                        text += f"\nThe Society shall charge a transfer fee of Rs. {fee} as per applicable rules."
+
+                elif title == "levy of non-occupancy charges":
+                    if hooks.get("non_occupancy_mode") == "fixed_amount":
+                        text = f"Non-occupancy charges shall be Rs. {hooks.get('non_occupancy_charge_fixed')} per month."
+                    else:
+                        text = f"Non-occupancy charges shall be {hooks.get('non_occupancy_charge_percent')}% of the service charges."
 
                 elif title == "levy of maintenance charges":
                     basis_map = {
@@ -108,16 +153,34 @@ class BylawDocumentGenerator:
                         "hybrid": "as decided by the General Body",
                     }
                     basis = basis_map.get(hooks.get("maintenance_charge_basis"))
-                    text += f"\n\nMaintenance charges shall be levied {basis}."
+
+                    new_text = re.sub(
+                        r"Maintenance charges.*\.",
+                        f"Maintenance charges shall be levied {basis}.",
+                        text,
+                    )
+                    text = new_text if new_text != text else text + "\n\n" + \
+                        f"Maintenance charges shall be levied {basis}."
+
 
                 elif title == "interest on arrears":
-                    text += f"\n\nInterest at the rate of {hooks.get('late_payment_interest_percent')}% per annum shall be charged on arrears."
+                    new_text = re.sub(
+                        r"Interest.*\.",
+                        f"Interest at the rate of {hooks.get('late_payment_interest_percent')}% per annum shall be charged on arrears.",
+                        text,
+                    )
+                    text = new_text if new_text != text else text + "\n\n" + \
+                        f"Interest at the rate of {hooks.get('late_payment_interest_percent')}% per annum shall be charged on arrears."
+
 
                 elif title == "sinking fund":
-                    text += f"\n\nMembers shall contribute {hooks.get('sinking_fund_percent')}% towards the sinking fund."
-
-                elif title == "levy of non-occupancy charges":
-                    text += f"\n\nNon-occupancy charges shall be {hooks.get('non_occupancy_charge_percent')}% of the service charges."
+                    new_text = re.sub(
+                        r"Members shall contribute.*\.",
+                        f"Members shall contribute {hooks.get('sinking_fund_percent')}% towards the sinking fund.",
+                        text,
+                    )
+                    text = new_text if new_text != text else text + "\n\n" + \
+                        f"Members shall contribute {hooks.get('sinking_fund_percent')}% towards the sinking fund."
 
                 lines.append(text)
 
