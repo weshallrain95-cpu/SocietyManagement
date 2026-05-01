@@ -53,10 +53,24 @@ export default function AppShell({ children }: any) {
           </div>
 
           {/* RIGHT — UPGRADED */}
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ fontSize: 13, color: "#6b7280" }}>
               {society?.name || "Logged in"}
             </div>
+
+            {society && (
+              <div style={{ fontSize: 12 }}>
+                {society.is_registered ? (
+                  <span style={{ color: "#374151" }}>
+                    Reg No: {society.registration_number || "-"}
+                  </span>
+                ) : (
+                  <span style={{ color: "#dc2626" }}>
+                    Your society is unregistered!
+                  </span>
+                )}
+              </div>
+            )}
 
             <div
               onClick={handleLogout}

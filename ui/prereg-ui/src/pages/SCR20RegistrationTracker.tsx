@@ -13,8 +13,23 @@ export default function SCR20RegistrationTracker() {
   const [society, setSociety] = useState<any>(null);
   const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [submitted, setSubmitted] = useState(false);
-  const [packGenerated, setPackGenerated] = useState(false);
+  const [selectedFlats, setSelectedFlats] = useState<number[]>([]);
+  const [flats, setFlats] = useState<any[]>([]);
+  const [builderDocs, setBuilderDocs] = useState<string[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [registrationSubmitted, setRegistrationSubmitted] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [registrationNumber, setRegistrationNumber] = useState("");
+  const [registrationDate, setRegistrationDate] = useState("");
+
+  const [, setRegistrationDocs] = useState<{
+    registration_certificate: File | null;
+    oc_certificate: File | null;
+  }>({
+    registration_certificate: null,
+    oc_certificate: null,
+  });
+  
   const [fileMap, setFileMap] = useState<Record<string, string>>({});
   const artifacts: Artifact[] = [
   {
@@ -59,7 +74,23 @@ export default function SCR20RegistrationTracker() {
   },
 ];
 
-  useEffect(() => {
+useEffect(() => {
+  const fetchFlats = async () => {
+    try {
+      const res = await fetch(
+        `/api/society/flats/?society_id=${localStorage.getItem("society_id")}`
+      );
+      const data = await res.json();
+      setFlats(data || []);
+    } catch (e) {
+      console.error("Failed to load flats", e);
+    }
+  };
+
+  fetchFlats();
+}, []);  
+
+useEffect(() => {
     fetchSociety();
     fetchStatus();
 
@@ -141,7 +172,23 @@ export default function SCR20RegistrationTracker() {
     (s) => s === "GENERATED" || s === "UPLOADED"
     ).length;
 
-    const allDone = completedCount === artifacts.length;
+    const allDone = artifacts.every((a) => {
+      const status = statusMap[a.code];
+
+      if (a.code === "BYLAW_DRAFT_MH") {
+        return status === "GENERATED" || status === "UPLOADED";
+      }
+
+      return status === "UPLOADED";
+    });
+
+    const [phase2, setPhase2] = useState(false);
+
+    useEffect(() => {
+      if (allDone) {
+        setPhase2(true);
+      }
+    }, [allDone]);
 
     const handleOpen = (code: string) => {
         const routeMap: Record<string, string> = {
@@ -167,6 +214,7 @@ export default function SCR20RegistrationTracker() {
         </AppShell>
     );
     }
+      
 
   if (society.is_registered) {
   const [docs, setDocs] = useState<{
@@ -179,9 +227,9 @@ export default function SCR20RegistrationTracker() {
 
   const allUploaded =
     docs.registration_certificate && docs.oc_certificate;
-
+  
   return (
-    <AppShell>
+  <AppShell>
       <div style={container}>
         <div style={card}>
           <div style={title}>Society Registered ✔</div>
@@ -211,6 +259,7 @@ export default function SCR20RegistrationTracker() {
                 setDocs((p) => ({
                   ...p,
                   registration_certificate: e.target.files?.[0] || null,
+                
                 }))
               }
             />
@@ -238,14 +287,14 @@ export default function SCR20RegistrationTracker() {
           {allUploaded && (
             <button
                 style={primaryBtn}
-                onClick={() => navigate("/financial-controls")}
+                onClick={() => navigate("/financial-onboarding")}
             >
                 Proceed to Financial Onboarding
             </button>
             )}
         </div>
       </div>
-    </AppShell>
+     </AppShell>
   );
 }
   const handleDownload = (code: string) => {
@@ -271,9 +320,20 @@ export default function SCR20RegistrationTracker() {
         `http://127.0.0.1:8000/api/society/artifacts/download/?society_id=${societyId}&artifact_code=${code}`
     );
   };
-  
+  const builderDocList = [
+    "Approved Plan",
+    "Commencement Certificate",
+    "Occupation Certificate",
+    "Layout Approval",
+    "Title Certificate",
+    "Conveyance",
+    "Architect Certificate",
+    "Flat List"
+  ];
+
   return (
     <AppShell>
+      {!phase2 && (
       <div style={container}>
         {/* HEADER */}
         <div style={header}>
@@ -296,7 +356,6 @@ export default function SCR20RegistrationTracker() {
                     <th style={th}>Generate</th>
                     <th style={th}>Download</th>
                     <th style={th}>Upload</th>
-                    <th style={th}>Extra Upload</th>
                     <th style={th}>Status</th>
                     </tr>
                 </thead>
@@ -336,21 +395,6 @@ export default function SCR20RegistrationTracker() {
                      }
                     };
 
-                    const handleExtraUpload = async (code: string, file: File | null) => {
-                        if (!file) return;
-
-                        const formData = new FormData();
-                        formData.append("file", file);
-                        formData.append("artifact_code", code);
-                        formData.append("society_id", localStorage.getItem("society_id") || "");
-
-                        await fetch("/api/society/document-upload/", {
-                            method: "POST",
-                            body: formData,
-                        });
-
-                        fetchStatus(); // refresh
-                    };
                     return (
                         <tr key={a.code}>
                         <td style={td}>
@@ -404,32 +448,7 @@ export default function SCR20RegistrationTracker() {
                                 }
                                 />
                         </td>
-
-                        <td style={td}>
-                            <input
-                                type="file"
-                                accept="application/pdf"
-                                disabled={status === "UPLOADED"}
-                                onChange={(e) =>
-                                    handleUpload(a.code, e.target.files?.[0] || null)
-                              }
-                            />
-                        </td>
                         
-                        <td style={td}>
-                            {a.code === "BUILDER_DOCUMENT_NOTICE_MH" && status === "UPLOADED" ? (
-                                <input
-                                type="file"
-                                accept="application/pdf"
-                                onChange={(e) =>
-                                    handleExtraUpload(a.code, e.target.files?.[0] || null)
-                                }
-                                />
-                            ) : (
-                                <span style={{ opacity: 0.4 }}>—</span>
-                            )}
-                        </td>
-
                         <td style={td}>
                             <b>{status}</b>
                         </td>
@@ -441,67 +460,374 @@ export default function SCR20RegistrationTracker() {
             </div>
             )}
 
-        {/* FINAL ACTION PANEL */}
-        <div style={actionCard}>
-          <>
-            {allDone && !packGenerated && (
-                <>
-                <div style={success}>All documents ready ✔</div>
+        
+      </div>
+      )}
+      {phase2 && (
+        <div style={{ padding: "20px" }}>
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "20px",
+              border: "2px solid #f97316",
+              background: "#fff7ed",
+              borderRadius: "10px"
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: "8px", fontSize: "16px" }}>
+              Continue to Financial Onboarding
+            </div>
+
+            <div style={{ fontSize: "13px", color: "#555", marginBottom: "14px" }}>
+              Registration approval may take time. You can proceed with financial setup and begin operations immediately.
+            </div>
+
+            <button
+              style={primaryBtn}
+              onClick={() => navigate("/financial-onboarding")}
+            >
+              Start Financial Onboarding
+            </button>
+          <div
+            style={{
+              margin: "30px 0 10px",
+              textAlign: "center",
+              fontWeight: 600,
+              color: "#9ca3af"
+            }}
+          >
+            — OR —
+          </div>
+
+          {/* ===== OPTION 2: COMPLETE REGISTRATION ===== */}
+          <div style={title}>
+            Complete Registration Process
+          </div>
+          
+          </div><div style={{ ...title, marginTop: "40px" }}>
+              Let's Finish Registration Process: Consent Tracking / Developer Doc Collection & Registrar Submission
+            </div>
+
+          <div style={{ marginTop: "0px" }}>
+            <div style={{
+              marginTop: "50px",
+              fontSize: "25px",
+              fontWeight: 600
+            }}>
+              Consent Tracking
+            </div>
+            <div style={{
+              marginTop: "10px",
+              padding: "16px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              background: "#fafafa"
+            }}>
+              <div style={{ marginBottom: "12px" }}>
+                <div style={{ fontSize: "13px", color: "#555" }}>
+                  Select flats from which consent has been received.
+                </div>
+
+                <div style={{ marginTop: "6px", fontWeight: 600 }}>
+                  Consent: {selectedFlats.length} / {flats.length} (
+                  {flats.length
+                    ? Math.round((selectedFlats.length / flats.length) * 100)
+                    : 0}
+                  %)
+                </div>
+              </div>
+              <div style={{ marginTop: "8px", display: "flex", gap: "10px" }}>
+                <button
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => {
+                    const allIds = flats.map((f, idx) => f.id || idx);
+                    setSelectedFlats(allIds);
+                  }}
+                >
+                  Select All
+                </button>
 
                 <button
-                    style={primaryBtn}
-                    onClick={() => setPackGenerated(true)}
+                  style={{
+                    padding: "4px 10px",
+                    fontSize: "12px",
+                    cursor: "pointer"
+                  }}
+                  onClick={() => setSelectedFlats([])}
                 >
-                    Generate Registrar Pack
+                  Clear All
                 </button>
-                </>
-            )}
+              </div>
+              <div style={{
+                maxHeight: "200px",
+                overflowY: "auto",
+                border: "1px solid #eee",
+                borderRadius: "6px",
+                padding: "10px",
+                background: "#fff"
+              }}>
+                {flats.map((f, idx) => {
+                  const flatId = f.id || idx;
+                  const flatLabel = f.flat_number || f.number || `Flat ${idx + 1}`;
+                  const ownerName = f.owner_name || f.owner || "";
+                  const isSelected = selectedFlats.includes(flatId);
 
-            {packGenerated && (
-                <>
-                <div style={success}>Registrar Pack Generated ✔</div>
-
-                <div style={question}>
-                    Have you submitted to Registrar?
-                </div>
-
-                <div>
-                    <button
-                    style={{
-                        ...yesBtn,
-                        background: submitted ? "#16a34a" : "#eee",
-                        color: submitted ? "#fff" : "#000",
-                    }}
-                    onClick={() => setSubmitted(true)}
+                  return (
+                    <label
+                      key={flatId}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "20px 1fr",
+                        alignItems: "center",
+                        columnGap: "8px",
+                        padding: "6px 8px",
+                        cursor: "pointer",
+                        background: isSelected ? "#ecfeff" : "transparent",
+                        borderRadius: "4px"
+                      }}
                     >
-                    Yes
-                    </button>
+                      {/* Checkbox */}
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        style={{ marginTop: "10px" }}
+                        onChange={() => {
+                          setSelectedFlats((prev) =>
+                            prev.includes(flatId)
+                              ? prev.filter((id) => id !== flatId)
+                              : [...prev, flatId]
+                          );
+                        }}
+                      />
+
+                      {/* Text block */}
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <div style={{ fontWeight: 500 }}>
+                          {flatLabel}
+                        </div>
+
+                        {ownerName && (
+                          <div style={{ fontSize: "12px", color: "#666" }}>
+                            {ownerName}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: "20px" }}>
+            <div style={{
+              marginTop: "30px",
+              fontSize: "16px",
+              fontWeight: 600
+            }}>
+              Builder Documents
+            </div>
+            <div style={{
+              marginTop: "10px",
+              padding: "16px",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              background: "#fafafa"
+            }}>
+              <div style={{ fontSize: "13px", color: "#555", marginBottom: "10px" }}>
+                Track documents received from the builder. These are required for registration submission.
+              </div>
+
+              <div style={{ fontWeight: 600, marginBottom: "10px" }}>
+                Received: {builderDocs.length} / {builderDocList.length}
+              </div>
+
+              <div style={{
+                maxHeight: "200px",
+                overflowY: "auto",
+                border: "1px solid #eee",
+                borderRadius: "6px",
+                padding: "10px",
+                background: "#fff"
+              }}>
+                {builderDocList.map((doc, idx) => {
+                  const isChecked = builderDocs.includes(doc);
+
+                  return (
+                    <label
+                      key={idx}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "20px 1fr",
+                        alignItems: "center",
+                        columnGap: "8px",
+                        padding: "6px 8px",
+                        cursor: "pointer",
+                        background: isChecked ? "#ecfeff" : "transparent",
+                        borderRadius: "4px"
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        style={{ margin: 0 }}
+                        onChange={() => {
+                          setBuilderDocs((prev) =>
+                            prev.includes(doc)
+                              ? prev.filter((d) => d !== doc)
+                              : [...prev, doc]
+                          );
+                        }}
+                      />
+
+                      <div>{doc}</div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          
+          <div style={{
+            marginTop: "30px",
+            padding: "16px",
+            border: "1px solid #e5e7eb",
+            borderRadius: "8px",
+            background: "#fafafa"
+          }}>
+            <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "10px" }}>
+              Registration
+            </div>
+
+            <div style={{ fontSize: "13px", color: "#555", marginBottom: "12px" }}>
+              Mark when the application has been submitted to the Registrar.
+            </div>
+
+            {!registrationSubmitted ? (
+              <button
+                style={{
+                  padding: "8px 14px",
+                  cursor: "pointer"
+                }}
+                onClick={() => setRegistrationSubmitted(true)}
+              >
+                Mark as Submitted for Registration
+              </button>
+            ) : (
+                  <div>
+                    <div style={{ color: "#16a34a", fontWeight: 600, marginBottom: "10px" }}>
+                      ✔ Submitted for Registration
+                    </div>
+
+                    <div>
+                    {/* INPUTS FIRST */}
+
+                    <div style={{ marginBottom: "10px" }}>
+                      <div style={{ fontSize: "13px", marginBottom: "4px" }}>
+                        Society Registration Number
+                      </div>
+                      <input
+                        value={registrationNumber}
+                        onChange={(e) => setRegistrationNumber(e.target.value)}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: "10px" }}>
+                      <div style={{ fontSize: "13px", marginBottom: "4px" }}>
+                        Registration Date
+                      </div>
+                      <input
+                        type="date"
+                        value={registrationDate}
+                        onChange={(e) => setRegistrationDate(e.target.value)}
+                      />
+                    </div>
+
+                    {/* DOCUMENTS */}
+
+                    <div style={{ marginBottom: "10px" }}>
+                      <div style={{ fontSize: "13px", marginBottom: "4px" }}>
+                        Registration Certificate
+                      </div>
+                      <input
+                        type="file"
+                        onChange={(e) =>
+                          setRegistrationDocs((p) => ({
+                            ...p,
+                            registration_certificate: e.target.files?.[0] || null,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: "10px" }}>
+                      <div style={{ fontSize: "13px", marginBottom: "4px" }}>
+                        Occupancy Certificate (OC)
+                      </div>
+                      <input
+                        type="file"
+                        onChange={(e) =>
+                          setRegistrationDocs((p) => ({
+                            ...p,
+                            oc_certificate: e.target.files?.[0] || null,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    {/* SAVE BUTTON — ONLY HERE API FIRES */}
 
                     <button
-                    style={{
-                        ...noBtn,
-                        background: !submitted ? "#dc2626" : "#eee",
-                        color: !submitted ? "#fff" : "#000",
-                    }}
-                    onClick={() => setSubmitted(false)}
-                    >
-                    No
-                    </button>
-                </div>
+                      style={{ padding: "8px 14px", cursor: "pointer" }}
+                      onClick={async () => {
+                        try {
+                          const societyId = localStorage.getItem("society_id");
 
-                {submitted && (
-                    <button
-                    style={primaryBtn}
-                    onClick={() => navigate("/financial-controls")}
+                          if (!registrationNumber || !registrationDate) {
+                            alert("Enter registration number and date");
+                            return;
+                          }
+
+                          await fetch("http://127.0.0.1:8000/api/society/update-registration/", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                              society_id: societyId,
+                              registration_number: registrationNumber,
+                              registration_date: registrationDate,
+                            }),
+                          });
+
+                          // ✅ ADD THIS LINE
+                          navigate("/financial-onboarding");
+
+                          // setRegistrationComplete(true);
+
+                        } catch (e) {
+                          console.error(e);
+                          alert("Failed to update registration");
+                        }
+                      }}
                     >
-                    Proceed to Financial Onboarding
+                      Save Registration Details
                     </button>
-                )}
-                </>
-            )}
-            </>
-        </div>
-      </div>
+                  </div>
+                        
+                        </div>
+                    
+                    )}
+                  </div>
+                
+          </div>
+
+        
+      )}
     </AppShell>
   );
 }
@@ -605,12 +931,7 @@ const artifactDesc = {
 };
 
 
-const actionCard = {
-  marginTop: "28px",
-  background: "#fff",
-  padding: "20px",
-  borderRadius: "10px",
-};
+
 
 const primaryBtn = {
   marginTop: "12px",
@@ -622,20 +943,3 @@ const primaryBtn = {
   cursor: "pointer",
 };
 
-const success = {
-  color: "#16a34a",
-  fontWeight: 600,
-};
-
-const question = {
-  marginTop: "12px",
-};
-
-const yesBtn = {
-  marginRight: "10px",
-  padding: "10px",
-};
-
-const noBtn = {
-  padding: "10px",
-};

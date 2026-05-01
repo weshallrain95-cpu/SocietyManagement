@@ -40,6 +40,7 @@ from society.api.views.artifact_status import get_artifact_status
 from society.api.views.artifact_download import download_artifact
 from society.api.views.artifact_upload import upload_artifact
 from society.api.views.test_forma_access import test_forma_access
+from society.api.views.update_registration import update_registration
 
 
 router = DefaultRouter()
@@ -98,6 +99,7 @@ urlpatterns = [
     path("artifacts/download/", download_artifact),
     path("artifacts/upload/", upload_artifact),
     path("test-forma-access/", test_forma_access),
+    path("update-registration/", update_registration),
 ]
 
 urlpatterns += router.urls

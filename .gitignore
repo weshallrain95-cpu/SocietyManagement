@@ -27,3 +27,5 @@ tree.txt.DS_Store
 *.xlsx
 data/
 media/
+
+echo ".DS_Store" >> .gitignore
