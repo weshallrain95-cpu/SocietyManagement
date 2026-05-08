@@ -156,6 +156,10 @@ export default function OTPPage() {
               navigate("/operations");
               return;
 
+            case "FINANCIAL_PENDING":
+              navigate("/financial-onboarding");
+              return;
+
             case "ONBOARDING_COMPLETE":
               navigate("/dashboard");
               return;

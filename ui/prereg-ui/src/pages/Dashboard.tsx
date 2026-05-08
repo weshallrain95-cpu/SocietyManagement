@@ -7,6 +7,18 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   if (!society) return null;
+  
+  // 🔴 FINAL COMPLETION OVERRIDE ONLY
+  if (
+    society.legal_status === "REGISTERED" &&
+    society.registration_number &&
+    society.registration_date &&
+    society.registration_certificate &&
+    society.oc_certificate
+  ) {
+    navigate("/financial-onboarding");
+    return null;
+  }
 
   const stage = society?.onboarding?.stage;
 

@@ -41,6 +41,11 @@ from society.api.views.artifact_download import download_artifact
 from society.api.views.artifact_upload import upload_artifact
 from society.api.views.test_forma_access import test_forma_access
 from society.api.views.update_registration import update_registration
+from society.api.views.ledger_views import transfer_ledger_view
+from society.api.views.coa_list import get_coa_list
+from society.api.views.billing import generate_bill
+from society.api.views.update_registration_docs import update_registration_docs
+from society.api.views.financial_onboarding import financial_onboarding_state
 
 
 router = DefaultRouter()
@@ -100,6 +105,11 @@ urlpatterns = [
     path("artifacts/upload/", upload_artifact),
     path("test-forma-access/", test_forma_access),
     path("update-registration/", update_registration),
+    path("api/ledger/transfers/", transfer_ledger_view),
+    path("coa/list/", get_coa_list),
+    path("billing/generate/", generate_bill),
+    path("update-registration-docs/", update_registration_docs),
+    path("financial-onboarding/state/",financial_onboarding_state,),
 ]
 
 urlpatterns += router.urls

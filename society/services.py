@@ -270,9 +270,27 @@ def generate_monthly_maintenance_bill(society, billing_month):
 
     return bill
 
-from society.models import Payment, LedgerEntry
+
+# ==========================================================
+# ⚠️ LEGACY PAYMENT FUNCTION (SOFT BLOCK)
+# Date: 2026-05-03
+#
+# This function is deprecated but still operational.
+# It now routes through V2 engine and raises a warning.
+#
+# ⚠️ DO NOT USE FOR NEW DEVELOPMENT
+# Use: record_member_payment()
+# ==========================================================
+
+import warnings
 from decimal import Decimal
+from django.db import transaction
 from django.utils import timezone
+
+from society.models import Payment, ChartOfAccount
+from society.finance.kernel.posting_engine import post_transaction
+
+
 def record_payment(
     *,
     society,
@@ -282,42 +300,53 @@ def record_payment(
     bill=None,
     reference_number=None,
 ):
-    """
-    Records a payment and posts a CREDIT entry in ledger.
-    """
-
-    payment = Payment.objects.create(
-        society=society,
-        flat=flat,
-        bill=bill,
-        amount=amount,
-        payment_mode=payment_mode,
-        reference_number=reference_number,
-        status="RECEIVED",
+    warnings.warn(
+        "⚠️ record_payment() is deprecated. Use record_member_payment()",
+        DeprecationWarning,
+        stacklevel=2
     )
 
-    LedgerEntry.objects.create(
-        society=society,
-        flat=flat,
-        entry_type="CREDIT",
-        amount=Decimal(amount),
-        description=f"Payment received ({payment_mode})",
-        reference_id=str(payment.id),
-        posted_on=timezone.now().date(),
-    )
+    with transaction.atomic():
+
+        # 1️⃣ Create payment record (keep existing behavior)
+        payment = Payment.objects.create(
+            society=society,
+            flat=flat,
+            bill=bill,
+            amount=amount,
+            payment_mode=payment_mode,
+            reference_number=reference_number,
+            status="RECEIVED",
+        )
+
+        # 2️⃣ Resolve accounts
+        bank_account = ChartOfAccount.objects.filter(
+            society=society,
+            account_type="ASSET"
+        ).first()
+
+        receivable_account = ChartOfAccount.objects.get(
+            society=society,
+            code="MEMBER_RECEIVABLE"
+        )
+
+        if not bank_account:
+            raise Exception("❌ No ASSET account found")
+
+        # 3️⃣ Post via V2 engine
+        post_transaction(
+            society=society,
+            transaction_type="PAYMENT",
+            reference_type="PAYMENT",
+            reference_id=str(payment.id),
+            description=f"Payment received ({payment_mode})",
+            entries=[
+                {"account": bank_account, "type": "DEBIT", "amount": Decimal(amount), "flat": flat},
+                {"account": receivable_account, "type": "CREDIT", "amount": Decimal(amount), "flat": flat},
+            ],
+        )
 
     return payment
-
-    NotificationEvent.objects.create(
-        society=receivable.society,
-        flat=receivable.flat,
-        event_type="PAYMENT_RECEIPT",
-        reference_id=str(receipt.id),
-        payload={
-            "amount": str(amount),
-            "receipt_number": receipt.receipt_number,
-        },
-    )
 
 def get_flat_outstanding_balance(flat):
     """
@@ -333,43 +362,85 @@ def get_flat_outstanding_balance(flat):
     ).aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
 
     return debits - credits
+
 # society/services.py
+# ==========================================================
+# 🧠 FLAT BALANCE CALCULATION (V2 — TEMPORARY IMPLEMENTATION)
+# ==========================================================
+# Date: 2026-05-02
+#
+# Context:
+# This function was migrated from legacy LedgerEntry-based
+# calculation to the new Transaction + LedgerEntryV2 system.
+#
+# Why change was required:
+# - Legacy LedgerEntry is now DEPRECATED and blocked
+# - Old logic depended on debit_account / credit_account fields
+# - New system uses normalized double-entry rows (DEBIT/CREDIT)
+#
+# Current Behavior (IMPORTANT):
+# ⚠️ This implementation calculates balance at SOCIETY level,
+# not per-flat level.
+#
+# Reason:
+# - LedgerEntryV2 currently does NOT store flat reference
+# - Hence filtering is done only by society
+#
+# Impact:
+# - All flats will temporarily show SAME balance
+# - This is expected during migration phase
+#
+# Future Fix (MANDATORY):
+# - Add `flat` field to LedgerEntryV2
+# - Backfill historical data
+# - Update this function to filter by flat
+#
+# ⚠️ DO NOT USE for final financial reporting until fixed
+# ==========================================================
 
+from society.models import LedgerEntryV2
 from django.db.models import Sum
 from decimal import Decimal
-
-from decimal import Decimal
-from django.db.models import Sum
-from society.models import LedgerEntry
-
 
 def get_flat_balance(flat) -> Decimal:
-    """
-    Returns net outstanding balance for a flat.
-
-    +ve  → amount payable by flat
-    -ve  → advance balance
-    """
+    entries = LedgerEntryV2.objects.filter(
+        flat=flat,
+        account__code="MEMBER_RECEIVABLE"
+    )
 
     debits = (
-        LedgerEntry.objects
-        .filter(flat=flat, debit_account__code="PAYABLE")
+        entries.filter(entry_type="DEBIT")
         .aggregate(total=Sum("amount"))["total"]
         or Decimal("0.00")
     )
 
     credits = (
-        LedgerEntry.objects
-        .filter(flat=flat, credit_account__code="PAYABLE")
+        entries.filter(entry_type="CREDIT")
         .aggregate(total=Sum("amount"))["total"]
         or Decimal("0.00")
     )
 
     return debits - credits
 
-from django.db import transaction
+
+
+# ==========================================================
+# ⚠️ LEGACY PAYMENT FUNCTION (SOFT BLOCK - V2 REDIRECT)
+# Date: 2026-05-03
+#
+# This function previously wrote directly to LedgerEntry.
+# It is now redirected to V2 transaction engine.
+#
+# ⚠️ DO NOT USE FOR NEW DEVELOPMENT
+# Use: record_member_payment()
+# ==========================================================
+
+import warnings
 from decimal import Decimal
-from society.models import LedgerEntry
+from django.db import transaction
+
+from society.models import ChartOfAccount
+from society.finance.kernel.posting_engine import post_transaction
 
 
 @transaction.atomic
@@ -380,27 +451,60 @@ def record_payment(
     description: str = "Payment received",
     category: str = "PAYMENT",
 ):
-    """
-    Records a payment as a CREDIT entry.
-    Allocation is implicit via ledger balance.
-    """
+    warnings.warn(
+        "⚠️ record_payment() is deprecated. Use record_member_payment()",
+        DeprecationWarning,
+        stacklevel=2
+    )
 
     if amount <= 0:
         raise ValueError("Payment amount must be positive")
 
-    LedgerEntry.objects.create(
-        flat=flat,
+    # 🔍 Resolve accounts
+    bank_account = ChartOfAccount.objects.filter(
         society=flat.society,
-        entry_type="PAYMENT",
-        category=category,
-        credit_amount=amount,
-        debit_amount=Decimal("0.00"),
-        description=description,
+        account_type="ASSET"
+    ).first()
+
+    receivable_account = ChartOfAccount.objects.get(
+        society=flat.society,
+        code="MEMBER_RECEIVABLE"
     )
-def record_payment(*, flat, amount: Decimal, description="Payment received"):
-    """
-    Records a CREDIT entry (payment or advance)
-    """
+
+    if not bank_account:
+        raise Exception("❌ No ASSET account found")
+
+    # 🧾 Post via V2 engine
+    post_transaction(
+        society=flat.society,
+        transaction_type="PAYMENT",
+        reference_type="LEGACY_PAYMENT",
+        reference_id=f"LEGACY-PAY-{flat.id}-{amount}",
+        description=description,
+        entries=[
+            {"account": bank_account, "type": "DEBIT", "amount": amount, "flat": flat},
+            {"account": receivable_account, "type": "CREDIT", "amount": amount, "flat": flat},
+        ],
+    )
+
+# ==========================================================
+# ⚠️ DEPRECATED GENERIC PAYMENT FUNCTION
+# Date: 2026-05-03
+#
+# This function is unsafe because:
+# - Uses legacy LedgerEntry
+# - Bypasses posting engine
+# - Does not enforce double-entry
+#
+# Replacement:
+# - record_member_payment()
+# - record_vendor_payment() (future)
+# - record_transfer() (future)
+# ==========================================================
+
+def record_payment(*args, **kwargs):
+    raise Exception("❌ Deprecated. Use specific payment flows.")
+    
     return LedgerEntry.objects.create(
         society=flat.society,
         flat=flat,
@@ -434,85 +538,133 @@ def record_charge(
         credit_amount=Decimal("0.00"),
         description=description,
     )
+
+from society.finance.kernel.posting_engine import post_transaction
+from society.models import ChartOfAccount
 from decimal import Decimal
+from django.db import transaction
 from django.utils import timezone
-from society.models import LedgerEntry
 
+# ==========================================================
+# 🧠 CHARGE FUNCTION (V2 — DOUBLE ENTRY ENGINE)
+# Date: 2026-05-02
+#
+# This replaces legacy LedgerEntry-based charge logic
+# as part of accounting system migration.
+#
+# Replacement:
+# → Use post_transaction() based charge flow
+# ==========================================================
 
-from society.models import ChartOfAccount, LedgerEntry
-
-def record_charge(*, flat, amount: Decimal, category: str, description: str):
+def record_charge(
+    *,
+    flat,
+    amount: Decimal,
+    category: str,
+    description: str,
+):
     """
-    Records a DEBIT entry for a flat using double-entry accounting.
+    Records a maintenance charge using double-entry accounting (V2).
     """
 
-    receivable_account = ChartOfAccount.objects.get(code="MEMBER_RECEIVABLE")
-    income_account = ChartOfAccount.objects.get(code="MAINTENANCE_INCOME")
+    if amount <= 0:
+        raise ValueError("Charge amount must be positive")
 
-    return LedgerEntry.objects.create(
-        society=flat.society,
-        flat=flat,
-        debit_account=receivable_account,
-        credit_account=income_account,
-        amount=amount,
-        description=description,
-        entry_date=timezone.now().date(),
-        source_type="MAINTENANCE_BILL",
-    )
+    with transaction.atomic():
 
-def get_outstanding_breakup(flat):
-    """
-    Returns outstanding grouped by category.
-    """
-    rows = (
-        LedgerEntry.objects
-        .filter(flat=flat, entry_type="DEBIT")
-        .values("category")
-        .annotate(total=Sum("debit_amount"))
-    )
+        receivable_account = ChartOfAccount.objects.get(
+            society=flat.society,
+            code="MEMBER_RECEIVABLE"
+        )
 
-    return list(rows)
+        income_account = ChartOfAccount.objects.get(
+            society=flat.society,
+            code="MAINTENANCE_INCOME"
+        )
 
-    balance = get_flat_balance(flat)
-    if balance <= 0:
-        return []
+        post_transaction(
+            society=flat.society,
+            transaction_type="BILL",
+            reference_type="CHARGE",
+            reference_id=f"CHARGE-{flat.id}-{timezone.now().timestamp()}",
+            description=description,
+            entries=[
+                {"account": receivable_account, "type": "DEBIT", "amount": amount, "flat": flat},
+                {"account": income_account, "type": "CREDIT", "amount": amount, "flat": flat},
+            ],
+        )
 
-    debits = (
-        LedgerEntry.objects
-        .filter(flat=flat, debit_amount__gt=0)
-        .order_by("created_at")
-    )
+# ==========================================================
+# 🧠 MEMBER PAYMENT FUNCTION (V2 — DOUBLE ENTRY ENGINE)
+# Date: 2026-05-03
+#
+# Purpose:
+# Handles ONLY member payments (reducing receivable)
+#
+# Why separate:
+# - Payments are multi-type (member, vendor, transfer)
+# - Each flow has different accounting logic
+#
+# Accounting:
+# DEBIT  → Bank/Cash (asset increases)
+# CREDIT → Member Receivable (liability reduces)
+#
+# Engine:
+# Uses post_transaction() → V2 system
+# ==========================================================
 
-    credits_total = (
-        LedgerEntry.objects
-        .filter(flat=flat, credit_amount__gt=0)
-        .aggregate(total=Sum("credit_amount"))["total"]
-        or Decimal("0.00")
-    )
+from django.utils import timezone
+from society.models import BankAccount
+from django.db import transaction
+from society.models import ChartOfAccount
+from society.finance.kernel.posting_engine import post_transaction
 
-    remaining_credit = credits_total
-    result = []
+def record_member_payment(
+    *,
+    flat,
+    amount,
+    bank_account_id,  # NEW (MANDATORY)
+    description="Payment received",
+):
+    if amount <= 0:
+        raise ValueError("Payment amount must be positive")
 
-    for d in debits:
-        charge = d.debit_amount
+    with transaction.atomic():
 
-        applied = min(charge, remaining_credit)
-        remaining_credit -= applied
+        # 🔍 Fetch accounts (scoped to society)
+        try:
+            bank_account = BankAccount.objects.get(
+                id=bank_account_id,
+                society=flat.society
+            )
+        except BankAccount.DoesNotExist:
+            raise Exception("❌ Invalid bank_account_id for this society")
 
-        outstanding = charge - applied
+        bank_account_coa = bank_account.chart_account
 
-        if outstanding > 0:
-            result.append({
-                "category": d.category,
-                "description": d.description,
-                "amount": outstanding,
-                "date": d.entry_date,
-            })
+        try:
+            receivable_account = ChartOfAccount.objects.get(
+                society=flat.society,
+                code="MEMBER_RECEIVABLE"
+            )
+        except ChartOfAccount.DoesNotExist:
+            raise Exception("❌ MEMBER_RECEIVABLE account not found")
 
-        if remaining_credit <= 0:
-            break
 
-    return result
+        # 🧾 Post transaction via V2 engine
+        post_transaction(
+            society=flat.society,
+            transaction_type="PAYMENT",
+            reference_type="MEMBER_PAYMENT",
+            reference_id=f"PAY-{flat.id}-{timezone.now().timestamp()}",
+            description=description,
+            entries=[
+                {"account": bank_account_coa, "type": "DEBIT", "amount": amount, "flat": flat},
+                {"account": receivable_account, "type": "CREDIT", "amount": amount, "flat": flat},
+            ],
+        )
+
+
 from datetime import date
 from decimal import Decimal
 from django.db.models import Sum
@@ -938,8 +1090,8 @@ def get_society_income_expenditure(
         "expense": expense,
         "surplus": income - expense,
     }
-from society.models import Flat
 
+from society.models import Flat
 
 def get_flat_balances_for_society(society):
     report = []
@@ -976,12 +1128,14 @@ from django.utils import timezone
 
 from society.models import VendorPayment, LedgerEntry
 from society.models import ChartOfAccount
+from society.models import BankAccount
 
 def record_vendor_payment(
     *,
     payable,
     amount,
     payment_method,
+    bank_account_id,   # NEW (MANDATORY)
     reference_number=None,
 ):
 
@@ -1014,22 +1168,53 @@ def record_vendor_payment(
 
     payable.save()
 
+    from society.finance.kernel.posting_engine import post_transaction
+
+    try:
+        bank_account = BankAccount.objects.get(
+            id=bank_account_id,
+            society=payable.society
+        )
+    except BankAccount.DoesNotExist:
+        raise Exception("❌ Invalid bank_account_id for this society")
+
+    bank_account_coa = bank_account.chart_account
+
+    expense_account = ChartOfAccount.objects.get(
+        society=payable.society,
+        code="GENERAL_EXPENSE"
+    )
+
+    post_transaction(
+        society=payable.society,
+        transaction_type="VENDOR_PAYMENT",
+        reference_type="VENDOR_PAYMENT",
+        reference_id=str(payment.id),
+        description=f"Vendor payment - {payable.vendor_bill.vendor.name}",
+        entries=[
+            {"account": expense_account, "type": "DEBIT", "amount": Decimal(amount)},
+            {"account": bank_account_coa, "type": "CREDIT", "amount": Decimal(amount)},
+        ],
+    )
+
+
+    # ❌ LEGACY LEDGER BLOCK (DISABLED - 2026-05-03)
+    """
     from society.models import LedgerEntry, ChartOfAccount
 
     bank_account = ChartOfAccount.objects.get(code="BANK")
     vendor_payable_account = ChartOfAccount.objects.get(code="VENDOR_PAYABLE")
-    
+
     LedgerEntry.objects.create(
         society=payable.society,
         debit_account=vendor_payable_account,
         credit_account=bank_account,
         amount=amount,
-        description=f"Vendor payment - {payable.vendor.name}",
+        description=f"Vendor payment - {payable.vendor_bill.vendor.name}",
         source_type="VENDOR_PAYMENT",
         source_ref=str(payment.id),
     )
 
-    # Ledger posting
     LedgerEntry.objects.create(
         society=payable.society,
         flat=None,
@@ -1039,6 +1224,9 @@ def record_vendor_payment(
         description=f"Vendor payment: {payable.vendor_bill.vendor.name}",
         entry_date=timezone.now().date(),
     )
+    """
+
+
     return payment
 
 
@@ -1190,6 +1378,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from society.models import LedgerEntry, ChartOfAccount
+from society.models import BankAccount
 
 
 @transaction.atomic
@@ -1205,16 +1394,46 @@ def post_double_entry(
     created_by=None,
     source_type=None,
     source_ref=None,
+    bank_account_id=None,   # 🔥 NEW
 ):
-    debit_account = ChartOfAccount.objects.get(
-        society=society,
-        code=debit_account_code,
-    )
+    bank_account = None
 
-    credit_account = ChartOfAccount.objects.get(
-        society=society,
-        code=credit_account_code,
-    )
+    # Resolve bank once if needed
+    if debit_account_code == "BANK" or credit_account_code == "BANK":
+        if not bank_account_id:
+            raise Exception("❌ bank_account_id required for BANK transactions")
+
+        try:
+            bank_account = BankAccount.objects.get(
+                id=bank_account_id,
+                society=society
+            )
+        except BankAccount.DoesNotExist:
+            raise Exception("❌ Invalid bank_account_id")
+
+    # Resolve debit account
+    if debit_account_code == "BANK":
+        debit_account = bank_account.chart_account
+    else:
+        try:
+            debit_account = ChartOfAccount.objects.get(
+                society=society,
+                code=debit_account_code,
+            )
+        except ChartOfAccount.DoesNotExist:
+            raise Exception(f"❌ Invalid debit account: {debit_account_code}")
+
+    # Resolve credit account
+    if credit_account_code == "BANK":
+        credit_account = bank_account.chart_account
+    else:
+        try:
+            credit_account = ChartOfAccount.objects.get(
+                society=society,
+                code=credit_account_code,
+            )
+        except ChartOfAccount.DoesNotExist:
+            raise Exception(f"❌ Invalid credit account: {credit_account_code}")
 
     return LedgerEntry.objects.create(
         society=society,
@@ -1228,7 +1447,6 @@ def post_double_entry(
         source_type=source_type,
         source_ref=source_ref,
     )
-
 
 # imports
 from decimal import Decimal
@@ -1314,6 +1532,7 @@ def record_transaction(
     source_type=None,
     source_ref=None,
     created_by=None,
+    bank_account_id=None,   # 🔥 NEW
 ):
     """
     User-facing transaction entry point.
@@ -1330,27 +1549,37 @@ def record_transaction(
         society=society,
         transaction_type=transaction_type,
     )
-    
-        # SAFEGUARD: Ensure rule accounts exist in Chart of Accounts
-    from society.models import ChartOfAccount
 
-    if not ChartOfAccount.objects.filter(
-        society=society,
-        code=rule.debit_account_code
-    ).exists():
-        raise ValueError(
-            f"Invalid debit account '{rule.debit_account_code}' "
-            f"for transaction rule {transaction_type}"
-        )
+    # Ensure bank_account_id is provided when BANK is involved
+    if (
+        rule.debit_account_code == "BANK"
+        or rule.credit_account_code == "BANK"
+    ):
+        if not bank_account_id:
+            raise Exception("❌ bank_account_id required for BANK transactions")
 
-    if not ChartOfAccount.objects.filter(
-        society=society,
-        code=rule.credit_account_code
-    ).exists():
-        raise ValueError(
-            f"Invalid credit account '{rule.credit_account_code}' "
-            f"for transaction rule {transaction_type}"
-        )
+    # SAFEGUARD: Ensure rule accounts exist in Chart of Accounts
+    # (Skip BANK — handled via BankAccount)
+
+    if rule.debit_account_code != "BANK":
+        if not ChartOfAccount.objects.filter(
+            society=society,
+            code=rule.debit_account_code
+        ).exists():
+            raise ValueError(
+                f"Invalid debit account '{rule.debit_account_code}' "
+                f"for transaction rule {transaction_type}"
+            )
+
+    if rule.credit_account_code != "BANK":
+        if not ChartOfAccount.objects.filter(
+            society=society,
+            code=rule.credit_account_code
+        ).exists():
+            raise ValueError(
+                f"Invalid credit account '{rule.credit_account_code}' "
+                f"for transaction rule {transaction_type}"
+            )
 
     # Ensure accounting period is open
     assert_open_accounting_period(
@@ -1369,8 +1598,12 @@ def record_transaction(
         source_type=source_type,
         source_ref=source_ref,
         created_by=created_by,
+        bank_account_id=bank_account_id,   # 🔥 NEW
     )
 
+    return entry
+
+    
     # Ledger integrity check
     from society.finance.ledger_integrity import verify_ledger_integrity
     verify_ledger_integrity(society)

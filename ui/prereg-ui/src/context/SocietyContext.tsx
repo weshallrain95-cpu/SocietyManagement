@@ -30,6 +30,12 @@ export function SocietyProvider({ children }: any) {
               // ✅ Step 3 — merge updated stage into context
               const updatedSociety = {
                 ...parsed,
+
+                // 🔴 CRITICAL FIX — refresh core fields from backend
+                legal_status: status.legal_status,
+                registration_number: status.registration_number,
+                registration_date: status.registration_date,
+
                 onboarding: {
                   stage: status.stage,
 
@@ -80,7 +86,12 @@ export function SocietyProvider({ children }: any) {
       // 🔥 Override stage with backend truth
       const updatedSociety = {
         ...data,
-        // ✅ REQUIRED
+
+        // 🔴 SAME FIX HERE
+        legal_status: status.legal_status,
+        registration_number: status.registration_number,
+        registration_date: status.registration_date,
+
         onboarding: {
           stage: status.stage,
 

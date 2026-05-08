@@ -101,6 +101,14 @@ def _has_registration_compliance(society_id):
     except Society.DoesNotExist:
         return False
 
+    return (
+        society.legal_status == "REGISTERED" and
+        bool(society.registration_number) and
+        bool(society.registration_date) and
+        bool(society.registration_certificate) and
+        bool(society.oc_certificate)
+    )
+
     is_registered = bool(getattr(society, "registration_number", None))
 
     if not is_registered:
@@ -147,7 +155,8 @@ def derive_onboarding_state(society_id):
     if not _has_registration_compliance(society_id):
         return "OPERATIONAL_RULES_PENDING"
 
-    return "OPERATIONS_COMPLETE"
+    # 🔴 NEW — REGISTRATION COMPLETE → EXIT OPERATIONS
+    return "FINANCIAL_PENDING"
 
 
 def derive_allowed_actions(society_id):

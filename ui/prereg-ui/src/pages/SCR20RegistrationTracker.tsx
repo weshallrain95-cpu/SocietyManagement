@@ -31,6 +31,7 @@ export default function SCR20RegistrationTracker() {
   });
   
   const [fileMap, setFileMap] = useState<Record<string, string>>({});
+  
   const artifacts: Artifact[] = [
   {
     code: "BYLAW_DRAFT_MH",
@@ -216,7 +217,7 @@ useEffect(() => {
     }
       
 
-  if (society.is_registered) {
+  if (society.legal_status === "REGISTERED") {
   const [docs, setDocs] = useState<{
     registration_certificate: File | null;
     oc_certificate: File | null;
@@ -255,13 +256,31 @@ useEffect(() => {
             <div style={label}>Registration Certificate</div>
             <input
               type="file"
-              onChange={(e) =>
+              onChange={async (e) => {
+                const file = e.target.files?.[0] || null;
+
                 setDocs((p) => ({
                   ...p,
-                  registration_certificate: e.target.files?.[0] || null,
-                
-                }))
-              }
+                  registration_certificate: file,
+                }));
+
+                if (!file) return;
+
+                const fd = new FormData();
+
+                fd.append(
+                  "society_id",
+                  localStorage.getItem("society_id") || ""
+                );
+
+                fd.append("doc_type", "REG_CERT");
+                fd.append("file", file);
+
+                await fetch("/api/society/update-registration-docs/", {
+                  method: "POST",
+                  body: fd,
+                });
+              }}
             />
           </div>
 
@@ -269,12 +288,31 @@ useEffect(() => {
             <div style={label}>Occupancy Certificate (OC)</div>
             <input
               type="file"
-              onChange={(e) =>
+              onChange={async (e) => {
+                const file = e.target.files?.[0] || null;
+
                 setDocs((p) => ({
                   ...p,
-                  oc_certificate: e.target.files?.[0] || null,
-                }))
-              }
+                  oc_certificate: file,
+                }));
+
+                if (!file) return;
+
+                const fd = new FormData();
+
+                fd.append(
+                  "society_id",
+                  localStorage.getItem("society_id") || ""
+                );
+
+                fd.append("doc_type", "OC_CERT");
+                fd.append("file", file);
+
+                await fetch("/api/society/update-registration-docs/", {
+                  method: "POST",
+                  body: fd,
+                });
+              }}
             />
           </div>
 
@@ -362,6 +400,7 @@ useEffect(() => {
 
                 <tbody>
                     {artifacts.map((a) => {
+                    
                     const status = statusMap[a.code] || "Not Started";
                     const hasFile = !!fileMap[a.code];
                     const isBylaws = a.code === "BYLAW_DRAFT_MH";
@@ -384,7 +423,8 @@ useEffect(() => {
                             method: "POST",
                             body: formData,
                             });
-
+                            
+                          
                             alert("Upload successful");
 
                             // refresh status
@@ -786,7 +826,7 @@ useEffect(() => {
                       onClick={async () => {
                         try {
                           const societyId = localStorage.getItem("society_id");
-
+                          
                           if (!registrationNumber || !registrationDate) {
                             alert("Enter registration number and date");
                             return;
@@ -803,9 +843,51 @@ useEffect(() => {
                               registration_date: registrationDate,
                             }),
                           });
+                          // paste the certificate upload code here (same as before)
+                          // 🔴 Persist Registration Certificate
+                          const regInput = document.querySelector(
+                            'input[type="file"]'
+                          ) as HTMLInputElement | null;
 
-                          // ✅ ADD THIS LINE
-                          navigate("/financial-onboarding");
+                          const ocInput = document.querySelectorAll(
+                            'input[type="file"]'
+                          )[1] as HTMLInputElement | null;
+
+                          const regFile = regInput?.files?.[0];
+                          const ocFile = ocInput?.files?.[0];
+
+                          if (regFile) {
+                            const fd = new FormData();
+
+                            fd.append("society_id", societyId || "");
+                            fd.append("doc_type", "REG_CERT");
+                            fd.append("file", regFile);
+
+                            await fetch("/api/society/update-registration-docs/", {
+                              method: "POST",
+                              body: fd,
+                            });
+                          }
+
+                          // 🔴 Persist OC Certificate
+
+                          if (ocFile) {
+                            const fd = new FormData();
+
+                            fd.append("society_id", societyId || "");
+                            fd.append("doc_type", "OC_CERT");
+                            fd.append("file", ocFile);
+
+                            await fetch("/api/society/update-registration-docs/", {
+                              method: "POST",
+                              body: fd,
+                            });
+                          }
+                          // STEP 1: Refresh society state
+                          await fetchSociety();
+
+                          // STEP 2: HARD REDIRECT (clean state)
+                          window.location.href = "/financial-onboarding";
 
                           // setRegistrationComplete(true);
 

@@ -29,6 +29,7 @@ import SCR24BuilderNotice from "./pages/SCR24BuilderNotice";
 import SCR25BankAccountLetter from "./pages/SCR25BankAccountLetter";
 import SCR26FirstGeneralMeeting from "./pages/SCR26FirstGeneralMeeting";
 import SCR27RegistrarSubmission from "./pages/SCR27RegistrarSubmission";
+import SCR28FinancialOnboarding from "./pages/SCR28FinancialOnboarding";
 
 import { SocietyProvider } from "./context/SocietyContext";
 
@@ -69,6 +70,7 @@ function App() {
           <Route path="/documents/BANK_ACCOUNT_LETTER_MH" element={<SCR25BankAccountLetter />}/>
           <Route path="/documents/FIRST_GENERAL_MEETING_MINUTES_MH" element={<SCR26FirstGeneralMeeting />}/> 
           <Route path="/documents/REGISTRAR_SUBMISSION_LETTER_MH" element={<SCR27RegistrarSubmission />}/>
+          <Route path="/financial-onboarding" element={<SCR28FinancialOnboarding />}/>
           
          {/* 🔒 PROTECTED ROUTES (GUARD REMOVED TEMPORARILY) */}
 

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useSociety } from "../context/SocietyContext";
 
+
 export default function OperationsHub() {
   const navigate = useNavigate();
   const { society } = useSociety();
@@ -15,6 +16,7 @@ export default function OperationsHub() {
 
   const status = society?.onboarding;   // ✅ from context
   const [bylawsStatus, setBylawsStatus] = useState<string | null>(null);
+
 
   // ---------------- FETCH BYLAWS ONLY ----------------
   useEffect(() => {
@@ -34,6 +36,29 @@ export default function OperationsHub() {
 
     fetchStatus();
   }, [society]);
+  
+  // 🔴 INSERT THIS EXACTLY HERE (NEXT LINE)
+
+  useEffect(() => {
+    if (!society) return;
+
+    const isRegistered =
+      society.legal_status === "REGISTERED" &&
+      society.registration_number &&
+      society.registration_date;
+
+    const certificatesUploaded =
+      society.registration_certificate && society.oc_certificate;
+
+    if (isRegistered && certificatesUploaded) {
+      navigate("/financial-onboarding");
+    }
+
+    if (isRegistered && !certificatesUploaded) {
+      navigate("/registration-tracker");
+    }
+  }, [society]);
+  
   return (
     <AppShell>
       <div style={container}>

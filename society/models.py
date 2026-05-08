@@ -72,6 +72,22 @@ class Society(models.Model):
         blank=True,
         help_text="Registrar office / ward / zone"
     )
+    
+    # -----------------------------
+    # Registration Documents
+    # -----------------------------
+    registration_certificate = models.FileField(
+        upload_to="registration_docs/",
+        null=True,
+        blank=True
+    )
+
+    oc_certificate = models.FileField(
+        upload_to="registration_docs/",
+        null=True,
+        blank=True
+    )
+    
     # -----------------------------
     # Legal Jurisdiction (NEW)
     # -----------------------------
@@ -94,7 +110,7 @@ class Society(models.Model):
         choices=LEGAL_STATUS_CHOICES,
         default="DRAFT",
     )
-
+    
     # -----------------------------
     # Metadata
     # -----------------------------
@@ -1226,6 +1242,55 @@ class ChartOfAccount(models.Model):
         max_length=20,
         choices=ACCOUNT_TYPE_CHOICES,
     )
+    # 🔥 NEW: Account Category (system intelligence layer)
+    ACCOUNT_CATEGORY_CHOICES = [
+        ("BANK", "Bank"),
+        ("CASH", "Cash"),
+        ("MEMBER", "Member"),
+        ("VENDOR", "Vendor"),
+        ("FUND", "Fund"),
+        ("INCOME", "Income"),
+        ("EXPENSE", "Expense"),
+        ("GENERAL", "General"),
+    ]
+
+    account_category = models.CharField(
+        max_length=20,
+        choices=ACCOUNT_CATEGORY_CHOICES,
+        default="GENERAL",
+    )
+
+    # 🔥 NEW: Account Subtype (granular classification for income/expense)
+    SUBTYPE_CHOICES = [
+        ("MAINTENANCE", "Maintenance"),
+        ("PARKING", "Parking"),
+        ("PENALTY", "Penalty"),
+        ("INTEREST", "Interest"),
+        ("TRANSFER", "Transfer Fee"),
+        ("AMENITY", "Amenity Income"),
+        ("RENTAL", "Rental Income"),
+        ("SERVICE", "Service Income"),
+        ("MISC", "Miscellaneous"),
+    ]
+
+    subtype = models.CharField(
+        max_length=30,
+        choices=SUBTYPE_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    # 🔥 NEW: Control flags (posting + entity enforcement)
+
+    is_postable = models.BooleanField(
+        default=True,
+        help_text="Can transactions be posted directly to this account?"
+    )
+
+    requires_entity = models.BooleanField(
+        default=False,
+        help_text="Requires member/vendor linkage for transactions"
+    )
 
     opening_balance = models.DecimalField(
         max_digits=14,
@@ -1247,6 +1312,10 @@ class ChartOfAccount(models.Model):
     class Meta:
         unique_together = ("society", "code")
         ordering = ["account_type", "code"]
+    def save(self, *args, **kwargs):
+        if self.code:
+            self.code = self.code.strip().upper()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -1254,12 +1323,303 @@ class ChartOfAccount(models.Model):
     def can_be_deleted(self):
         return not self.ledger_entries.exists()
 
+# ==========================================================
+# 🏦 BANK ACCOUNT MODEL
+#
+# Represents real-world bank accounts of a society.
+# Each bank account is mapped 1:1 with a ChartOfAccount.
+#
+# Purpose:
+# - Enables multi-bank support
+# - Ensures accurate accounting & reconciliation
+# - Eliminates generic "BANK" bucket usage
+#
+# Accounting Mapping:
+# BankAccount → ChartOfAccount (ASSET)
+# ==========================================================
+from django.core.exceptions import ValidationError
+from society.finance.kernel.account_factory import get_or_create_account
 
-from django.db import models
-from decimal import Decimal
-from django.utils import timezone
+class BankAccount(models.Model):
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="bank_accounts"
+    )
+
+    name = models.CharField(max_length=100)  # e.g. ICICI MAIN
+
+    bank_name = models.CharField(max_length=100)
+
+    account_number = models.CharField(max_length=50)
+
+    ifsc = models.CharField(max_length=20)
+
+    chart_account = models.OneToOneField(
+        "ChartOfAccount",
+        on_delete=models.CASCADE,
+        related_name="bank_account"
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("society", "account_number")
+
+    def clean(self):
+        if self.chart_account.account_type != "ASSET":
+            raise ValidationError("BankAccount must be linked to an ASSET account")
+    
+    from society.finance.kernel.account_factory import get_or_create_account
+    from society.models import ChartOfAccount
+
+
+    def save(self, *args, **kwargs):
+
+        # 🔥 STEP 1: Auto-create COA if missing
+        if not self.chart_account_id:
+
+            bank_slug = self.bank_name.strip().upper().replace(" ", "_")
+            last4 = self.account_number[-4:]
+
+            base_code = f"BANK_{bank_slug}_{last4}"
+            code = base_code
+
+            # 🔥 Collision safety
+            counter = 1
+            while ChartOfAccount.objects.filter(
+                society=self.society,
+                code=code
+            ).exists():
+                code = f"{base_code}_{counter}"
+                counter += 1
+
+            name = f"Bank - {self.name}"
+
+            base_code = f"BANK_{bank_slug}_{last4}"
+            code = base_code
+
+            counter = 1
+
+            while ChartOfAccount.objects.filter(
+                society=self.society,
+                code=code
+            ).exists():
+                code = f"{base_code}_{counter}"
+                counter += 1
+
+            coa = get_or_create_account(
+                society=self.society,
+                code=code,
+                name=name,
+                account_type="ASSET",
+                account_category="BANK",
+                subtype=None,
+                is_postable=True,
+                requires_entity=False,
+            )
+
+            self.chart_account = coa
+
+        # 🔥 Validation (unchanged)
+        self.clean()
+
+        # 🔥 Save
+        super().save(*args, **kwargs)
+        
+    
+    def __str__(self):
+        return f"{self.name} ({self.account_number})"
+
+# ==========================================================
+# 🟢 TRANSACTION MODEL (V2 FINANCIAL CORE — AUTHORITATIVE)
+# ==========================================================
+# Date: 2026-05-01
+#
+# Purpose:
+# This model represents a SINGLE financial event (e.g. bill,
+# payment, adjustment). It acts as the parent container for
+# all ledger entries under double-entry accounting.
+#
+# Why this exists:
+# - Legacy system stored debit/credit in a single row (unsafe)
+# - No grouping of entries → no audit trail
+# - No idempotency → duplicate financial postings possible
+#
+# What this fixes:
+# ✔ Groups multiple ledger entries under one transaction
+# ✔ Enables strict double-entry accounting (debit = credit)
+# ✔ Provides audit trail for every financial event
+# ✔ Prevents duplication via (society, reference_type, reference_id)
+#
+# Relationship:
+# Transaction → multiple LedgerEntryV2 records
+#
+# ⚠️ RULE:
+# All financial postings MUST originate via Transaction
+# (through post_transaction() — to be implemented)
+#
+# ❌ DO NOT:
+# - Create LedgerEntryV2 directly without Transaction
+# - Bypass this model in services or APIs
+#
+# ==========================================================
+class Transaction(models.Model):
+
+    TRANSACTION_TYPE_CHOICES = [
+        ("BILL", "Bill"),
+        ("PAYMENT", "Payment"),
+        ("ADJUSTMENT", "Adjustment"),
+        ("OPENING", "Opening Balance"),
+    ]
+
+    society = models.ForeignKey(
+        "society.Society",
+        on_delete=models.CASCADE,
+        related_name="transactions",
+    )
+
+    transaction_date = models.DateField()
+
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TRANSACTION_TYPE_CHOICES,
+    )
+
+    reference_type = models.CharField(max_length=50)
+
+    reference_id = models.CharField(max_length=100)
+
+    # 🔥 IDEMPOTENCY KEY (ADD THIS EXACTLY HERE)
+    idempotency_key = models.CharField(
+        max_length=100,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="Prevents duplicate transaction creation"
+    )
+
+    description = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("society", "reference_type", "reference_id")
+
+    def __str__(self):
+        return f"{self.transaction_type} - {self.reference_id}"
+
+# ==========================================================
+# 🟢 NEW FINANCIAL CORE Ledger Entry (V2 — AUTHORITATIVE SYSTEM)
+# ==========================================================
+# Date: 2026-05-01
+#
+# This is the NEW financial architecture replacing the legacy ledger system.
+#
+# Components:
+# - Transaction → groups financial events
+# - LedgerEntryV2 → normalized double-entry ledger
+#
+# ✔ Guarantees:
+# - Double-entry accounting (debit = credit)
+# - Transaction grouping (audit-safe)
+# - Idempotent posting (no duplication)
+# - Immutable financial records
+#
+# ⚠️ IMPORTANT:
+# All future financial logic MUST use:
+# → post_transaction() (to be implemented)
+#
+# ❌ DO NOT USE:
+# Legacy LedgerEntry model (deprecated below)
+#
+# Migration Plan:
+# Phase 1 → Introduce V2 models (current step)
+# Phase 2 → Route all writes to V2
+# Phase 3 → Migrate old data
+# Phase 4 → Remove legacy ledger
+# ==========================================================
+class LedgerEntryV2(models.Model):
+
+    ENTRY_TYPE_CHOICES = [
+        ("DEBIT", "Debit"),
+        ("CREDIT", "Credit"),
+    ]
+
+    transaction = models.ForeignKey(
+        "Transaction",
+        on_delete=models.CASCADE,
+        related_name="entries",
+    )
+
+    flat = models.ForeignKey(
+        "society.Flat",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ledger_entries_v2",
+    )
+
+    account = models.ForeignKey(
+        "society.ChartOfAccount",
+        on_delete=models.PROTECT,
+        related_name="ledger_entries",
+    )
+
+    entry_type = models.CharField(
+        max_length=10,
+        choices=ENTRY_TYPE_CHOICES,
+    )
+
+    amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.entry_type} {self.amount} - {self.account.name}"
+
+
+
+# ==========================================================
+# ⚠️ DEPRECATED LEDGER MODEL (DO NOT USE)
+# ==========================================================
+# Date: 2026-05-01
+#
+# This LedgerEntry model is DEPRECATED as part of the
+# Financial System Rebuild (Ledger + Journal Architecture).
+#
+# ❌ Issues with this model:
+# - Mixed debit/credit structure in single row
+# - No transaction grouping
+# - No double-entry enforcement
+# - Duplicate definitions exist in codebase
+# - No idempotency or audit integrity
+#
+# 🚨 Critical Risk:
+# This model allows silent financial imbalance and
+# inconsistent ledger state.
+#
+# ✅ Replacement:
+# - Transaction (new model)
+# - LedgerEntryV2 (new normalized double-entry model)
+#
+# ⚠️ STRICT RULE:
+# Do NOT use this model for any new financial logic.
+# This remains only for legacy compatibility until migration.
+#
+# Future Action:
+# - Data migration → Transaction + LedgerEntryV2
+# - Then complete removal
+# ==========================================================
 
 class LedgerEntry(models.Model):
+
     society = models.ForeignKey(
         "society.Society",
         on_delete=models.CASCADE,
@@ -1300,13 +1660,21 @@ class LedgerEntry(models.Model):
 
     class Meta:
         ordering = ["entry_date", "id"]
+
+    def save(self, *args, **kwargs):
+        raise Exception("❌ Deprecated LedgerEntry cannot be used. Use post_transaction().")
+
+    @classmethod
+    def create(cls, *args, **kwargs):
+        raise Exception("❌ Deprecated LedgerEntry cannot be used. Use post_transaction().")
+
 from django.conf import settings
 
-class LedgerEntry(models.Model):
+class LedgerEntryV1(models.Model):
     society = models.ForeignKey(
         "society.Society",
         on_delete=models.CASCADE,
-        related_name="ledger_entries",
+        related_name="legacy_v1_entries"
     )
 
     flat = models.ForeignKey(
@@ -1319,13 +1687,13 @@ class LedgerEntry(models.Model):
     debit_account = models.ForeignKey(
         "society.ChartOfAccount",
         on_delete=models.PROTECT,
-        related_name="debit_entries",
+        related_name="legacy_v1_debits"
     )
 
     credit_account = models.ForeignKey(
         "society.ChartOfAccount",
         on_delete=models.PROTECT,
-        related_name="credit_entries",
+        related_name="legacy_v1_credits"
     )
 
     amount = models.DecimalField(max_digits=14, decimal_places=2)
@@ -1360,6 +1728,13 @@ class LedgerEntry(models.Model):
     class Meta:
         ordering = ["entry_date", "id"]
 
+    def save(self, *args, **kwargs):
+        raise Exception("❌ Deprecated LedgerEntry cannot be used. Use post_transaction().")
+
+    @classmethod
+    def create(cls, *args, **kwargs):
+        raise Exception("❌ Deprecated LedgerEntry cannot be used. Use post_transaction().")
+    
     def __str__(self):
         return f"{self.entry_date} | {self.amount}"
 
@@ -1417,6 +1792,7 @@ def clean(self):
         society=self.society, code=self.credit_account_code
     ).exists():
         raise ValidationError(f"Credit account {self.credit_account_code} not found.")
+
 def save(self, *args, **kwargs):
     self.full_clean()
     super().save(*args, **kwargs)
@@ -1966,6 +2342,8 @@ class CaseStage(models.Model):
 
     def __str__(self):
         return f"{self.stage_code} — {self.case.id}"
+
+
 
 # ==========================================================
 # SOFT ONBOARDING TRACKER
