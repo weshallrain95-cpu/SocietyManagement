@@ -136,60 +136,104 @@ def transfer_parking_on_flat_transfer(*, flat):
 
 from decimal import Decimal
 from datetime import date
+
 from django.db import transaction
 
-from society.models import MaintenanceBill, FlatMaintenanceBill, Flat
-from society.constants import TransactionType
+from society.models import (
+    MaintenanceBill,
+    FlatMaintenanceBill,
+    FlatMaintenanceBillLine,
+    Flat,
+    MemberReceivable,
+    NotificationEvent,
+)
+
+from society.finance.maintenance.maintenance_engine import (
+    calculate_flat_maintenance,
+)
 
 
 @transaction.atomic
 def generate_monthly_maintenance_bill(*, society, billing_month):
-    """
-    Generates maintenance bills for all flats.
 
-    Creates:
-    - MaintenanceBill (batch)
-    - FlatMaintenanceBill (per flat)
-    - Ledger entries via record_transaction()
+# ==========================================================
+# 🧠 MONTHLY MAINTENANCE BILLING ENGINE (V2 — CANONICAL)
+# ==========================================================
+# Date: 2026-05-09
+#
+# Purpose:
+# This is the SINGLE canonical implementation for generating
+# society-wide monthly maintenance billing.
+#
+# What this creates:
+# ✔ MaintenanceBill (master batch)
+# ✔ FlatMaintenanceBill (per flat snapshot)
+# ✔ FlatMaintenanceBillLine (charge line items)
+# ✔ MemberReceivable records
+# ✔ Transaction records (V2)
+# ✔ LedgerEntryV2 records via record_charge()
+# ✔ NotificationEvent records
+#
+# Financial Architecture:
+# - Fully aligned to Transaction + LedgerEntryV2 system
+# - Uses double-entry accounting via post_transaction()
+# - Legacy LedgerEntry system is NOT used
+#
+# Critical Guarantees:
+# ✔ Duplicate billing prevention
+# ✔ Atomic transaction safety
+# ✔ Immutable billing snapshot generation
+# ✔ Society-wide receivable creation
+# ✔ Standardized maintenance charge execution
+#
+# Billing Logic:
+# - Charges are derived from MaintenanceCharge
+# - Basis rules executed via maintenance_engine
+# - Supports AREA / EQUAL / PER_SLOT / PER_INLET /
+#   PERCENT_MAINT billing strategies
+#
+# Current Operational Flow:
+# SCR31
+#   ↓
+# maintenance_setup API
+#   ↓
+# generate_monthly_maintenance_bill()
+#   ↓
+# V2 financial posting
+#
+# Important Notes:
+# - This is onboarding operationalization infrastructure
+# - PDFs are generated separately via bill_generator.py
+# - Financial realism depends on configured rates/basis
+#
+# ⚠️ STRICT RULES
+# - DO NOT create maintenance bills manually
+# - DO NOT bypass this function for recurring billing
+# - DO NOT directly create LedgerEntryV2 rows
+#
+# Future Enhancements:
+# - Bill PDF orchestration
+# - Auto-scheduled monthly billing
+# - Billing preview simulation
+# - WhatsApp/email bill dispatch
+# - Partial billing support
+# ==========================================================
 
-    Immutable billing snapshot.
-    """
-
-    # 🚨 Prevent duplicate billing
+    # ==========================================================
+    # PREVENT DUPLICATE BILLING
+    # ==========================================================
     if MaintenanceBill.objects.filter(
         society=society,
         billing_month=billing_month
     ).exists():
+
         raise ValueError(
             f"Maintenance bill already generated for {billing_month}"
         )
 
-    # Create batch bill
-    bill = MaintenanceBill.objects.create(
-        society=society,
-        billing_month=billing_month,
-        generated_on=date.today(),
-        total_amount=Decimal("0.00"),
-    )
-
-from decimal import Decimal
-from datetime import date
-
-from society.models import MaintenanceBill, FlatMaintenanceBill, Flat
-from society.finance.maintenance.maintenance_engine import calculate_flat_maintenance
-
-def generate_monthly_maintenance_bill(society, billing_month):
-
-    # Prevent duplicate billing
-    if MaintenanceBill.objects.filter(
-        society=society,
-        billing_month=billing_month
-    ).exists():
-        raise ValueError(
-            f"Maintenance bill already generated for {billing_month}"
-        )
-
-    # Create batch bill
+    # ==========================================================
+    # CREATE MASTER BILL
+    # ==========================================================
     bill = MaintenanceBill.objects.create(
         society=society,
         billing_month=billing_month,
@@ -199,24 +243,35 @@ def generate_monthly_maintenance_bill(society, billing_month):
 
     total_society_amount = Decimal("0.00")
 
-    flats = Flat.objects.filter(society=society)
+    flats = Flat.objects.filter(
+        society=society
+    )
 
+    # ==========================================================
+    # GENERATE FLAT BILLS
+    # ==========================================================
     for flat in flats:
 
-        # Calculate maintenance using rule engine
         rows, base_amount = calculate_flat_maintenance(flat)
 
-        # Default non-occupancy charge
+        # ------------------------------------------------------
+        # NON OCCUPANCY CALCULATION
+        # ------------------------------------------------------
         non_occ = Decimal("0.00")
 
         occupancy = getattr(flat, "occupancy", None)
 
         if occupancy and occupancy.occupancy_type == "RENTED":
-            non_occ = (base_amount * Decimal("0.10")).quantize(Decimal("0.01"))
+
+            non_occ = (
+                base_amount * Decimal("0.10")
+            ).quantize(Decimal("0.01"))
 
         total = base_amount + non_occ
 
-        # Create flat bill
+        # ------------------------------------------------------
+        # CREATE FLAT BILL
+        # ------------------------------------------------------
         flat_bill = FlatMaintenanceBill.objects.create(
             bill=bill,
             flat=flat,
@@ -225,7 +280,23 @@ def generate_monthly_maintenance_bill(society, billing_month):
             total_payable=total,
         )
 
+        # ------------------------------------------------------
+        # CREATE LINE ITEMS
+        # ------------------------------------------------------
+        for r in rows:
+
+            FlatMaintenanceBillLine.objects.create(
+                bill=flat_bill,
+                charge_code=r["charge_code"],
+                charge_name=r["charge_name"],
+                amount=r["amount"],
+            )
+
+        # ------------------------------------------------------
+        # CREATE RECEIVABLE ENTRIES
+        # ------------------------------------------------------
         from society.services import record_charge
+
         record_charge(
             flat=flat,
             amount=total,
@@ -233,7 +304,9 @@ def generate_monthly_maintenance_bill(society, billing_month):
             description=f"Maintenance bill {billing_month}",
         )
 
-        # 🔵 CREATE RECEIVABLE HERE
+        # ------------------------------------------------------
+        # MEMBER RECEIVABLE
+        # ------------------------------------------------------
         MemberReceivable.objects.create(
             society=society,
             flat=flat,
@@ -242,6 +315,9 @@ def generate_monthly_maintenance_bill(society, billing_month):
             outstanding_amount=total,
         )
 
+        # ------------------------------------------------------
+        # NOTIFICATION EVENT
+        # ------------------------------------------------------
         NotificationEvent.objects.create(
             society=society,
             flat=flat,
@@ -254,18 +330,13 @@ def generate_monthly_maintenance_bill(society, billing_month):
             },
         )
 
-        # Create bill line items
-        for r in rows:
-            FlatMaintenanceBillLine.objects.create(
-                bill=flat_bill,
-                charge_code=r["charge_code"],
-                charge_name=r["charge_name"],
-                amount=r["amount"],
-            )
-
         total_society_amount += total
 
+    # ==========================================================
+    # UPDATE MASTER TOTAL
+    # ==========================================================
     bill.total_amount = total_society_amount
+
     bill.save(update_fields=["total_amount"])
 
     return bill

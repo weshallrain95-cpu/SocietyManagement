@@ -30,6 +30,8 @@ import SCR25BankAccountLetter from "./pages/SCR25BankAccountLetter";
 import SCR26FirstGeneralMeeting from "./pages/SCR26FirstGeneralMeeting";
 import SCR27RegistrarSubmission from "./pages/SCR27RegistrarSubmission";
 import SCR28FinancialOnboarding from "./pages/SCR28FinancialOnboarding";
+import SCR29BankAccounts from "./pages/SCR29BankAccounts";
+import SCR30RevenueReceivablesSetup from "./pages/SCR30RevenueReceivablesSetup";
 
 import { SocietyProvider } from "./context/SocietyContext";
 
@@ -71,7 +73,8 @@ function App() {
           <Route path="/documents/FIRST_GENERAL_MEETING_MINUTES_MH" element={<SCR26FirstGeneralMeeting />}/> 
           <Route path="/documents/REGISTRAR_SUBMISSION_LETTER_MH" element={<SCR27RegistrarSubmission />}/>
           <Route path="/financial-onboarding" element={<SCR28FinancialOnboarding />}/>
-          
+          <Route path="/financial-onboarding/bank-accounts" element={<SCR29BankAccounts />}/>
+          <Route path="/financial-onboarding/revenue-receivables" element={<SCR30RevenueReceivablesSetup />}/>
          {/* 🔒 PROTECTED ROUTES (GUARD REMOVED TEMPORARILY) */}
 
         <Route path="/dashboard" element={<Dashboard />} />

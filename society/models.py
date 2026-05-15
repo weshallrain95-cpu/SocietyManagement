@@ -1356,6 +1356,41 @@ class BankAccount(models.Model):
 
     ifsc = models.CharField(max_length=20)
 
+    TREASURY_ROLE_CHOICES = [
+        ("OPERATIONS", "Operations"),
+        ("SINKING_FUND", "Sinking Fund"),
+        ("RESERVE", "Reserve"),
+        ("FD", "Fixed Deposit"),
+    ]
+
+    treasury_role = models.CharField(
+        max_length=30,
+        choices=TREASURY_ROLE_CHOICES,
+        default="OPERATIONS",
+    )
+
+    bank_address = models.TextField(
+        blank=True,
+        null=True,
+    )
+    # 🔹 Operational banking identities
+    upi_id = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    banking_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+    )
+
+    banking_email = models.EmailField(
+        blank=True,
+        null=True,
+    )
+
     chart_account = models.OneToOneField(
         "ChartOfAccount",
         on_delete=models.CASCADE,

@@ -46,7 +46,11 @@ from society.api.views.coa_list import get_coa_list
 from society.api.views.billing import generate_bill
 from society.api.views.update_registration_docs import update_registration_docs
 from society.api.views.financial_onboarding import financial_onboarding_state
-
+from society.api.views.bank_accounts import bank_accounts
+from society.api.views.maintenance_setup import maintenance_setup
+from society.api.views.generate_maintenance_bill import (generate_maintenance_bill,)
+from society.api.views.scr30_context import (scr30_financial_context,)
+from society.api.views.scr30_save import (save_scr30_receivables,)
 
 router = DefaultRouter()
 router.register("audit-events", AuditEventViewSet, basename="audit-events")
@@ -110,6 +114,11 @@ urlpatterns = [
     path("billing/generate/", generate_bill),
     path("update-registration-docs/", update_registration_docs),
     path("financial-onboarding/state/",financial_onboarding_state,),
+    path("bank-accounts/", bank_accounts),
+    path("maintenance-setup/",maintenance_setup,),
+    path("maintenance/generate/",generate_maintenance_bill,),
+    path("financial-context/",scr30_financial_context,),
+    path("receivables/save/",save_scr30_receivables,),
 ]
 
 urlpatterns += router.urls

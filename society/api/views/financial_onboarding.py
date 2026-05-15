@@ -3,6 +3,7 @@ from rest_framework.response import Response
 
 from society.models import Society, ChartOfAccount
 from society.finance.kernel.coa_seed import seed_core_coa
+from society.models import BankAccount
 
 
 @api_view(["GET"])
@@ -34,22 +35,35 @@ def financial_onboarding_state(request):
         seed_core_coa(society)
 
     # 🔹 TEMP ONBOARDING STATE
-    data = {
-        "can_setup_bank": True,
-        "bank_completed": False,
+    # 🔹 STEP 1 — BANK ACCOUNT COMPLETION
+    bank_completed = BankAccount.objects.filter(
+        society=society,
+        is_active=True
+    ).exists()
 
-        "can_setup_income": False,
+    data = {
+
+        # STEP 1
+        "can_setup_bank": True,
+        "bank_completed": bank_completed,
+
+        # STEP 2
+        "can_setup_income": bank_completed,
         "income_completed": False,
 
+        # STEP 3
         "can_setup_expense": False,
         "expense_completed": False,
 
+        # STEP 4
         "can_setup_investments": False,
         "investments_completed": False,
 
+        # STEP 5
         "can_setup_opening": False,
         "opening_completed": False,
 
+        # STEP 6
         "can_activate": False,
         "is_active": False,
     }

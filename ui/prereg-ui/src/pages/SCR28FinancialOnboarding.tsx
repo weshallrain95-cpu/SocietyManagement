@@ -42,7 +42,26 @@ export default function SCR28FinancialOnboarding() {
           is_active: false,
         };
 
-        setState(fallback);
+        try {
+
+          const response = await fetch(
+            `http://127.0.0.1:8000/api/society/financial-onboarding/state/?society_id=${societyId}`
+          );
+
+          if (!response.ok) {
+            throw new Error("Failed onboarding state fetch");
+          }
+
+          const data = await response.json();
+
+          setState(data);
+
+        } catch {
+
+          // 🔥 Safe fallback (preserve existing architecture)
+          setState(fallback);
+        }
+
       } catch (err) {
         console.error("Failed to load onboarding state", err);
       } finally {
@@ -79,12 +98,12 @@ export default function SCR28FinancialOnboarding() {
     },
     {
       label: "2. Income Sources",
-      route: "/financial-onboarding/income",
+      route: "/financial-onboarding/revenue-receivables",
       canAccess: onboarding.can_setup_income,
       isComplete: onboarding.income_completed,
       desc: onboarding.income_completed
-        ? "Income sources configured"
-        : "Define how your society earns money",
+        ? "Revenue channels configured"
+        : "Configure society receivables and income streams",
     },
     {
       label: "3. Expense Structure",
