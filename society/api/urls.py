@@ -48,9 +48,16 @@ from society.api.views.update_registration_docs import update_registration_docs
 from society.api.views.financial_onboarding import financial_onboarding_state
 from society.api.views.bank_accounts import bank_accounts
 from society.api.views.maintenance_setup import maintenance_setup
+from society.api.views.maintenance_bill_opening_balance_excel import (download_maintenance_bill_opening_balance_excel,)
+from society.api.views.maintenance_bill_opening_balance_upload import (upload_maintenance_bill_opening_balance_excel,)
 from society.api.views.generate_maintenance_bill import (generate_maintenance_bill,)
 from society.api.views.scr30_context import (scr30_financial_context,)
+from society.api.views.scr31_context import (scr31_context,)
+from society.api.views.scr31_preview import (scr31_preview,)
 from society.api.views.scr30_save import (save_scr30_receivables,)
+from society.api.views.scr31_save import (save_scr31_configuration,)
+from society.api.views.scr33_context import (scr33_context,)
+from society.api.views.save_scr33_configuration import (save_scr33_configuration,)
 
 router = DefaultRouter()
 router.register("audit-events", AuditEventViewSet, basename="audit-events")
@@ -116,9 +123,16 @@ urlpatterns = [
     path("financial-onboarding/state/",financial_onboarding_state,),
     path("bank-accounts/", bank_accounts),
     path("maintenance-setup/",maintenance_setup,),
+    path("maintenance-opening-balance/download/",download_maintenance_bill_opening_balance_excel,),
+    path("maintenance-opening-balance/upload/",upload_maintenance_bill_opening_balance_excel,),
     path("maintenance/generate/",generate_maintenance_bill,),
     path("financial-context/",scr30_financial_context,),
+    path("scr31-context/",scr31_context,),
+    path("scr31-preview/",scr31_preview,),
     path("receivables/save/",save_scr30_receivables,),
+    path("scr31-save/",save_scr31_configuration,),
+    path("scr33-context/",scr33_context,),
+    path("scr33-save/",save_scr33_configuration,),
 ]
 
 urlpatterns += router.urls

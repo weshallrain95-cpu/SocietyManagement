@@ -622,6 +622,7 @@ class ParkingSlot(models.Model):
     PARKING_TYPE_CHOICES = [
         ("CAR", "Car"),
         ("BIKE", "Bike"),
+        ("EV", "EV"),
         ("VISITOR", "Visitor"),
     ]
 
@@ -688,6 +689,52 @@ class ParkingAllocation(models.Model):
     def __str__(self):
         return f"{self.parking_slot} → {self.flat or self.user}"
 
+class ParkingRateConfiguration(models.Model):
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="parking_rate_configurations",
+    )
+
+    parking_type = models.CharField(
+        max_length=20,
+        choices=[
+            ("CAR", "Four Wheeler"),
+            ("BIKE", "Two Wheeler"),
+            ("EV", "EV Vehicle"),
+            ("VISITOR", "Visitor Parking"),
+        ],
+    )
+
+    rate = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
+
+    is_active = models.BooleanField(
+        default=True
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    class Meta:
+
+        unique_together = (
+            "society",
+            "parking_type",
+        )
+
+    def __str__(self):
+
+        return (
+            f"{self.society.name} - "
+            f"{self.parking_type}"
+        )
+
 class Amenity(models.Model):
     society = models.ForeignKey(
         "society.Society",
@@ -752,6 +799,7 @@ class AmenityChargeRule(models.Model):
 
     def __str__(self):
         return f"{self.amenity.name} – {self.charge_type}"
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -2558,9 +2606,22 @@ class MemberReceivable(models.Model):
     bill = models.ForeignKey(
         "FlatMaintenanceBill",
         on_delete=models.CASCADE,
-        related_name="receivable"
+        related_name="receivable",
+        null=True,
+        blank=True,
     )
 
+    source_type = models.CharField(
+        max_length=30,
+        default="BILL"
+    )
+
+    source_reference = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+    )
+    
     amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     outstanding_amount = models.DecimalField(max_digits=12, decimal_places=2)

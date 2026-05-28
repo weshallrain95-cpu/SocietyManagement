@@ -983,7 +983,10 @@ const hydrateFinancialTruths = async () => {
         }
         );
 
-      navigate("/financial-onboarding/maintenance-setup");
+      navigate(
+        "/financial-onboarding/maintenance-governance"
+      );
+      
     } catch (error) {
       console.error(error);
     } finally {

@@ -32,6 +32,9 @@ import SCR27RegistrarSubmission from "./pages/SCR27RegistrarSubmission";
 import SCR28FinancialOnboarding from "./pages/SCR28FinancialOnboarding";
 import SCR29BankAccounts from "./pages/SCR29BankAccounts";
 import SCR30RevenueReceivablesSetup from "./pages/SCR30RevenueReceivablesSetup";
+import SCR31MaintenanceGovernanceSetup from "./pages/SCR31MaintenanceGovernanceSetup";
+import SCR32GovernanceIntelligence from "./pages/SCR32GovernanceIntelligence";
+import SCR33GovernanceSimulation from "./pages/SCR33GovernanceSimulation";
 
 import { SocietyProvider } from "./context/SocietyContext";
 
@@ -75,6 +78,10 @@ function App() {
           <Route path="/financial-onboarding" element={<SCR28FinancialOnboarding />}/>
           <Route path="/financial-onboarding/bank-accounts" element={<SCR29BankAccounts />}/>
           <Route path="/financial-onboarding/revenue-receivables" element={<SCR30RevenueReceivablesSetup />}/>
+          <Route path="/financial-onboarding/maintenance-governance"element={<SCR31MaintenanceGovernanceSetup />}/>
+          <Route path="/financial-onboarding/governance-intelligence"element={<SCR32GovernanceIntelligence />}/>
+          <Route path="/financial-onboarding/governance-simulation"element={<SCR33GovernanceSimulation />}/>
+          <Route path="/financial-onboarding/scr33"element={<SCR33GovernanceSimulation />}/>
          {/* 🔒 PROTECTED ROUTES (GUARD REMOVED TEMPORARILY) */}
 
         <Route path="/dashboard" element={<Dashboard />} />
