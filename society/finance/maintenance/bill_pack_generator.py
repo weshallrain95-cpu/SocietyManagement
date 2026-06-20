@@ -13,7 +13,7 @@ def generate_society_bill_zip(bill):
 
     pdf_paths = []
 
-    for flat_bill in bill.flatmaintenancebill_set.all():
+    for flat_bill in bill.flat_bills.all():
 
         path = generate_flat_bill_pdf(flat_bill)
         pdf_paths.append(path)

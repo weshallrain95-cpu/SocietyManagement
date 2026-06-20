@@ -4,7 +4,12 @@ from django.db.models import Exists, OuterRef
 
 from society.models import Society, MaintenanceBill
 from society.services import generate_monthly_maintenance_bill
-
+from society.finance.maintenance.bill_pack_generator import (
+    generate_society_bill_zip,
+)
+from society_product.engines.communications_engine import (
+    CommunicationsEngine,
+)
 
 class Command(BaseCommand):
     help = "Automatically generate monthly maintenance bills for all active societies"
@@ -35,14 +40,29 @@ class Command(BaseCommand):
                 continue
             
             try:
-                generate_monthly_maintenance_bill(
+                bill = generate_monthly_maintenance_bill(
                     society=society,
                     billing_month=billing_month
+                )
+
+                generate_society_bill_zip(
+                    bill
+                )
+
+                processed = (
+                    CommunicationsEngine()
+                    .process_queue()
                 )
 
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"Billing generated for {society.name}"
+                    )
+                )
+
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Notifications processed: {processed}"
                     )
                 )
 

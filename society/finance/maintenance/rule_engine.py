@@ -16,6 +16,27 @@ class MaintenanceRuleEngine:
         rate = Decimal(self.charge.rate or 0)
 
         # ---------------------------------------
+        # NON OCCUPANCY
+        # RENTED FLATS ONLY
+        # ---------------------------------------
+        if self.charge.code == "NON_OCCUPANCY":
+
+            occupancy = getattr(
+                self.flat,
+                "occupancy",
+                None,
+            )
+
+            occupancy_type = getattr(
+                occupancy,
+                "occupancy_type",
+                None,
+            )
+
+            if occupancy_type != "RENTED":
+                return Decimal("0.00")
+                
+        # ---------------------------------------
         # Equal share across all flats
         # ---------------------------------------
         if basis == "EQUAL":

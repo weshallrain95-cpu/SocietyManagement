@@ -28,7 +28,26 @@ export default function AppShell({ children }: any) {
       <div
         style={{
           flex: 1,
-          background: "#f5f7fb",
+          background:
+            `
+            radial-gradient(
+              circle at top left,
+              rgba(251,191,36,0.12),
+              transparent 35%
+            ),
+
+            radial-gradient(
+              circle at top right,
+              rgba(59,130,246,0.10),
+              transparent 35%
+            ),
+
+            linear-gradient(
+              180deg,
+              #f8fafc 0%,
+              #eef2ff 100%
+            )
+            `,
           minHeight: "100vh",
         }}
       >
@@ -58,6 +77,7 @@ export default function AppShell({ children }: any) {
               {society?.name || "Logged in"}
             </div>
 
+            {console.log("FULL SOCIETY OBJECT", society)}
             {society && (
               <div style={{ fontSize: 12 }}>
                 {society.is_registered ? (

@@ -61,9 +61,21 @@ def verify_otp(request):
             }
 
         societies.append({
+
             "id": society.id,
+
             "name": society.name,
-            "onboarding": onboarding
+
+            "registration_number":
+                society.registration_number,
+
+            "registration_date":
+                society.registration_date,
+
+            "legal_status":
+                society.legal_status,
+
+            "onboarding": onboarding,
         })
 
     # ==========================================================

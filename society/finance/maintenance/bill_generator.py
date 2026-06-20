@@ -1,7 +1,20 @@
 import os
+
 from django.conf import settings
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
+
+from reportlab.platypus import (
+    SimpleDocTemplate,
+)
+
+from reportlab.lib.units import mm
+
+from society.finance.maintenance.maintenance_bill_context import (
+    build_maintenance_bill_payload,
+)
+
+from statutory.document_engine.templates.maintenance_bill_template_v2 import (
+    render_maintenance_bill_story,
+)
 
 
 def generate_flat_bill_pdf(flat_bill):
@@ -10,73 +23,49 @@ def generate_flat_bill_pdf(flat_bill):
     flat = flat_bill.flat
     month = flat_bill.bill.billing_month
 
-    folder = os.path.join(settings.MEDIA_ROOT, "maintenance_bills")
-    os.makedirs(folder, exist_ok=True)
+    folder = os.path.join(
+        settings.MEDIA_ROOT,
+        "maintenance_bills",
+    )
 
-    filename = f"{society.id}_{flat.id}_{month}.pdf"
-    filepath = os.path.join(folder, filename)
+    os.makedirs(
+        folder,
+        exist_ok=True,
+    )
 
-    c = canvas.Canvas(filepath, pagesize=A4)
+    filename = (
+        f"{society.id}_{flat.id}_{month}.pdf"
+    )
 
-    y = 800
+    filepath = os.path.join(
+        folder,
+        filename,
+    )
 
-    # Society Header
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(50, y, society.name)
+    payload = (
+        build_maintenance_bill_payload(
+            flat_bill
+        )
+    )
 
-    y -= 40
+    document = SimpleDocTemplate(
+        filepath,
 
-    c.setFont("Helvetica", 11)
-    c.drawString(50, y, f"Maintenance Bill")
-    y -= 20
+        leftMargin=8 * mm,
+        rightMargin=8 * mm,
 
-    c.drawString(50, y, f"Flat: {flat}")
-    y -= 20
+        topMargin=8 * mm,
+        bottomMargin=8 * mm,
+    )
 
-    c.drawString(50, y, f"Billing Month: {month}")
+    story = (
+        render_maintenance_bill_story(
+            payload
+        )
+    )
 
-    y -= 40
-
-    # Table Header
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Charge")
-    c.drawRightString(500, y, "Amount")
-
-    y -= 10
-    c.line(50, y, 500, y)
-
-    y -= 25
-
-    # Charge Lines
-    c.setFont("Helvetica", 11)
-
-    for line in flat_bill.lines.all():
-
-        c.drawString(50, y, line.charge_name)
-        c.drawRightString(500, y, f"{line.amount}")
-
-        y -= 20
-
-    # Non occupancy (if applicable)
-    if flat_bill.non_occupancy_charge > 0:
-
-        c.drawString(50, y, "Non Occupancy Charge")
-        c.drawRightString(500, y, f"{flat_bill.non_occupancy_charge}")
-
-        y -= 20
-
-    y -= 10
-    c.line(50, y, 500, y)
-
-    y -= 25
-
-    # Total
-    c.setFont("Helvetica-Bold", 12)
-
-    c.drawString(50, y, "Total Payable")
-    c.drawRightString(500, y, f"{flat_bill.total_payable}")
-
-    c.save()
+    document.build(
+        story
+    )
 
     return filepath
-    

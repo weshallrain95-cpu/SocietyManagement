@@ -11,6 +11,8 @@ from society.models import (
     FlatMaintenanceBill,
     FlatMaintenanceBillLine,
     MemberReceivable,
+    ParkingAllocation,
+    ParkingRateConfiguration,
 )
 
 CATEGORY_PRIORITY = {
@@ -135,6 +137,7 @@ def transfer_parking_on_flat_transfer(*, flat):
         )
 
 from decimal import Decimal
+from datetime import timedelta
 from datetime import date
 
 from django.db import transaction
@@ -234,10 +237,50 @@ def generate_monthly_maintenance_bill(*, society, billing_month):
     # ==========================================================
     # CREATE MASTER BILL
     # ==========================================================
+    
+    # ==========================================================
+    # BILL METADATA
+    # ==========================================================
+
+    society_code = (
+        society.name.strip()
+        .split()[0]
+        .upper()[:4]
+    )
+
+    serial = (
+        MaintenanceBill.objects.filter(
+            society=society
+        ).count()
+        + 1
+    )
+
+    bill_number = (
+        f"{society_code}"
+        f"-MAIN-"
+        f"{serial:03d}-"
+        f"{billing_month.strftime('%m%y')}"
+    )
+
+    bill_date = timezone.now().date()
+
+    due_date = (
+        bill_date
+        + timedelta(days=15)
+    )
+    
     bill = MaintenanceBill.objects.create(
         society=society,
         billing_month=billing_month,
+
+        bill_number=bill_number,
+
+        bill_date=bill_date,
+
+        due_date=due_date,
+
         generated_on=date.today(),
+
         total_amount=Decimal("0.00"),
     )
 
@@ -255,19 +298,88 @@ def generate_monthly_maintenance_bill(*, society, billing_month):
         rows, base_amount = calculate_flat_maintenance(flat)
 
         # ------------------------------------------------------
+        # PARKING RECOVERY
+        # ------------------------------------------------------
+        parking_total = Decimal("0.00")
+
+        allocations = (
+            ParkingAllocation.objects.filter(
+                flat=flat,
+                is_active=True,
+            ).select_related(
+                "parking_slot",
+            )
+        )
+
+        for allocation in allocations:
+
+            parking_type = (
+                allocation.parking_slot.parking_type
+            )
+
+            config = (
+                ParkingRateConfiguration.objects.filter(
+                    society=society,
+                    parking_type=parking_type,
+                    is_active=True,
+                ).first()
+            )
+
+            if not config:
+                continue
+
+            amount = config.rate
+
+            rows.append({
+                "charge_code":
+                    f"PARKING_{parking_type}",
+
+                "charge_name":
+                    {
+                        "CAR":
+                            "Parking - Four Wheeler",
+
+                        "BIKE":
+                            "Parking - Two Wheeler",
+
+                        "EV":
+                            "Parking - EV Vehicle",
+
+                        "VISITOR":
+                            "Parking - Visitor",
+                    }.get(
+                        parking_type,
+                        "Parking",
+                    ),
+
+                "amount":
+                    str(amount),
+            })
+
+            parking_total += amount
+
+        
+        
+        # ------------------------------------------------------
         # NON OCCUPANCY CALCULATION
         # ------------------------------------------------------
         non_occ = Decimal("0.00")
 
-        occupancy = getattr(flat, "occupancy", None)
+        occupancy = getattr(
+            flat,
+            "occupancy",
+            None,
+        )
 
         if occupancy and occupancy.occupancy_type == "RENTED":
 
-            non_occ = (
-                base_amount * Decimal("0.10")
-            ).quantize(Decimal("0.01"))
+            non_occ = Decimal("0.00")
 
-        total = base_amount + non_occ
+        total = (
+            base_amount
+            + parking_total
+            + non_occ
+        )
 
         # ------------------------------------------------------
         # CREATE FLAT BILL

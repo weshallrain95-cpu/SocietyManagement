@@ -197,6 +197,21 @@ export default function SCR33GovernanceSimulation() {
           "SCR33 CONTEXT",
           data
         );
+        console.log(
+            "NON OCC HYDRATED",
+            data?.effective_heads?.find(
+                (x: any) =>
+                x.code === "NON_OCCUPANCY"
+            )
+        );
+
+            console.log(
+            "NON OCC PREVIEW",
+            data?.preview?.headwise_summary?.find(
+                (x: any) =>
+                x.code === "NON_OCCUPANCY"
+            )
+        );
 
         setEffectiveHeads(
 
@@ -674,6 +689,7 @@ export default function SCR33GovernanceSimulation() {
                         heads.map(
                         (head: any) => {
 
+                            
                             const financial =
                             preview
                             ?.headwise_summary
@@ -682,7 +698,7 @@ export default function SCR33GovernanceSimulation() {
                                 x.code
                                 === head.code
                             );
-
+                        
                             return (
 
                                 <React.Fragment
@@ -730,6 +746,10 @@ export default function SCR33GovernanceSimulation() {
 
                                 <option value="PER_INLET">
                                     Per Inlet
+                                </option>
+
+                                <option value="PERCENT_MAINT">
+                                    % of Maintenance
                                 </option>
 
                                 </select>
@@ -1071,11 +1091,22 @@ const styles: any = {
 
   liveBadge: {
 
-    background: "#fff7ed",
+    background:
+        "rgba(255,247,237,0.75)",
+
+    backdropFilter:
+        "blur(14px)",
+
+    WebkitBackdropFilter:
+        "blur(14px)",
 
     color: "#ea580c",
 
-    border: "1px solid #fdba74",
+    border:
+        "1px solid rgba(251,191,36,0.35)",
+
+    boxShadow:
+        "0 4px 12px rgba(234,88,12,0.08)",
 
     padding: "8px 14px",
 
@@ -1084,7 +1115,7 @@ const styles: any = {
     fontSize: 12,
 
     fontWeight: 600,
-  },
+    },
 
   mainGrid: {
 
@@ -1095,11 +1126,22 @@ const styles: any = {
 
     width: "100%",
 
-    background: "#ffffff",
+    background:
+        "rgba(255,255,255,0.82)",
 
-    borderRadius: 14,
+    backdropFilter:
+        "blur(20px)",
 
-    border: "1px solid #e5e7eb",
+    WebkitBackdropFilter:
+        "blur(20px)",
+
+    border:
+        "1px solid rgba(255,255,255,0.55)",
+
+    boxShadow:
+        "0 12px 32px rgba(15,23,42,0.08)",
+
+    borderRadius: 16,
 
     overflow: "hidden",
   },
@@ -1189,6 +1231,8 @@ const styles: any = {
     borderBottom: "1px solid #f3f4f6",
 
     background: "#fafafa",
+
+    minWidth: 120,
   },
 
   row: {
@@ -1253,15 +1297,17 @@ childRateInput: {
 
   select: {
 
-    width: "100%",
+    width: 120,
 
-    height: 34,
+    height: 40,
 
     borderRadius: 8,
 
     border: "1px solid #d1d5db",
 
-    fontSize: 12,
+    fontSize: 13,
+
+    lineHeight: "40px",
 
     background: "#fff",
 
@@ -1270,7 +1316,7 @@ childRateInput: {
     color: "#374151",
 
     outline: "none",
-  },
+},
 
   rateInput: {
 
@@ -1360,11 +1406,22 @@ childRateInput: {
 
 metricInline: {
 
-  background: "#ffffff",
+  background:
+    "rgba(255,255,255,0.72)",
 
-  border: "1px solid #eceff3",
+  backdropFilter:
+    "blur(18px)",
 
-  borderRadius: 12,
+  WebkitBackdropFilter:
+    "blur(18px)",
+
+  border:
+    "1px solid rgba(255,255,255,0.45)",
+
+  boxShadow:
+    "0 8px 24px rgba(15,23,42,0.08)",
+
+  borderRadius: 14,
 
   padding: "14px 18px",
 },

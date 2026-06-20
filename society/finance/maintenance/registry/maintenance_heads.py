@@ -153,7 +153,7 @@ DEFAULT_MAINTENANCE_HEADS = [
         "name": "Non Occupancy Charges",
         "description": "Charges applicable for rented or licensed flats.",
         "category": "OPTIONAL",
-        "default_basis": "PERCENT_MAINT",
+        "default_basis": "EQUAL",
         "suggested_rate": 10,
         "enabled_by_default": False,
         "editable_basis": False,

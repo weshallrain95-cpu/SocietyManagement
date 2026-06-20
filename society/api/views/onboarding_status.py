@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+
 from society.onboarding_state_engine import (
     derive_onboarding_state,
     derive_allowed_actions,
