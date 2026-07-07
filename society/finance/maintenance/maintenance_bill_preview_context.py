@@ -17,6 +17,10 @@ from society.finance.maintenance.maintenance_engine import (
     calculate_flat_maintenance,
 )
 
+from society.finance.payments.upi_qr import (
+    generate_upi_qr_image,
+)
+
 # =====================================================
 # SCR35 MAINTENANCE BILL HYDRATION CONTRACT
 # =====================================================
@@ -745,6 +749,9 @@ def build_preview_bill_payload(
 
             else "-",
 
+        "qr_image":
+            None,
+
         "selected_account":
             None,
 
@@ -802,6 +809,30 @@ def build_preview_bill_payload(
     ] = str(
         net_payable
     )
+
+    # =====================================================
+    # QR PAYMENT
+    # =====================================================
+
+    qr_image = None
+
+    if (
+        active_bank_accounts.exists()
+        and active_bank_accounts.first().upi_id
+    ):
+
+        qr_image = generate_upi_qr_image(
+            upi_id=active_bank_accounts.first().upi_id,
+            payee_name=society.name,
+            amount=str(net_payable),
+            transaction_note=(
+                f"{society.name} "
+                f"{today:%b %Y} "
+                f"{preview_flat.flat_number}"
+            ),
+        )
+    
+        payment["qr_image"] = qr_image
 
     
     return {

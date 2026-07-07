@@ -49,7 +49,8 @@ def financial_onboarding_state(request):
 
         # STEP 2
         "can_setup_income": bank_completed,
-        "income_completed": False,
+        "income_completed":
+            society.communications_enabled,
 
         # STEP 3
         "can_setup_expense": False,

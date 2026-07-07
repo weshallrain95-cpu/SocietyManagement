@@ -1631,6 +1631,72 @@ def post_double_entry(
         source_ref=source_ref,
     )
 
+# ==========================================================
+# MAINTENANCE BILLING BANK ACCOUNT SERVICES
+# ==========================================================
+
+from society.models import BankAccount
+
+
+def get_maintenance_billing_bank_account(
+    *,
+    society,
+):
+    """
+    Returns the bank account whose details should appear on
+    Maintenance Bills, QR Codes and all maintenance payment
+    communications.
+
+    Business Rules
+    --------------
+    1. If there is only ONE active bank account, use it.
+    2. If multiple active bank accounts exist, use the one
+       designated with Treasury Role = OPERATIONS.
+    3. If no Operations bank has been designated, gracefully
+       fall back to the first active bank account. The caller
+       may surface an operational warning to the user.
+    """
+
+    active_bank_accounts = (
+        BankAccount.objects.filter(
+            society=society,
+            is_active=True,
+        )
+        .order_by(
+            "treasury_role",
+            "name",
+        )
+    )
+
+    # No active bank accounts configured
+    if not active_bank_accounts.exists():
+        raise BankAccount.DoesNotExist(
+            "No active bank accounts configured."
+        )
+
+    # Exactly one active bank account
+    if active_bank_accounts.count() == 1:
+        return active_bank_accounts.first()
+
+    # Preferred business rule:
+    # Use the designated Operations account.
+    operations_bank = (
+        active_bank_accounts.filter(
+            treasury_role="OPERATIONS",
+        ).first()
+    )
+
+    if operations_bank:
+        return operations_bank
+
+    # Safe fallback:
+    # No Operations account designated.
+    # Continue billing using the first active bank.
+    
+    return active_bank_accounts.first()
+
+
+
 # imports
 from decimal import Decimal
 from django.db import transaction

@@ -16,6 +16,7 @@ from society.finance.maintenance.maintenance_bill_artifact_generator import (
     MaintenanceBillArtifactGenerator,
 )
 
+import os
 
 @api_view(["POST"])
 def generate_maintenance_bill_preview(request):
@@ -89,6 +90,14 @@ def generate_maintenance_bill_preview(request):
         "preview_flat":
             preview_flat.flat_number,
 
-        "pdf_path":
-            pdf_path,
+        "preview_ready":
+            True,
+
+        "pdf_url":
+
+            "/media/maintenance_preview_artifacts/"
+
+            + os.path.basename(
+                pdf_path
+            ),
     })

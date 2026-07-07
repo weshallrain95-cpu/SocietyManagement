@@ -59,6 +59,8 @@ from society.api.views.scr31_save import (save_scr31_configuration,)
 from society.api.views.scr33_context import (scr33_context,)
 from society.api.views.save_scr33_configuration import (save_scr33_configuration,)
 from society.api.views.generate_maintenance_bill_preview import (generate_maintenance_bill_preview,)
+from society.api.views.scr34_context import (scr34_context,)
+from society.api.views.scr34_save import (save_scr34_configuration,)
 
 router = DefaultRouter()
 router.register("audit-events", AuditEventViewSet, basename="audit-events")
@@ -135,6 +137,8 @@ urlpatterns = [
     path("scr33-context/",scr33_context,),
     path("scr33-save/",save_scr33_configuration,),
     path("maintenance-bill-preview/",generate_maintenance_bill_preview,),
+    path("scr34-context/",scr34_context,),
+    path("scr34-save/",save_scr34_configuration,),
 ]
 
 urlpatterns += router.urls

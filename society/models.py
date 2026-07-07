@@ -15,7 +15,19 @@ class Society(models.Model):
     # Core Identity
     # -----------------------------
     name = models.CharField(max_length=255)
+    
     address = models.TextField(blank=True)
+    
+    official_email = models.EmailField(
+        blank=True,
+        null=True,
+        help_text="Official communication email for the society"
+    )
+
+    communications_enabled = models.BooleanField(
+        default=False,
+        help_text="Indicates whether the SocietyOS communications engine has been activated"
+    )
 
     # -----------------------------
     # Financial Definition
@@ -2701,6 +2713,7 @@ class PaymentReceipt(models.Model):
     issued_at = models.DateTimeField(auto_now_add=True)
 
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+
 
 class NotificationEvent(models.Model):
 

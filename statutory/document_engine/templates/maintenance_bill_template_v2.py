@@ -8,6 +8,7 @@ from reportlab.platypus import (
     Paragraph,
     Table,
     TableStyle,
+    Image,
 )
 
 
@@ -1449,6 +1450,10 @@ def render_maintenance_bill_story(payload):
         "Not Configured",
     )
 
+    qr_image = payment_info.get(
+        "qr_image",
+    )
+
     qr_panel = Table(
 
         [
@@ -1461,8 +1466,14 @@ def render_maintenance_bill_story(payload):
             ],
 
             [
+                Image(
+                    qr_image,
+                    width=32 * mm,
+                    height=32 * mm,
+                )
+                if qr_image
+                else
                 Paragraph(
-
                     """
                     <font size="6">
                     QR Not Configured
@@ -1472,7 +1483,6 @@ def render_maintenance_bill_story(payload):
                     Use Bank Transfer
                     </font>
                     """,
-
                     styles["BodyText"],
                 )
             ],

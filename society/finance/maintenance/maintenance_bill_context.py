@@ -11,6 +11,13 @@ from society.models import (
     MemberReceivable,
 )
 
+from society.finance.payments.upi_qr import (
+    generate_upi_qr_image,
+)
+
+from society.services import (
+    get_maintenance_billing_bank_account,
+)
 
 def build_maintenance_bill_payload(flat_bill):
 
@@ -73,17 +80,17 @@ def build_maintenance_bill_payload(flat_bill):
     # BANKING
     # =====================================================
 
-    active_bank_account = (
-        BankAccount.objects.filter(
-            society=society,
-            is_active=True,
+    try:
+
+        active_bank_account = (
+            get_maintenance_billing_bank_account(
+                society=society,
+            )
         )
-        .order_by(
-            "treasury_role",
-            "name",
-        )
-        .first()
-    )
+
+    except BankAccount.DoesNotExist:
+
+        active_bank_account = None
 
     bank_name = "-"
 
@@ -412,6 +419,21 @@ def build_maintenance_bill_payload(flat_bill):
     # PAYLOAD
     # =====================================================
 
+    qr_image = None
+
+    if upi_id:
+
+        qr_image = generate_upi_qr_image(
+            upi_id=upi_id,
+            payee_name=society.name,
+            amount=str(net_payable),
+            transaction_note=(
+                f"{society.name} "
+                f"{billing_month:%b %Y} "
+                f"{getattr(flat, 'flat_number', '-')}"
+            ),
+        )
+    
     payload = {
 
         "society": {
@@ -553,6 +575,9 @@ def build_maintenance_bill_payload(flat_bill):
 
             "upi_id":
                 upi_id,
+
+            "qr_image":
+                qr_image,
         },
 
         "notes": [
@@ -561,5 +586,5 @@ def build_maintenance_bill_payload(flat_bill):
 
         ],
     }
-
+        
     return payload

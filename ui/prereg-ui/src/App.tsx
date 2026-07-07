@@ -35,6 +35,7 @@ import SCR30RevenueReceivablesSetup from "./pages/SCR30RevenueReceivablesSetup";
 import SCR31MaintenanceGovernanceSetup from "./pages/SCR31MaintenanceGovernanceSetup";
 import SCR32GovernanceIntelligence from "./pages/SCR32GovernanceIntelligence";
 import SCR33GovernanceSimulation from "./pages/SCR33GovernanceSimulation";
+import SCR34MaintenanceBillingActivation from "./pages/SCR34MaintenanceBillingActivation";
 
 import { SocietyProvider } from "./context/SocietyContext";
 
@@ -82,6 +83,9 @@ function App() {
           <Route path="/financial-onboarding/governance-intelligence"element={<SCR32GovernanceIntelligence />}/>
           <Route path="/financial-onboarding/governance-simulation"element={<SCR33GovernanceSimulation />}/>
           <Route path="/financial-onboarding/scr33"element={<SCR33GovernanceSimulation />}/>
+          <Route path="/financial-onboarding/billing-activation"element={<SCR34MaintenanceBillingActivation />}/>
+          <Route path="/financial-onboarding/scr34"element={<SCR34MaintenanceBillingActivation />}/>
+          
          {/* 🔒 PROTECTED ROUTES (GUARD REMOVED TEMPORARILY) */}
 
         <Route path="/dashboard" element={<Dashboard />} />
