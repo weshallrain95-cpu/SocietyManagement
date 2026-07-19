@@ -1,5 +1,10 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
+from society.knowledge_center.views import (
+    knowledge_center,
+    knowledge_center_save,
+    knowledge_center_remove_focus,
+)
 
 from society.api.views.audit import AuditEventViewSet
 from society.api.views.audit_verification import AuditVerificationAPIView
@@ -139,6 +144,9 @@ urlpatterns = [
     path("maintenance-bill-preview/",generate_maintenance_bill_preview,),
     path("scr34-context/",scr34_context,),
     path("scr34-save/",save_scr34_configuration,),
+    path("knowledge-center/",knowledge_center,),
+    path("knowledge-center/save/",knowledge_center_save,),
+    path("knowledge-center/remove-focus/",knowledge_center_remove_focus,),
 ]
 
 urlpatterns += router.urls

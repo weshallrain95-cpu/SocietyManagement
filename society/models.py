@@ -1309,6 +1309,60 @@ class ChartOfAccount(models.Model):
         help_text="Short account code (e.g. MAINT, BANK, SINKFUND)",
     )
 
+    # ==========================================================
+    # Canonical System Account Identity
+    #
+    # Immutable identity used internally by SocietyOS financial
+    # engines. Display names and codes may evolve, but this
+    # identifier remains stable across all modules.
+    # ==========================================================
+
+    SYSTEM_ACCOUNT_CHOICES = [
+
+        ("BANK_OPERATIONS", "Bank - Operations"),
+        ("BANK_SINKING_FUND", "Bank - Sinking Fund"),
+        ("BANK_RESERVE_FUND", "Bank - Reserve Fund"),
+        ("BANK_FIXED_DEPOSIT", "Bank - Fixed Deposit"),
+
+        ("MEMBER_RECEIVABLES", "Member Receivables"),
+        ("VENDOR_PAYABLES", "Vendor Payables"),
+
+        ("CASH_ON_HAND", "Cash on Hand"),
+
+        ("MAINTENANCE_INCOME", "Maintenance Income"),
+        ("INTEREST_INCOME", "Interest Income"),
+        ("PENALTY_INCOME", "Penalty Income"),
+        ("PARKING_INCOME", "Parking Income"),
+        ("TRANSFER_FEE_INCOME", "Transfer Fee Income"),
+        ("AMENITY_INCOME", "Amenity Income"),
+        ("RENTAL_INCOME", "Rental Income"),
+        ("MISCELLANEOUS_INCOME", "Miscellaneous Income"),
+
+        ("MAINTENANCE_EXPENSE", "Maintenance Expense"),
+        ("UTILITY_EXPENSE", "Utility Expense"),
+        ("REPAIR_EXPENSE", "Repair Expense"),
+        ("SECURITY_EXPENSE", "Security Expense"),
+        ("HOUSEKEEPING_EXPENSE", "Housekeeping Expense"),
+        ("ADMINISTRATIVE_EXPENSE", "Administrative Expense"),
+        ("PROFESSIONAL_FEES", "Professional Fees"),
+        ("INSURANCE_EXPENSE", "Insurance Expense"),
+
+        ("SINKING_FUND", "Sinking Fund"),
+        ("REPAIR_FUND", "Repair Fund"),
+        ("RESERVE_FUND", "Reserve Fund"),
+    ]
+
+    system_account = models.CharField(
+        max_length=60,
+        choices=SYSTEM_ACCOUNT_CHOICES,
+        null=True,
+        blank=True,
+        help_text=(
+            "Immutable canonical identity used internally "
+            "by SocietyOS financial engines."
+        ),
+    )
+    
     name = models.CharField(
         max_length=255,
         help_text="Account name",
@@ -1386,7 +1440,10 @@ class ChartOfAccount(models.Model):
     objects = SocietyManager()
 
     class Meta:
-        unique_together = ("society", "code")
+        unique_together = [
+            ("society", "code"),
+            ("society", "system_account"),
+        ]
         ordering = ["account_type", "code"]
     def save(self, *args, **kwargs):
         if self.code:
@@ -2050,6 +2107,225 @@ class Vendor(models.Model):
     def __str__(self):
         return f"{self.name}"
 
+class ExpenseAuthorization(models.Model):
+    """
+    Society-approved authorization to incur an expense.
+
+    This is the first permanent business event
+    in the Payables lifecycle.
+
+    Procurement and accounting execute against
+    this authorization.
+    """
+
+    STATUS_CHOICES = [
+
+        ("DRAFT", "Draft"),
+
+        ("PENDING_APPROVAL", "Pending Approval"),
+
+        ("APPROVED", "Approved"),
+
+        (
+            "PROCUREMENT_DOCUMENT_ISSUED",
+            "Procurement Document Issued",
+        ),
+
+        (
+            "PROCUREMENT_COMPLETED",
+            "Procurement Completed",
+        ),
+
+        (
+            "INVOICE_RECEIVED",
+            "Invoice Received",
+        ),
+
+        (
+            "INVOICE_BOOKED",
+            "Invoice Booked",
+        ),
+
+        (
+            "PAYMENT_AUTHORIZED",
+            "Payment Authorized",
+        ),
+
+        ("PAID", "Paid"),
+
+        ("CLOSED", "Closed"),
+
+        ("CANCELLED", "Cancelled"),
+    ]
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="expense_authorizations",
+    )
+
+    expense_category = models.CharField(
+        max_length=100,
+    )
+
+    purpose = models.TextField()
+
+    estimated_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
+
+    approval_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    approval_date = models.DateField(
+        blank=True,
+        null=True,
+    )
+
+    # ======================================================
+    # Procurement Identity
+    # ======================================================
+
+    procurement_reference = models.CharField(
+        max_length=30,
+        unique=True,
+        blank=True,
+        null=True,
+        editable=False,
+        help_text=(
+            "Immutable business reference for the "
+            "entire procurement lifecycle."
+        ),
+    )
+
+    # ======================================================
+    # Procurement Instrument
+    # ======================================================
+
+    PROCUREMENT_TYPE_CHOICES = [
+
+        ("GOODS", "goods"),
+
+        ("SERVICES", "services"),
+
+        ("WORKS", "works"),
+
+    ]
+
+    procurement_type = models.CharField(
+        max_length=30,
+        choices=PROCUREMENT_TYPE_CHOICES,
+        blank=True,
+        null=True,
+    )
+
+    procurement_document_number = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    procurement_document_date = models.DateField(
+        blank=True,
+        null=True,
+    )
+
+    # ======================================================
+    # Execution Evidence
+    # ======================================================
+
+    completion_date = models.DateField(
+        blank=True,
+        null=True,
+    )
+
+    goods_receipt_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    goods_receipt_date = models.DateField(
+        blank=True,
+        null=True,
+    )
+
+    # ======================================================
+    # Payment Governance
+    # ======================================================
+
+    payment_authorization_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    payment_authorization_date = models.DateField(
+        blank=True,
+        null=True,
+    )
+
+    payment_authorized_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="authorized_expense_payments",
+    )
+
+    # ======================================================
+    # Closure Governance
+    # ======================================================
+
+    closed_date = models.DateField(
+        blank=True,
+        null=True,
+    )
+
+    closed_by = models.ForeignKey(
+        "auth.User",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="closed_expense_authorizations",
+    )
+
+    closure_notes = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    funding_source = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+    )
+
+    is_recurring = models.BooleanField(
+        default=False,
+    )
+
+    status = models.CharField(
+        max_length=40,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    def __str__(self):
+
+        return (
+            f"{self.expense_category} "
+            f"({self.status})"
+        )
+
 class VendorBill(models.Model):
 
     STATUS_CHOICES = [
@@ -2064,6 +2340,12 @@ class VendorBill(models.Model):
         related_name="vendor_bills"
     )
 
+    expense_authorization = models.ForeignKey(
+        "ExpenseAuthorization",
+        on_delete=models.PROTECT,
+        related_name="vendor_bills",
+    )
+    
     vendor = models.ForeignKey(
         Vendor,
         on_delete=models.CASCADE,

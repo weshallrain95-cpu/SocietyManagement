@@ -117,10 +117,43 @@ MASTER_COA = [
     {"code": "4140", "name": "Diesel Expense", "group": "EXPENSE"},
     {"code": "4150", "name": "Postage & Courier", "group": "EXPENSE"},
 
+    # ---------- PAYABLES ----------
+
+    {
+        "code": "2230",
+        "name": "TDS Payable",
+        "group": "PAYABLE",
+    },
+
+    {
+        "code": "2240",
+        "name": "Vendor Security Deposit",
+        "group": "PAYABLE",
+    },
+
+    {
+        "code": "2250",
+        "name": "Vendor Retention Payable",
+        "group": "PAYABLE",
+    },
+
+    {
+        "code": "1210",
+        "name": "Vendor Advances",
+        "group": "ASSET",
+    },
+
+    {
+        "code": "1220",
+        "name": "GST Input Credit",
+        "group": "ASSET",
+    },
+    
     # ---------- SYSTEM ----------
 
     {"code": "9998", "name": "Opening Balance Adjustment", "group": "SYSTEM"},
     {"code": "9999", "name": "Suspense Account", "group": "SYSTEM"},
+
 ]
 
 

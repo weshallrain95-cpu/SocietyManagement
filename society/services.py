@@ -1363,9 +1363,9 @@ def record_vendor_payment(
 
     bank_account_coa = bank_account.chart_account
 
-    expense_account = ChartOfAccount.objects.get(
+    vendor_payable_account = ChartOfAccount.objects.get(
         society=payable.society,
-        code="GENERAL_EXPENSE"
+        code="VENDOR_PAYABLES"
     )
 
     post_transaction(
@@ -1375,8 +1375,16 @@ def record_vendor_payment(
         reference_id=str(payment.id),
         description=f"Vendor payment - {payable.vendor_bill.vendor.name}",
         entries=[
-            {"account": expense_account, "type": "DEBIT", "amount": Decimal(amount)},
-            {"account": bank_account_coa, "type": "CREDIT", "amount": Decimal(amount)},
+            {
+                "account": vendor_payable_account,
+                "type": "DEBIT",
+                "amount": Decimal(amount),
+            },
+            {
+                "account": bank_account_coa,
+                "type": "CREDIT",
+                "amount": Decimal(amount),
+            },
         ],
     )
 

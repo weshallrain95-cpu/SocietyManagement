@@ -15,8 +15,85 @@ def record_expense_payment(
     reference_id,
     description="",
 ):
+
     """
-    Records an expense payment from society.
+    ==========================================================
+    SocietyOS
+    Direct Expense Payment Engine
+    ==========================================================
+
+    Purpose
+    -------
+
+    Records immediate Expense Payments made
+    directly by the Society.
+
+    This engine is intended for expenses that
+    do NOT pass through the Vendor Procurement
+    lifecycle.
+
+    Examples
+
+    • Petty Cash
+    • Courier Charges
+    • Refreshments
+    • Office Supplies
+    • Staff Reimbursements
+    • Cash Purchases
+    • Immediate Utility Payments
+    • Miscellaneous Administrative Expenses
+
+    Accounting
+
+        Dr Expense
+
+        Cr Bank
+
+    This is an immediate cash / bank
+    disbursement.
+
+    ----------------------------------------------------------
+
+    This engine does NOT create:
+
+    • Expense Authorization
+    • Vendor Bill
+    • Vendor Payable
+    • Vendor Payment
+
+    ----------------------------------------------------------
+
+    Vendor Procurement follows a completely
+    different workflow.
+
+    Expense Authorization
+
+            ↓
+
+    Vendor Bill
+
+            ↓
+
+    Vendor Payable
+
+            ↓
+
+    Vendor Payment
+
+            ↓
+
+    Bank Payment
+
+    ----------------------------------------------------------
+
+    Single Responsibility
+
+    Record immediate expense payments that do
+    not generate Vendor Payables.
+
+    The Payables subsystem owns all vendor
+    procurement workflows.
+    ==========================================================
     """
 
     # 🔥 Get expense account
