@@ -116,6 +116,7 @@ from society.domain_services.payables.workflow_policy import (
 )
 
 from datetime import date
+from decimal import Decimal
 
 from society.domain_services.payables.procurement_document_number import (
     generate_procurement_document_number,
@@ -209,6 +210,12 @@ class ExpenseAuthorizationEngine:
             event,
         )
 
+        ExpenseAuthorizationEngine._validate_invoice_authorization_limit(
+            authorization,
+            event,
+            payload,
+        )
+        
         next_status = (
             ExpenseAuthorizationEngine._resolve_next_status(
                 authorization,
@@ -498,6 +505,78 @@ class ExpenseAuthorizationEngine:
             ),
 
         }
+    
+    @staticmethod
+    def _validate_invoice_authorization_limit(
+        authorization,
+        event,
+        payload,
+    ):
+        """
+        Prevents Vendor Invoices from exceeding
+        the approved Expense Authorization value.
+        """
+
+        if event != ExpenseAuthorizationEvent.BOOK_INVOICE:
+            return
+
+        existing_total = (
+            VendorBill.objects.filter(
+                expense_authorization=authorization,
+            )
+            .values_list("amount", flat=True)
+        )
+
+        existing_total = sum(
+            existing_total,
+            Decimal("0.00"),
+        )
+
+        new_invoice_amount = Decimal(
+            str(
+                payload.get(
+                    "amount",
+                    0,
+                )
+            )
+        )
+
+        new_invoice_amount = new_invoice_amount.quantize(
+            Decimal("0.01")
+        )
+
+        proposed_total = (
+            existing_total
+            + new_invoice_amount
+        )
+
+        authorized_amount = (
+            authorization.estimated_amount
+        )
+
+        if proposed_total <= authorized_amount:
+            return
+
+        remaining_amount = max(
+            Decimal("0.00"),
+            authorized_amount - existing_total,
+        )
+
+        exceeded_amount = max(
+            Decimal("0.00"),
+            proposed_total - authorized_amount,
+        )
+
+        raise ExpenseAuthorizationWorkflowError(
+            (
+                "Invoice exceeds remaining authorized amount.\n\n"
+                f"Authorized Amount    : ₹{authorized_amount}\n"
+                f"Already Invoiced    : ₹{existing_total}\n"
+                f"Remaining Available : ₹{remaining_amount}\n"
+                f"Attempted Invoice   : ₹{new_invoice_amount}\n"
+                f"Exceeded By         : ₹{exceeded_amount}"
+            )
+        )
 
     @staticmethod
     def _resolve_next_status(

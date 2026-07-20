@@ -802,6 +802,7 @@ from django.db import transaction
 from society.models import ChartOfAccount
 from society.finance.kernel.posting_engine import post_transaction
 
+
 def record_member_payment(
     *,
     flat,
@@ -1312,7 +1313,11 @@ from django.utils import timezone
 from society.models import VendorPayment, LedgerEntry
 from society.models import ChartOfAccount
 from society.models import BankAccount
+from society.finance.kernel.treasury_engine import (
+    _validate_available_balance,
+)
 
+@transaction.atomic
 def record_vendor_payment(
     *,
     payable,
@@ -1362,6 +1367,11 @@ def record_vendor_payment(
         raise Exception("❌ Invalid bank_account_id for this society")
 
     bank_account_coa = bank_account.chart_account
+
+    _validate_available_balance(
+        account=bank_account_coa,
+        amount=Decimal(amount),
+    )
 
     vendor_payable_account = ChartOfAccount.objects.get(
         society=payable.society,

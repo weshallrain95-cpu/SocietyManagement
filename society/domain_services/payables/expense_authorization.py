@@ -241,6 +241,9 @@ class ExpenseAuthorizationStateMachine:
 
         ExpenseAuthorizationStatus.INVOICE_BOOKED: {
 
+            ExpenseAuthorizationEvent.BOOK_INVOICE:
+                ExpenseAuthorizationStatus.INVOICE_BOOKED,
+
             ExpenseAuthorizationEvent.AUTHORIZE_PAYMENT:
                 ExpenseAuthorizationStatus.PAYMENT_AUTHORIZED,
 
