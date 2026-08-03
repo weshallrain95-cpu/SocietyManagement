@@ -27,6 +27,10 @@ from society.domain_services.payables.expense_authorization_engine import (
     ExpenseAuthorizationEngine,
 )
 
+from society.domain_services.spend.spend_resolver import (
+    resolve_spend,
+)
+
 from society.models import ExpenseAuthorization
 
 from datetime import date
@@ -93,6 +97,27 @@ class ExpenseAuthorizationService:
         Creates a new Expense Authorization.
         """
 
+        resolution = resolve_spend(
+            operational_domain_code=fields[
+                "operational_domain_code"
+            ],
+            spend_item_code=fields[
+                "spend_item_code"
+            ],
+        )
+
+        fields[
+            "operational_domain_code"
+        ] = (
+            resolution.operational_domain_code
+        )
+
+        fields[
+            "spend_item_code"
+        ] = (
+            resolution.spend_item_code
+        )
+        
         fields[
             "procurement_reference"
         ] = (

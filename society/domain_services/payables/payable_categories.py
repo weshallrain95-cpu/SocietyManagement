@@ -2484,6 +2484,181 @@ REPAIRS_MAINTENANCE = {
 
 
 # ==========================================================
+# Equipment & Infrastructure
+# ==========================================================
+
+EQUIPMENT_INFRASTRUCTURE = {
+
+    "definition": {
+
+        "code": "EQUIPMENT_INFRASTRUCTURE",
+
+        "name": "Equipment & Infrastructure",
+
+        "description":
+            "Procurement and lifecycle management of movable operational equipment and infrastructure assets.",
+
+        "purpose":
+            "Supports acquisition of capital equipment used in society operations.",
+
+    },
+
+    "heads": {
+
+        "EQUIPMENT_EXPENSE": {
+
+            "definition": {
+
+                "code": "EQUIPMENT_EXPENSE",
+
+                "name": "Equipment Procurement",
+
+                "description":
+                    "Purchase of movable operational equipment and infrastructure assets.",
+
+                "purpose":
+                    "Records procurement of capital equipment owned by the society.",
+
+            },
+
+            "intelligence": {
+
+                "business": {
+
+                    "nature": "CAPITAL_ASSET",
+
+                    "default_recurring": False,
+
+                    "vendor_required": True,
+
+                    "multiple_vendors_allowed": True,
+
+                },
+
+                "governance": {
+
+                    "default_approval": "MANAGING_COMMITTEE",
+
+                    "committee_resolution_required": False,
+
+                },
+
+                "funding": {
+
+                    "default_source": "OPERATING_FUND",
+
+                    "allowed_sources": [
+                        "OPERATING_FUND",
+                        "SINKING_FUND",
+                    ],
+
+                },
+
+                "accounting": {
+
+                    "coa_code": "EXP_EQUIPMENT",
+
+                    "requires_vendor_control": True,
+
+                    "requires_entity": True,
+
+                },
+
+                "taxation": {
+
+                    "gst_possible": True,
+
+                    "tds_possible": False,
+
+                    "input_tax_credit_possible": True,
+
+                },
+
+                "budgeting": {
+
+                    "budgetable": True,
+
+                    "forecastable": False,
+
+                    "variance_tracking": True,
+
+                },
+
+                "operations": {
+
+                    "requires_invoice": True,
+
+                    "requires_asset_creation": True,
+
+                },
+
+                "financial_presentation": {
+
+                    "income_expense_statement": True,
+
+                    "balance_sheet": False,
+
+                    "cash_flow": "INVESTING",
+
+                },
+
+                "ui": {
+
+                    "enabled_by_default": True,
+
+                    "user_can_disable": True,
+
+                },
+
+            },
+
+            "children": {
+
+                "COMPUTER": {
+                    "name": "Computer"
+                },
+
+                "PRINTER": {
+                    "name": "Printer"
+                },
+
+                "OFFICE_FURNITURE": {
+                    "name": "Office Furniture"
+                },
+
+                "NOTICE_BOARD": {
+                    "name": "Notice Board"
+                },
+
+                "GARDEN_EQUIPMENT": {
+                    "name": "Garden Equipment"
+                },
+
+                "GYM_EQUIPMENT": {
+                    "name": "Gym Equipment"
+                },
+
+                "PLAYGROUND_EQUIPMENT": {
+                    "name": "Playground Equipment"
+                },
+
+                "IRRIGATION_EQUIPMENT": {
+                    "name": "Irrigation Equipment"
+                },
+
+                "SOLAR_POWER_SYSTEM": {
+                    "name": "Solar Power System"
+                },
+
+            },
+
+        },
+
+    },
+
+}
+
+# ==========================================================
 # Staff & Human Resources
 # ==========================================================
 

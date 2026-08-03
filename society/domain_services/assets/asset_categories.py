@@ -1185,3 +1185,176 @@ SECURITY_SURVEILLANCE = {
     },
 
 }
+
+# ==========================================================
+# Movable Assets
+# ==========================================================
+
+MOVABLE_ASSETS = {
+
+    "definition": {
+
+        "code": "MOVABLE_ASSETS",
+
+        "name": "Movable Assets",
+
+        "description":
+            "Movable operational assets owned and managed by the society.",
+
+        "purpose":
+            "Supports day-to-day society operations through movable assets and equipment.",
+
+    },
+
+    "asset_types": {
+
+        "OFFICE_FURNITURE": {
+
+            "definition": {
+
+                "code": "OFFICE_FURNITURE",
+
+                "name": "Office Furniture",
+
+            },
+
+        },
+
+        "COMPUTER": {
+
+            "definition": {
+
+                "code": "COMPUTER",
+
+                "name": "Computer",
+
+            },
+
+        },
+
+        "PRINTER": {
+
+            "definition": {
+
+                "code": "PRINTER",
+
+                "name": "Printer",
+
+            },
+
+        },
+
+        "NOTICE_BOARD": {
+
+            "definition": {
+
+                "code": "NOTICE_BOARD",
+
+                "name": "Notice Board",
+
+            },
+
+        },
+
+        "FURNITURE": {
+
+            "definition": {
+
+                "code": "FURNITURE",
+
+                "name": "Furniture",
+
+            },
+
+        },
+
+        "GARDEN_EQUIPMENT": {
+
+            "definition": {
+
+                "code": "GARDEN_EQUIPMENT",
+
+                "name": "Garden Equipment",
+
+            },
+
+        },
+
+        "GYM_EQUIPMENT": {
+
+            "definition": {
+
+                "code": "GYM_EQUIPMENT",
+
+                "name": "Gym Equipment",
+
+            },
+
+        },
+
+        "PLAYGROUND_EQUIPMENT": {
+
+            "definition": {
+
+                "code": "PLAYGROUND_EQUIPMENT",
+
+                "name": "Playground Equipment",
+
+            },
+
+        },
+
+        "PLANTS_TREES": {
+
+            "definition": {
+
+                "code": "PLANTS_TREES",
+
+                "name": "Plants & Trees",
+
+            },
+
+        },
+
+        "IRRIGATION_EQUIPMENT": {
+
+            "definition": {
+
+                "code": "IRRIGATION_EQUIPMENT",
+
+                "name": "Irrigation Equipment",
+
+            },
+
+        },
+
+    },
+
+}
+
+# ==========================================================
+# Asset Registry
+# ==========================================================
+#
+# Canonical registry of every supported asset family.
+#
+# This registry is the single entry point for:
+#
+# - Asset Factory
+# - Asset Intelligence
+# - Asset Validation
+# - Asset Search
+# - Asset Registry
+#
+# New asset families MUST be registered here.
+#
+# ==========================================================
+
+ASSET_CATEGORY_REGISTRY = {
+    "LIFTS_AND_VERTICAL_TRANSPORT": LIFTS_AND_VERTICAL_TRANSPORT,
+    "ELECTRICAL_INFRASTRUCTURE": ELECTRICAL_INFRASTRUCTURE,
+    "WATER_SYSTEMS": WATER_SYSTEMS,
+    "FIRE_SAFETY_SYSTEMS": FIRE_SAFETY_SYSTEMS,
+    "SECURITY_SURVEILLANCE": SECURITY_SURVEILLANCE,
+    "MOVABLE_ASSETS": MOVABLE_ASSETS,
+}

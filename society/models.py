@@ -1242,6 +1242,7 @@ class AccountGroup(models.Model):
     CATEGORY_CHOICES = [
         ("ASSET", "Asset"),
         ("LIABILITY", "Liability"),
+        ("EQUITY", "Equity"),
         ("INCOME", "Income"),
         ("EXPENSE", "Expense"),
     ]
@@ -1285,9 +1286,9 @@ class ChartOfAccount(models.Model):
     ACCOUNT_TYPE_CHOICES = [
         ("ASSET", "Asset"),
         ("LIABILITY", "Liability"),
+        ("EQUITY", "Equity"),
         ("INCOME", "Income"),
         ("EXPENSE", "Expense"),
-        ("RESERVE", "Reserve"),
     ]
 
     society = models.ForeignKey(
@@ -1319,15 +1320,11 @@ class ChartOfAccount(models.Model):
 
     SYSTEM_ACCOUNT_CHOICES = [
 
-        ("BANK_OPERATIONS", "Bank - Operations"),
-        ("BANK_SINKING_FUND", "Bank - Sinking Fund"),
-        ("BANK_RESERVE_FUND", "Bank - Reserve Fund"),
-        ("BANK_FIXED_DEPOSIT", "Bank - Fixed Deposit"),
+        ("BANK_FUNDS", "Bank Funds"),
+        ("CASH_ON_HAND", "Cash on Hand"),
 
         ("MEMBER_RECEIVABLES", "Member Receivables"),
         ("VENDOR_PAYABLES", "Vendor Payables"),
-
-        ("CASH_ON_HAND", "Cash on Hand"),
 
         ("MAINTENANCE_INCOME", "Maintenance Income"),
         ("INTEREST_INCOME", "Interest Income"),
@@ -1347,9 +1344,6 @@ class ChartOfAccount(models.Model):
         ("PROFESSIONAL_FEES", "Professional Fees"),
         ("INSURANCE_EXPENSE", "Insurance Expense"),
 
-        ("SINKING_FUND", "Sinking Fund"),
-        ("REPAIR_FUND", "Repair Fund"),
-        ("RESERVE_FUND", "Reserve Fund"),
     ]
 
     system_account = models.CharField(
@@ -1372,6 +1366,86 @@ class ChartOfAccount(models.Model):
         max_length=20,
         choices=ACCOUNT_TYPE_CHOICES,
     )
+    
+    
+    # ==========================================================
+    # Statutory Equity Classification
+    #
+    # Applicable only when account_type == "EQUITY".
+    # Identifies the legal/statutory nature of the equity account.
+    # ==========================================================
+
+    EQUITY_TYPE_CHOICES = [
+
+        # Ownership Capital
+        ("SHARE_CAPITAL", "Share Capital"),
+        ("SHARE_PREMIUM", "Share Premium"),
+
+        # Statutory / Reserve Funds
+        ("STATUTORY_RESERVE", "Statutory Reserve"),
+        ("GENERAL_RESERVE", "General Reserve"),
+        ("RESERVE_FUND", "Reserve Fund"),
+        ("SINKING_FUND", "Sinking Fund"),
+        ("REPAIR_FUND", "Repair Fund"),
+        ("MAJOR_REPAIR_FUND", "Major Repair Fund"),
+
+        # Capital Projects
+        ("BUILDING_RECONSTRUCTION_FUND", "Building Reconstruction Fund"),
+        ("REDEVELOPMENT_FUND", "Redevelopment Fund"),
+        ("CAPITAL_IMPROVEMENT_FUND", "Capital Improvement Fund"),
+        ("INFRASTRUCTURE_FUND", "Infrastructure Fund"),
+
+        # Member Funds
+        ("CORPUS_FUND", "Corpus Fund"),
+        ("WELFARE_FUND", "Welfare Fund"),
+        ("CULTURAL_FUND", "Cultural Fund"),
+        ("COMMON_AMENITY_FUND", "Common Amenity Fund"),
+        ("PARKING_DEVELOPMENT_FUND", "Parking Development Fund"),
+        ("SECURITY_DEPOSIT_FUND", "Security Deposit Fund"),
+
+        # Restricted / Earmarked Funds
+        ("DISASTER_RELIEF_FUND", "Disaster Relief Fund"),
+        ("EMERGENCY_FUND", "Emergency Fund"),
+        ("INSURANCE_RESERVE", "Insurance Reserve"),
+        ("LEGAL_CONTINGENCY_FUND", "Legal Contingency Fund"),
+        ("LITIGATION_FUND", "Litigation Fund"),
+
+        # Infrastructure Lifecycle Funds
+        ("LIFT_REPLACEMENT_FUND", "Lift Replacement Fund"),
+        ("PAINTING_FUND", "Painting Fund"),
+        ("WATER_SYSTEM_FUND", "Water System Fund"),
+        ("SOLAR_PROJECT_FUND", "Solar Project Fund"),
+        ("FIRE_SAFETY_FUND", "Fire Safety Fund"),
+        ("ELECTRICAL_UPGRADE_FUND", "Electrical Upgrade Fund"),
+
+        # Accumulated Equity
+        ("ACCUMULATED_SURPLUS", "Accumulated Surplus"),
+        ("RETAINED_EARNINGS", "Retained Earnings"),
+
+        # Grants / Contributions
+        ("GOVERNMENT_GRANT_RESERVE", "Government Grant Reserve"),
+        ("DONATION_FUND", "Donation Fund"),
+        ("CSR_CAPITAL_FUND", "CSR Capital Fund"),
+
+        # Formation
+        ("PROMOTER_CONTRIBUTION", "Promoter Contribution"),
+        ("BUILDER_CONTRIBUTION", "Builder Contribution"),
+        ("INITIAL_WORKING_CAPITAL", "Initial Working Capital"),
+        ("FORMATION_EXPENSE_RECOVERY", "Formation Expense Recovery"),
+
+    ]
+
+    equity_type = models.CharField(
+        max_length=50,
+        choices=EQUITY_TYPE_CHOICES,
+        null=True,
+        blank=True,
+        help_text=(
+            "Statutory classification for Equity accounts. "
+            "Applicable only when account_type is EQUITY."
+        ),
+    )
+    
     # 🔥 NEW: Account Category (system intelligence layer)
     ACCOUNT_CATEGORY_CHOICES = [
         ("BANK", "Bank"),
@@ -2164,6 +2238,31 @@ class ExpenseAuthorization(models.Model):
         related_name="expense_authorizations",
     )
 
+    # ======================================================
+    # Spend Classification
+    # ======================================================
+
+    operational_domain_code = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=(
+            "Canonical operational domain code "
+            "from the Spend Catalog."
+        ),
+    )
+
+    spend_item_code = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=(
+            "Canonical spend item code "
+            "from the Spend Catalog."
+        ),
+    )
+    
+    
     expense_category = models.CharField(
         max_length=100,
     )
@@ -2468,6 +2567,312 @@ class VendorPayment(models.Model):
     def __str__(self):
         return f"{self.vendor_payable.vendor_bill.vendor} ₹{self.amount}"
            
+
+# ==========================================================
+# SOCIETY ASSET MANAGEMENT (SAM)
+# ==========================================================
+#
+# Asset
+#
+# Canonical representation of a physical asset owned,
+# inherited or controlled by the society.
+#
+# This model answers one question only:
+#
+#     "What is this physical asset?"
+#
+# Financial valuation, acquisition history, documents,
+# events, identity tags, maintenance history and
+# relationships are maintained in dedicated models.
+#
+# ==========================================================
+
+class Asset(models.Model):
+
+    CATEGORY_CHOICES = [
+
+        ("CIVIL", "Civil"),
+
+        ("ELECTRICAL", "Electrical"),
+
+        ("MECHANICAL", "Mechanical"),
+
+        ("PLUMBING", "Plumbing"),
+
+        ("FIRE_SAFETY", "Fire Safety"),
+
+        ("SECURITY", "Security"),
+
+        ("IT", "Information Technology"),
+
+        ("FURNITURE", "Furniture & Fixtures"),
+
+        ("RECREATIONAL", "Recreational"),
+
+        ("LANDSCAPING", "Landscaping"),
+
+        ("OTHER", "Other"),
+    ]
+
+    ORIGIN_CHOICES = [
+
+        ("BUILDER", "Builder Handover"),
+
+        ("PURCHASED", "Purchased by Society"),
+
+        ("DONATED", "Donated"),
+
+        ("TRANSFERRED", "Transferred"),
+
+        ("OTHER", "Other"),
+    ]
+
+    STATUS_CHOICES = [
+
+        ("ACTIVE", "Active"),
+
+        ("UNDER_REPAIR", "Under Repair"),
+
+        ("NON_OPERATIONAL", "Non Operational"),
+
+        ("DISPOSED", "Disposed"),
+    ]
+
+    CONDITION_CHOICES = [
+
+        ("EXCELLENT", "Excellent"),
+
+        ("GOOD", "Good"),
+
+        ("FAIR", "Fair"),
+
+        ("POOR", "Poor"),
+    ]
+
+    CRITICALITY_CHOICES = [
+
+        ("LOW", "Low"),
+
+        ("MEDIUM", "Medium"),
+
+        ("HIGH", "High"),
+
+        ("CRITICAL", "Critical"),
+    ]
+
+    society = models.ForeignKey(
+        "Society",
+        on_delete=models.CASCADE,
+        related_name="assets",
+    )
+
+    asset_number = models.CharField(
+        max_length=50,
+        help_text="Unique society asset identifier",
+    )
+
+    name = models.CharField(
+        max_length=255,
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True,
+    )
+
+    category = models.CharField(
+        max_length=30,
+        choices=CATEGORY_CHOICES,
+    )
+
+    asset_type = models.CharField(
+        max_length=100,
+        help_text=(
+            "Canonical Asset Operating Model "
+            "definition code."
+        ),
+    )
+    
+    origin = models.CharField(
+        max_length=20,
+        choices=ORIGIN_CHOICES,
+        default="PURCHASED",
+    )
+
+    manufacturer = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    model = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    serial_number = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+
+    wing = models.ForeignKey(
+        "Wing",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assets",
+    )
+
+    floor = models.ForeignKey(
+        "Floor",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assets",
+    )
+
+    flat = models.ForeignKey(
+        "Flat",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assets",
+    )
+
+    location_description = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Exact physical location within society",
+    )
+
+    installed_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    commissioned_on = models.DateField(
+        null=True,
+        blank=True,
+    )
+
+    expected_life_years = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=25,
+        choices=STATUS_CHOICES,
+        default="ACTIVE",
+    )
+
+    condition = models.CharField(
+        max_length=20,
+        choices=CONDITION_CHOICES,
+        default="GOOD",
+    )
+
+    criticality = models.CharField(
+        max_length=20,
+        choices=CRITICALITY_CHOICES,
+        default="MEDIUM",
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "category",
+            "name",
+        ]
+
+        unique_together = (
+            "society",
+            "asset_number",
+        )
+
+    def __str__(self):
+        return f"{self.asset_number} - {self.name}"
+
+# ==========================================================
+# Asset Valuation
+# ==========================================================
+#
+# Financial valuation history for an Asset.
+#
+# An Asset represents the physical identity.
+#
+# AssetValuation represents its financial value over time.
+#
+# ==========================================================
+
+class AssetValuation(models.Model):
+
+    VALUATION_TYPE_CHOICES = [
+
+        ("ORIGINAL_COST", "Original Cost"),
+
+        ("OPENING_BALANCE", "Opening Balance"),
+
+        ("FAIR_VALUE", "Fair Value"),
+    ]
+
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.CASCADE,
+        related_name="valuations",
+    )
+
+    valuation_type = models.CharField(
+        max_length=30,
+        choices=VALUATION_TYPE_CHOICES,
+    )
+
+    amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+    )
+
+    valuation_date = models.DateField()
+
+    remarks = models.TextField(
+        blank=True,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+    class Meta:
+
+        ordering = [
+            "-valuation_date",
+            "-id",
+        ]
+
+        unique_together = (
+            (
+                "asset",
+                "valuation_type",
+            ),
+        )
+
+    def __str__(self):
+        return (
+            f"{self.asset.asset_number} "
+            f"{self.valuation_type} "
+            f"{self.amount}"
+        )
 
 from django.db import models
 from django.core.exceptions import ValidationError

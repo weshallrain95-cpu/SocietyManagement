@@ -12,8 +12,172 @@ from society.models import (
 from society.services import post_double_entry
 from society.finance.ledger_integrity import verify_ledger_integrity
 from society.finance.trial_balance import generate_trial_balance
+from society.finance.kernel.coa_seed import seed_core_coa
+from society.finance.kernel.asset_coa_seed import (
+    seed_asset_coa,
+)
 
+"""
+===============================================================================
+ SocietyOS Financial Onboarding Orchestrator
+===============================================================================
 
+File:
+    society/finance/initialization.py
+
+Status:
+    ACTIVE
+    Canonical Financial Initialization / Onboarding Orchestrator
+
+Architecture Version:
+    Finance Platform V2
+
+Refined On:
+    2026-07-21
+
+-------------------------------------------------------------------------------
+PURPOSE
+-------------------------------------------------------------------------------
+
+This module is the single orchestration entry point responsible for preparing
+the financial foundation of a society.
+
+It does NOT perform accounting itself.
+
+Instead, it coordinates the various specialized financial initialization
+services required before the society can begin financial operations.
+
+This module intentionally contains orchestration logic only.
+
+Business Rule:
+
+    "Users onboard a financial system.
+     Services provision the accounting foundation."
+
+-------------------------------------------------------------------------------
+WHY THIS FILE EXISTS
+-------------------------------------------------------------------------------
+
+During the evolution of the Finance Platform, multiple initialization
+mechanisms emerged.
+
+Earlier implementations embedded Chart of Accounts creation directly inside
+this file.
+
+Later iterations introduced dedicated provisioning services such as:
+
+    seed_core_coa()
+
+This file has now been repurposed to become the orchestration layer rather
+than owning individual initialization responsibilities.
+
+It coordinates specialized services instead of duplicating them.
+
+-------------------------------------------------------------------------------
+DESIGN PRINCIPLES
+-------------------------------------------------------------------------------
+
+Every initialization step must be:
+
+✓ Idempotent
+✓ Safe to execute repeatedly
+✓ Independently testable
+✓ Independently replaceable
+✓ Business driven
+✓ Atomic
+
+This allows financial onboarding to be resumed safely from any point.
+
+-------------------------------------------------------------------------------
+THIS MODULE SHOULD NEVER
+-------------------------------------------------------------------------------
+
+This module should never contain:
+
+• Chart of Account definitions
+• Posting logic
+• Ledger logic
+• Trial Balance calculations
+• Validation algorithms
+• Domain-specific accounting rules
+
+Those belong in their respective services.
+
+-------------------------------------------------------------------------------
+THIS MODULE SHOULD ONLY
+-------------------------------------------------------------------------------
+
+Coordinate the financial onboarding workflow:
+
+    Ensure Account Groups
+
+        ↓
+
+    Ensure Core Chart of Accounts
+
+        ↓
+
+    Ensure Financial Period
+
+        ↓
+
+    Ensure Opening Balances
+
+        ↓
+
+    Verify Ledger Integrity
+
+        ↓
+
+    Verify Trial Balance
+
+        ↓
+
+    Return Initialization Status
+
+-------------------------------------------------------------------------------
+LEGACY NOTE
+-------------------------------------------------------------------------------
+
+The original implementation embedded:
+
+    seed_chart_of_accounts()
+
+directly inside this module.
+
+That implementation has been superseded by:
+
+    society.finance.kernel.coa_seed.seed_core_coa()
+
+which represents the Finance Platform V2 accounting model.
+
+The legacy COA implementation is retained only for historical reference until
+its complete removal.
+
+-------------------------------------------------------------------------------
+WORKING PROTOCOL
+-------------------------------------------------------------------------------
+
+When extending financial onboarding:
+
+DO
+
+✓ Add new orchestration steps here.
+✓ Keep orchestration linear.
+✓ Delegate business logic to specialized modules.
+✓ Keep every step idempotent.
+
+DO NOT
+
+✗ Embed accounting rules.
+✗ Duplicate domain services.
+✗ Create alternative initialization paths.
+✗ Couple orchestration to UI screens.
+
+There must always be one canonical initialization pipeline.
+
+===============================================================================
+"""
 # -------------------------------------------------------------------
 # 1. ACCOUNT GROUPS
 # -------------------------------------------------------------------
@@ -22,6 +186,7 @@ ACCOUNT_GROUPS = [
 
     {"code": "ASSET", "name": "Assets", "category": "ASSET"},
     {"code": "LIABILITY", "name": "Liabilities", "category": "LIABILITY"},
+    {"code": "EQUITY", "name": "Equity", "category": "EQUITY"},
     {"code": "INCOME", "name": "Income", "category": "INCOME"},
     {"code": "EXPENSE", "name": "Expenses", "category": "EXPENSE"},
 
@@ -42,134 +207,6 @@ def seed_account_groups():
             defaults={
                 "name": g["name"],
                 "category": g["category"],
-            },
-        )
-
-
-# -------------------------------------------------------------------
-# 2. MASTER CHART OF ACCOUNTS (PHASE-1)
-# -------------------------------------------------------------------
-
-MASTER_COA = [
-
-    # ---------- ASSETS ----------
-
-    {"code": "1000", "name": "Bank Account", "group": "ASSET"},
-    {"code": "1010", "name": "Cash", "group": "ASSET"},
-    {"code": "1020", "name": "Fixed Deposits", "group": "ASSET"},
-
-    {"code": "1100", "name": "Maintenance Receivable", "group": "RECEIVABLE"},
-    {"code": "1110", "name": "Interest Receivable", "group": "RECEIVABLE"},
-    {"code": "1120", "name": "Other Receivable", "group": "RECEIVABLE"},
-
-    {"code": "1200", "name": "Member Advances", "group": "ASSET"},
-
-    {"code": "1300", "name": "Building Asset", "group": "ASSET"},
-    {"code": "1310", "name": "Lift Asset", "group": "ASSET"},
-    {"code": "1320", "name": "Electrical Asset", "group": "ASSET"},
-    {"code": "1330", "name": "CCTV Asset", "group": "ASSET"},
-    {"code": "1340", "name": "Computer Asset", "group": "ASSET"},
-    {"code": "1350", "name": "Fire System Asset", "group": "ASSET"},
-
-    # ---------- LIABILITIES ----------
-
-    {"code": "2000", "name": "Maintenance Payable", "group": "PAYABLE"},
-
-    {"code": "2100", "name": "Share Capital", "group": "FUND"},
-    {"code": "2110", "name": "Building Fund", "group": "FUND"},
-    {"code": "2120", "name": "Sinking Fund", "group": "FUND"},
-    {"code": "2130", "name": "Repair Fund", "group": "FUND"},
-    {"code": "2140", "name": "Education Fund", "group": "FUND"},
-    {"code": "2150", "name": "Election Fund", "group": "FUND"},
-
-    {"code": "2200", "name": "Member Security Deposits", "group": "LIABILITY"},
-    {"code": "2210", "name": "Vendor Payables", "group": "PAYABLE"},
-    {"code": "2220", "name": "Audit Fees Payable", "group": "PAYABLE"},
-
-    # ---------- INCOME ----------
-
-    {"code": "3000", "name": "Maintenance Income", "group": "INCOME"},
-    {"code": "3010", "name": "Parking Income", "group": "INCOME"},
-    {"code": "3020", "name": "Interest Income", "group": "INCOME"},
-    {"code": "3030", "name": "Transfer Fees", "group": "INCOME"},
-    {"code": "3040", "name": "Late Fees", "group": "INCOME"},
-    {"code": "3050", "name": "Hall Booking Income", "group": "INCOME"},
-    {"code": "3060", "name": "Water Charges Recovery", "group": "INCOME"},
-    {"code": "3070", "name": "Electricity Charges Recovery", "group": "INCOME"},
-    {"code": "3080", "name": "Misc Income", "group": "INCOME"},
-
-    # ---------- EXPENSES ----------
-
-    {"code": "4000", "name": "Salary Expense", "group": "EXPENSE"},
-    {"code": "4010", "name": "Security Expense", "group": "EXPENSE"},
-    {"code": "4020", "name": "Electricity Expense", "group": "EXPENSE"},
-    {"code": "4030", "name": "Water Expense", "group": "EXPENSE"},
-    {"code": "4040", "name": "Repair Expense", "group": "EXPENSE"},
-    {"code": "4050", "name": "Lift Maintenance", "group": "EXPENSE"},
-    {"code": "4060", "name": "Garden Expense", "group": "EXPENSE"},
-    {"code": "4070", "name": "Insurance Expense", "group": "EXPENSE"},
-    {"code": "4080", "name": "Bank Charges", "group": "EXPENSE"},
-    {"code": "4090", "name": "Legal & Professional", "group": "EXPENSE"},
-    {"code": "4100", "name": "Software Expense", "group": "EXPENSE"},
-    {"code": "4110", "name": "Printing & Stationery", "group": "EXPENSE"},
-    {"code": "4120", "name": "Office Expense", "group": "EXPENSE"},
-    {"code": "4130", "name": "Telephone Expense", "group": "EXPENSE"},
-    {"code": "4140", "name": "Diesel Expense", "group": "EXPENSE"},
-    {"code": "4150", "name": "Postage & Courier", "group": "EXPENSE"},
-
-    # ---------- PAYABLES ----------
-
-    {
-        "code": "2230",
-        "name": "TDS Payable",
-        "group": "PAYABLE",
-    },
-
-    {
-        "code": "2240",
-        "name": "Vendor Security Deposit",
-        "group": "PAYABLE",
-    },
-
-    {
-        "code": "2250",
-        "name": "Vendor Retention Payable",
-        "group": "PAYABLE",
-    },
-
-    {
-        "code": "1210",
-        "name": "Vendor Advances",
-        "group": "ASSET",
-    },
-
-    {
-        "code": "1220",
-        "name": "GST Input Credit",
-        "group": "ASSET",
-    },
-    
-    # ---------- SYSTEM ----------
-
-    {"code": "9998", "name": "Opening Balance Adjustment", "group": "SYSTEM"},
-    {"code": "9999", "name": "Suspense Account", "group": "SYSTEM"},
-
-]
-
-
-def seed_chart_of_accounts(society):
-
-    for account in MASTER_COA:
-
-        group = AccountGroup.objects.get(code=account["group"])
-
-        ChartOfAccount.objects.get_or_create(
-            society=society,
-            code=account["code"],
-            defaults={
-                "name": account["name"],
-                "group": group,
-                "is_system": True,
             },
         )
 
@@ -240,7 +277,7 @@ def create_opening_balances(society, opening_data):
 
 
 # -------------------------------------------------------------------
-# 5. MASTER INITIALIZATION
+# 5. FINANCIAL ONBOARDING ORCHESTRATION
 # -------------------------------------------------------------------
 
 from society.finance.balance_sanity import validate_opening_balances
@@ -252,12 +289,27 @@ def initialize_finance(
     opening_data=None,
 ):
 
-    if society.finance_initialized:
-        raise Exception("Finance already initialized for this society")
+    #
+    # Financial initialization is intentionally idempotent.
+    #
+    # This orchestrator may be executed multiple times throughout
+    # Financial Onboarding.
+    #
+    # Each downstream service is responsible for ensuring its own
+    # state and must therefore be safe to execute repeatedly.
+    #
+    # Never short-circuit this orchestration solely because
+    # finance_initialized=True.
+    #
+    # Idempotency is a contractual requirement of every
+    # initialization service.
+    #
 
     seed_account_groups()
 
-    seed_chart_of_accounts(society)
+    seed_core_coa(society)
+
+    seed_asset_coa(society)
 
     create_financial_year(society, financial_year)
 
@@ -272,7 +324,5 @@ def initialize_finance(
     if not tb["is_balanced"]:
         raise Exception("Opening Trial Balance failed")
 
-    society.finance_initialized = True
-    society.save(update_fields=["finance_initialized"])
 
     return tb

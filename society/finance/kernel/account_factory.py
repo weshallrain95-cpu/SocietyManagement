@@ -9,6 +9,7 @@ def get_or_create_account(
     account_type,
     account_category="GENERAL",
     subtype=None,
+    equity_type=None,
     is_postable=True,
     requires_entity=False,
 ):
@@ -25,6 +26,7 @@ def get_or_create_account(
             "account_type": account_type,
             "account_category": account_category,
             "subtype": subtype,
+            "equity_type": equity_type,
             "is_postable": is_postable,
             "requires_entity": requires_entity,
             "is_system": True,
