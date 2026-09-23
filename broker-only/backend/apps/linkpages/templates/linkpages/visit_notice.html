@@ -1,0 +1,17 @@
+{% extends "linkpages/base.html" %}{% load i18n %}{% block title %}{% translate "Visit scheduled at your flat" %}{% endblock %}
+{% block content %}
+<h1>{% translate "A visit is scheduled at your flat" %}</h1>
+<div class="card">
+  <h2>{{ flat }}</h2>
+  <p class="price">{% if when %}{{ when|date:"D j M, g:i A" }}{% else %}{{ day|date:"D j M" }}{% endif %}</p>
+  <p class="muted">{% blocktranslate %}{{ broker }} will show your flat to a customer.{% endblocktranslate %}</p>
+</div>
+{% if state == "acknowledged" %}<div class="notice ok">{% translate "Thanks — the broker knows the time works for you." %}</div>
+{% elif state == "declined" %}<div class="notice warn">{% translate "Noted — the broker will arrange another time." %}</div>
+{% else %}
+<form method="post" class="btns">{% csrf_token %}
+  <button class="primary" name="answer" value="ok">{% translate "OK, that works" %}</button>
+  <button name="answer" value="no">{% translate "Not at this time" %}</button>
+</form>
+{% endif %}
+{% endblock %}

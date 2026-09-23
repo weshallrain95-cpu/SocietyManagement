@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django.contrib.postgres",
+    "django.contrib.humanize",
     "corsheaders",
     "rest_framework",
     "drf_spectacular",
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     "apps.visits",
     "apps.marketplace",
     "apps.reviews",
+    "apps.linkpages",
 ]
 
 MIDDLEWARE = [
@@ -148,7 +150,8 @@ OB_OTP_PROVIDER = env("OB_OTP_PROVIDER", default="console")  # console | msg91
 # Echo OTPs in API responses (laptop only). Never enabled outside DEBUG.
 OB_EXPOSE_DEV_OTP = DEBUG and env.bool("OB_EXPOSE_DEV_OTP", default=True)
 OB_NOTIFY_PROVIDER = env("OB_NOTIFY_PROVIDER", default="console")  # console | whatsapp
-OB_PUBLIC_BASE_URL = env("OB_PUBLIC_BASE_URL", default="http://localhost:3000")
+# Where WhatsApp/SMS links point: the link pages are served by this Django app (apps.linkpages).
+OB_PUBLIC_BASE_URL = env("OB_PUBLIC_BASE_URL", default="http://localhost:8000")
 OB_STATUS_RULES = {
     "consensus_brokers": 2,
     "consensus_window_days": 7,

@@ -208,7 +208,9 @@ class SyncView(APIView):
 
 class PublicPlanView(PublicLinkMixin, APIView):
     def get(self, request, token):
-        return Response(domain_call(v.public_plan_view, token))
+        data = domain_call(v.public_plan_view, token)
+        data.pop("org_id", None)
+        return Response(data)
 
     def post(self, request, token):
         slot = request.data.get("slot")

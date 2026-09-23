@@ -11,12 +11,9 @@ from apps.matching.services import match_requirement
 from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
 from common.api import PublicLinkMixin, domain_call, is_field_staff
 from common.crypto import mask_phone
-from common.links import resolve_link
-from common.models import ShareLink
-from common.rls import platform_context
 
 from . import services as crm
-from .models import Customer, CustomerInteraction, Requirement, Shortlist
+from .models import Customer, Requirement, Shortlist
 
 
 def customer_json(c: Customer, request, detail=False):
@@ -287,36 +284,7 @@ class ShortlistShare(APIView):
 
 class PublicShortlistView(PublicLinkMixin, APIView):
     def get(self, request, token):
-        from apps.masterdata.api import resolved_for
-        from apps.masterdata.location import facts_dict
-
-        link = domain_call(resolve_link, token, ShareLink.Purpose.SHORTLIST, consume=False)
-        with platform_context():
-            sl = Shortlist.objects.get(pk=link.target_id)
-            broker = crm.customer_org_name(sl.customer)
-            items = []
-            for it in sl.items.select_related("listing__unit__building__society"):
-                u = it.listing.unit
-                attrs = {}
-                for scope, sid in (("society", u.building.society_id), ("building", u.building_id), ("unit", u.pk)):
-                    attrs.update(resolved_for(scope, sid, public_only=True))
-                items.append(
-                    {
-                        "item_id": str(it.id),
-                        "society": u.building.society.canonical_name,
-                        "locality": u.building.society.locality.name,
-                        "bhk": float(u.bhk),
-                        "price": it.listing.price,
-                        "txn_type": it.listing.txn_type,
-                        "floor": u.floor,
-                        "location": {"lat": u.building.society.location.y, "lng": u.building.society.location.x},
-                        "location_facts": facts_dict(u.building),
-                        "attributes": attrs,
-                        "response": it.customer_response,
-                    }
-                )
-            crm.log(sl.customer, CustomerInteraction.Kind.LINK_OPENED, "Customer opened the shortlist")
-        return Response({"broker": broker, "title": sl.title, "items": items})
+        return Response(domain_call(crm.public_shortlist, token))
 
 
 class PublicShortlistRespond(PublicLinkMixin, APIView):

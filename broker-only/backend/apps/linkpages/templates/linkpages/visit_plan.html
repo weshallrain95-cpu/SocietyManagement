@@ -1,0 +1,26 @@
+{% extends "linkpages/base.html" %}{% load i18n humanize %}{% block title %}{% translate "Your site visit plan" %}{% endblock %}
+{% block content %}
+<h1>{% translate "Your site visits" %}</h1>
+<p class="price">{{ day|date:"l, j F" }}</p>
+{% if done == "confirmed" or confirmed %}<div class="notice ok">{% translate "Confirmed. Flat numbers are shown below. Your broker's team will meet you at the first stop." %}</div>
+{% elif done == "proposed" %}<div class="notice warn">{% translate "Thanks — your broker will call you to agree the new time." %}</div>{% endif %}
+{% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+{% for s in stops %}
+<div class="card">
+  <div class="row" style="align-items:baseline"><h2>{{ forloop.counter }}. {{ s.society }}</h2><p class="price" style="flex:0;white-space:nowrap">{% if s.slot_start %}{{ s.slot_start|time:"g:i A" }}{% endif %}</p></div>
+  <p class="muted">{{ s.building }}{% if s.flat %} · {% translate "Flat" %} {{ s.flat }}{% endif %} · {% if s.bhk == 0.5 %}1 RK{% else %}{{ s.bhk|floatformat:"-1" }} BHK{% endif %}{% if s.rent_or_price %} · ₹{{ s.rent_or_price|intcomma }}{% endif %}</p>
+  {% if s.staff %}<p class="muted">{% blocktranslate with n=s.staff %}With {{ n }}{% endblocktranslate %}</p>{% endif %}
+  <a class="btn" href="https://www.google.com/maps/dir/?api=1&destination={{ s.location.lat }},{{ s.location.lng }}" rel="noopener" target="_blank">{% translate "Directions" %}</a>
+</div>
+{% endfor %}
+{% if not confirmed and done != "confirmed" %}
+<form method="post" class="btns">{% csrf_token %}
+  <button class="primary" name="action" value="confirm">{% translate "Confirm this plan" %}</button>
+</form>
+<form method="post" class="card">{% csrf_token %}
+  <label for="slot">{% translate "Need another time? Suggest one" %}</label>
+  <input type="datetime-local" id="slot" name="slot" required>
+  <button name="action" value="propose">{% translate "Suggest this time" %}</button>
+</form>
+{% endif %}
+{% endblock %}

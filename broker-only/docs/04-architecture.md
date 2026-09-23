@@ -27,7 +27,8 @@
 | Object storage | **S3** (prod) / **MinIO** (laptop) | Photos, videos, uploads; presigned URLs |
 | Video | AWS MediaConvert (prod) / ffmpeg worker (dev) → HLS | Owner walkthrough videos |
 | Mobile app | **React Native (Expo, TypeScript)**: one app with customer / broker / staff / owner modes | One codebase for Android and iOS; OTA updates; shared TypeScript types with the web |
-| Web (admin + broker desktop + link pages) | **Next.js 15 (React, TypeScript)** + a component library (shadcn/ui) + MapLibre GL | Desktop consoles, owner/customer link pages (no install) |
+| Web (admin + broker desktop) | **Next.js 15 (React, TypeScript)** + a component library (shadcn/ui) + MapLibre GL | Desktop consoles |
+| Owner/customer link pages | **Server-rendered Django templates** (`apps.linkpages`) | Opened from WhatsApp/SMS on any phone: no JavaScript needed, small pages for slow connections, same address as the API so no extra deployment (decided 2026-09-24) |
 | Maps | **Google Maps Platform** (Places autocomplete, geocoding, Routes API with waypoint optimisation) on mobile; **MapLibre + OSM tiles** on the admin console to control cost | Google has the best Indian address and POI coverage; OSM is enough for internal tools |
 | Push | Firebase Cloud Messaging (Android + iOS via APNs) | |
 | WhatsApp | WhatsApp Business Cloud API (Meta) directly, or via a BSP (Gupshup / Interakt / AiSensy) | Template messages for owner confirmation, visit notices |
@@ -183,8 +184,8 @@ If the external call fails, fall back to a local nearest-neighbour ordering on P
 
 ### 5.4 Owner confirmation link
 The worker creates `status_confirmation` with a random 32-byte token, stores only
-`sha256(token)`, and sends a WhatsApp template with `https://ob.link/c/{token}`. The Next.js page
-calls `POST /v1/public/confirmations/{token}` (rate-limited, one-time, 72 h expiry). The response
+`sha256(token)`, and sends a WhatsApp template with `https://<server>/c/{token}`. The server-rendered page
+(`apps.linkpages`) applies the answer (rate-limited, one-time, 72 h expiry). The response
 applies the state transition in one transaction with the ledger append.
 
 ### 5.5 Bulk upload pipeline

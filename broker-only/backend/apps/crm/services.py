@@ -177,6 +177,40 @@ def share_shortlist(sl: Shortlist, *, user) -> str:
     return token
 
 
+def public_shortlist(token: str, *, log_open: bool = True) -> dict:
+    """What an offline customer sees from a shortlist link: society-level facts, never flat numbers."""
+    from apps.masterdata.api import resolved_for
+    from apps.masterdata.location import facts_dict
+
+    link = resolve_link(token, ShareLink.Purpose.SHORTLIST, consume=False)
+    with rls.platform_context():
+        sl = Shortlist.objects.select_related("customer").get(pk=link.target_id)
+        items = []
+        for it in sl.items.select_related("listing__unit__building__society__locality"):
+            u = it.listing.unit
+            attrs = {}
+            for scope, sid in (("society", u.building.society_id), ("building", u.building_id), ("unit", u.pk)):
+                attrs.update(resolved_for(scope, sid, public_only=True))
+            items.append(
+                {
+                    "item_id": str(it.id),
+                    "society": u.building.society.canonical_name,
+                    "locality": u.building.society.locality.name,
+                    "bhk": float(u.bhk),
+                    "price": it.listing.price,
+                    "txn_type": it.listing.txn_type,
+                    "floor": u.floor,
+                    "location": {"lat": u.building.society.location.y, "lng": u.building.society.location.x},
+                    "location_facts": facts_dict(u.building),
+                    "attributes": attrs,
+                    "response": it.customer_response,
+                }
+            )
+        if log_open:
+            log(sl.customer, CustomerInteraction.Kind.LINK_OPENED, "Customer opened the shortlist")
+        return {"broker": customer_org_name(sl.customer), "title": sl.title, "items": items}
+
+
 def respond_to_shortlist_item(token: str, item_id, response: str) -> ShortlistItem:
     link = resolve_link(token, ShareLink.Purpose.SHORTLIST, consume=False)
     if response not in ShortlistItem.Response.values:

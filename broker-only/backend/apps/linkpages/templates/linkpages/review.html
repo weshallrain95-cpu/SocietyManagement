@@ -1,0 +1,17 @@
+{% extends "linkpages/base.html" %}{% load i18n %}{% block title %}{% translate "Rate your broker" %}{% endblock %}
+{% block content %}
+<h1>{% blocktranslate %}How was your visit with {{ broker }}?{% endblocktranslate %}</h1>
+{% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+<form method="post" class="card">{% csrf_token %}
+  <fieldset style="border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:8px">
+    <legend style="font-weight:600;font-size:14px;margin-bottom:6px">{% translate "Stars" %}</legend>
+    <div class="stars">{% for n in stars_range %}<label class="btn"><input type="radio" name="stars" value="{{ n }}" required>{{ n }}★</label>{% endfor %}</div>
+  </fieldset>
+  <p style="font-weight:600;font-size:14px">{% translate "What went well? (optional)" %}</p>
+  <div class="chips">{% for value, label in tags %}<label class="chip"><input type="checkbox" name="tags" value="{{ value }}"> {{ label }}</label>{% endfor %}</div>
+  <label for="text">{% translate "Anything else? (optional)" %}</label>
+  <textarea id="text" name="text" rows="3" maxlength="1000"></textarea>
+  <button class="primary">{% translate "Submit review" %}</button>
+</form>
+<p class="muted">{% translate "Reviews appear on the broker's profile as a verified visit." %}</p>
+{% endblock %}

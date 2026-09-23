@@ -1,0 +1,22 @@
+{% extends "linkpages/base.html" %}{% load i18n humanize %}{% block title %}{% translate "Flats for you" %}{% endblock %}
+{% block content %}
+<h1>{% if title %}{{ title }}{% else %}{% translate "Flats picked for you" %}{% endif %}</h1>
+<p class="muted">{% translate "Tap Interested on the ones you'd like to see. Your broker is notified." %}</p>
+{% for it in items %}
+<div class="card" id="item-{{ it.item_id }}">
+  <div class="row" style="align-items:baseline"><h2>{{ it.society }}</h2><p class="price" style="flex:0">₹{{ it.price|intcomma }}{% if it.txn_type == "RENT" %}/mo{% endif %}</p></div>
+  <p class="muted">{{ it.locality }} · {% if it.bhk == 0.5 %}1 RK{% else %}{{ it.bhk|floatformat:"-1" }} BHK{% endif %}{% if it.floor is not None %} · {% blocktranslate with f=it.floor %}Floor {{ f }}{% endblocktranslate %}{% endif %}</p>
+  {% if it.highlights %}<div class="chips">{% for h in it.highlights %}<span class="chip">{{ h }}</span>{% endfor %}</div>{% endif %}
+  {% if it.facts %}<ul class="facts">{% for f in it.facts %}<li>{{ f }}</li>{% endfor %}</ul>{% endif %}
+  <a class="btn" href="https://www.google.com/maps/search/?api=1&query={{ it.location.lat }},{{ it.location.lng }}" rel="noopener" target="_blank">{% translate "See area on map" %}</a>
+  {% if it.response == "interested" %}<div class="notice ok">{% translate "You're interested — your broker will plan a visit." %}</div>
+  {% elif it.response == "not_for_me" %}<div class="notice warn">{% translate "Marked as not for you." %}</div>{% endif %}
+  <form method="post" class="row">{% csrf_token %}<input type="hidden" name="item" value="{{ it.item_id }}">
+    <button class="primary" name="response" value="interested">{% translate "Interested" %}</button>
+    <button name="response" value="not_for_me">{% translate "Not for me" %}</button>
+  </form>
+</div>
+{% empty %}<div class="card"><p>{% translate "This shortlist is empty." %}</p></div>
+{% endfor %}
+<p class="muted">{% translate "Exact flat numbers are shared when you visit." %}</p>
+{% endblock %}

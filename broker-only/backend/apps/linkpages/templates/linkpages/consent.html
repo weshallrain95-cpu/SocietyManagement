@@ -1,0 +1,13 @@
+{% extends "linkpages/base.html" %}{% load i18n %}{% block title %}{% translate "Can we message you?" %}{% endblock %}
+{% block content %}
+<h1>{% blocktranslate %}Can {{ broker }} send you flat details?{% endblocktranslate %}</h1>
+<div class="card">
+  <p>{% translate "If you agree, your broker can send you on WhatsApp or SMS:" %}</p>
+  <ul class="facts"><li>{% translate "flats that match what you are looking for" %}</li><li>{% translate "site visit plans and timing changes" %}</li><li>{% translate "a short review request after visits" %}</li></ul>
+  <p class="muted">{% translate "Your number is shared only with this broker. You can withdraw anytime by telling your broker." %}</p>
+</div>
+<form method="post" class="btns">{% csrf_token %}
+  <button class="primary" name="answer" value="agree">{% translate "Yes, I agree" %}</button>
+  <button name="answer" value="decline">{% translate "No, thanks" %}</button>
+</form>
+{% endblock %}

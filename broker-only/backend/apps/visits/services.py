@@ -163,7 +163,7 @@ def share_with_customer(plan: VisitPlan, *, user) -> str:
         plan.customer.phone,
         "visit_plan_shared",
         {
-            "date": plan.date.isoformat(),
+            "date": plan.date.strftime("%a %d %b").replace(" 0", " "),
             "stops": len(live_stops(plan)),
             "url": f"{settings.OB_PUBLIC_BASE_URL}/v/{token}",
         },
@@ -197,7 +197,7 @@ def public_plan_view(token: str) -> dict:
                     "staff": s.assigned_staff.display_name if s.assigned_staff else None,
                 }
             )
-        return {"date": plan.date.isoformat(), "state": plan.state, "stops": stops, "version": plan.version}
+        return {"date": plan.date.isoformat(), "state": plan.state, "stops": stops, "version": plan.version, "org_id": plan.org_id}
 
 
 def customer_confirms(token: str, *, slot: datetime | None = None) -> VisitPlan:
@@ -228,7 +228,7 @@ def notify_owners(plan: VisitPlan) -> int:
             "visit_notice",
             {
                 "flat": str(s.listing.unit),
-                "when": s.slot_start.isoformat() if s.slot_start else plan.date.isoformat(),
+                "when": _human_when(s.slot_start, plan.date),
                 "url": f"{settings.OB_PUBLIC_BASE_URL}/o/{token}",
             },
             phone_hash=crypto.phone_hash(phone),
@@ -237,6 +237,13 @@ def notify_owners(plan: VisitPlan) -> int:
         s.save(update_fields=["owner_notice"])
         n += 1
     return n
+
+
+def _human_when(slot, day) -> str:
+    """Message text is read by people: India time, in words ("Fri 25 Sep, 11:00 AM")."""
+    if slot:
+        return timezone.localtime(slot).strftime("%a %d %b, %I:%M %p").replace(" 0", " ")
+    return day.strftime("%a %d %b")
 
 
 def owner_acknowledges(token: str, ok: bool) -> VisitStop:

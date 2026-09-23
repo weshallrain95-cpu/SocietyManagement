@@ -1,0 +1,20 @@
+{% extends "linkpages/base.html" %}{% load i18n %}{% block title %}{% translate "Is your flat available?" %}{% endblock %}
+{% block content %}
+<h1>{% blocktranslate %}Is your flat available for {{ noun }}?{% endblocktranslate %}</h1>
+<div class="card"><h2>{{ flat }}</h2><p class="muted">{% blocktranslate %}{{ broker }} has a customer and wants to confirm before showing your flat.{% endblocktranslate %}</p></div>
+{% if answered %}
+  <div class="notice ok">{% translate "Thank you — your answer has been recorded. Brokers now see your flat with this status." %}</div>
+{% else %}
+  {% if error %}<div class="notice bad">{{ error }}</div>{% endif %}
+  <form method="post" class="btns">{% csrf_token %}
+    <button class="primary" name="answer" value="yes">{% translate "Yes, it is available" %}</button>
+    <button class="bad" name="answer" value="no">{% translate "No, it is not available" %}</button>
+  </form>
+  <form method="post" class="card">{% csrf_token %}
+    <label for="available_from">{% translate "Available later? From" %}</label>
+    <input type="date" id="available_from" name="available_from" min="{{ today }}" required>
+    <button name="answer" value="available_from">{% translate "Save date" %}</button>
+  </form>
+  <p class="muted">{% translate "Your answer overrides what any broker has reported. Only you, as the verified owner, can confirm this." %}</p>
+{% endif %}
+{% endblock %}
