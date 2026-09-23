@@ -43,7 +43,7 @@ because it was built in one push:
 | Marketplace: enquiry broadcast, proposals, presence, anonymous map, WebSocket; reviews (incl. offline) | ✅ Done |
 | Real SMS/WhatsApp providers, Google Routes API, payments | ⏳ Needs accounts (DLT, WhatsApp Business, Google Cloud, Razorpay) |
 | **Mobile app (Expo) and web consoles (Next.js)** | ⏳ Next |
-| Attribute dictionary v1 | ⏳ Waiting on founder approval (D11) |
+| Attribute dictionary v1.0 | ✅ Approved and committed |
 
 ## 3. Definition of done (every story)
 
@@ -74,7 +74,7 @@ because it was built in one push:
 | D3 | Pilot micro-market | ✅ **Decided 2026-09-23: Thane West**; a pilot broker is already engaged | Seeding effort is per micro-market |
 | D4 | Number of proposals a customer can accept | 3 | Balance between customer choice and broker lead value |
 | D5 | Rules for broker consensus without an owner | 2 independent brokers within 7 days | Status accuracy vs. speed |
-| D11 | Unit Attribute Dictionary v0.1 | Pending founder approval (spreadsheet circulated 2026-09-23) | Drives forms, uploads, matching |
+| D11 | Unit Attribute Dictionary | ✅ **Approved 2026-09-23 as v1.0** (200 attributes, tiers per docs/06); committed as `attribute_dictionary.yaml` | Drives forms, uploads, matching |
 | D6 | House-rule catalogue content | Conduct-based only (BRD §10.2) | Legal and platform-policy exposure |
 | D7 | Mobile stack | React Native (Expo) | One team for mobile + web |
 | D8 | Hosting | AWS ap-south-1 | Data residency; managed PostGIS |
@@ -83,7 +83,7 @@ because it was built in one push:
 
 ## 6. Immediate next steps
 
-1. Founder: return the attribute dictionary spreadsheet with decisions (D11); answer D1, D2, D4, D5, D7–D10.
+1. Founder: answer D1, D2, D4, D5, D7–D10 when convenient (none of them block engineering today).
 2. Founder + pilot broker: run the laptop stack (docs/07), check the Thane West society list and pins,
    and add the broker's real society names and nicknames (they become aliases).
 3. Start the account registrations with long lead times: DLT sender ID + templates, WhatsApp Business,

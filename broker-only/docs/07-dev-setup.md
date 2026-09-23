@@ -90,15 +90,10 @@ Access so only invited people can reach it.
 
 ## 7. Attribute dictionary
 
-Until the founder approves the Unit Attribute Dictionary (D11), the seed loads a 16-attribute test
-set so everything works. To try the full 200-attribute draft locally:
-
-```bash
-cd backend && DJANGO_DEBUG=true .venv/bin/python manage.py load_attribute_dictionary /path/to/Only_Broker_Attribute_Dictionary_DRAFT_v0.1.xlsx --all-rows
-```
-
-After approval: `load_attribute_dictionary <approved.xlsx> --write-yaml apps/masterdata/dictionary/attribute_dictionary.yaml`,
-then commit the YAML. From then on, `load_attribute_dictionary` with no arguments loads the approved version.
+The approved dictionary (v1.0, 200 attributes) lives in
+`backend/apps/masterdata/dictionary/attribute_dictionary.yaml` and is loaded automatically by
+`make seed`. To change it, edit the YAML and run `python manage.py load_attribute_dictionary`.
+Attributes removed from the file are deactivated, never deleted, so old data stays readable.
 
 ## 8. What was verified, and where
 

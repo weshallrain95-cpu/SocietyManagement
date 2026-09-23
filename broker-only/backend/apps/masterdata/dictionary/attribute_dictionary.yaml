@@ -1,0 +1,3268 @@
+# Only Broker Unit Attribute Dictionary v1.0 (approved by the founder, 2026-09-23).
+# Change it by editing this file and running: python manage.py load_attribute_dictionary
+# Tier and who-is-asked are derived at load time (docs/06).
+version: '1.0'
+attributes:
+- key: property_type
+  label: Property type
+  category: 01 Core configuration
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - apartment
+  - row_house
+  - independent_house
+  - villa
+  - penthouse
+  - studio
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Also a core column on unit
+- key: bhk
+  label: Configuration (BHK)
+  category: 01 Core configuration
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - 1RK
+  - '1'
+  - '1.5'
+  - '2'
+  - '2.5'
+  - '3'
+  - '3.5'
+  - '4'
+  - '4.5'
+  - 5+
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 1.5 = 1 BHK + study (common Mumbai usage)
+- key: carpet_area_sqft
+  label: Carpet area (RERA)
+  category: 01 Core configuration
+  scope: unit
+  value_type: numeric
+  allowed_values: []
+  unit_label: sq ft
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: RERA carpet; builder brochures quote built-up/super. Store all three separately
+- key: builtup_area_sqft
+  label: Built-up area
+  category: 01 Core configuration
+  scope: unit
+  value_type: numeric
+  allowed_values: []
+  unit_label: sq ft
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: super_builtup_area_sqft
+  label: Super built-up / saleable area
+  category: 01 Core configuration
+  scope: unit
+  value_type: numeric
+  allowed_values: []
+  unit_label: sq ft
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Mostly for older sale inventory
+- key: floor_no
+  label: Floor number
+  category: 01 Core configuration
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: -2..120 (0 = ground)
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Core column on unit
+- key: floor_pref_band
+  label: Floor band (derived)
+  category: 01 Core configuration
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - ground
+  - lower (1-4)
+  - middle
+  - higher
+  - top
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Derived from floor_no + total floors
+- key: bedrooms
+  label: Bedrooms
+  category: 01 Core configuration
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: 0-10
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: bathrooms
+  label: Bathrooms (total)
+  category: 01 Core configuration
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: 0-10
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: attached_bathrooms
+  label: Attached bathrooms
+  category: 01 Core configuration
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: 0-10
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: balconies
+  label: Balconies
+  category: 01 Core configuration
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: 0-6
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: dry_balcony
+  label: Dry balcony / utility area
+  category: 01 Core configuration
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: facing
+  label: Main door / balcony facing
+  category: 01 Core configuration
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - N
+  - NE
+  - E
+  - SE
+  - S
+  - SW
+  - W
+  - NW
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Vastu-driven preference; conduct-neutral
+- key: view
+  label: View
+  category: 01 Core configuration
+  scope: unit
+  value_type: multi_enum
+  allowed_values:
+  - sea
+  - creek
+  - lake
+  - hill
+  - garden
+  - pool
+  - city
+  - road
+  - building
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: corner_unit
+  label: Corner unit
+  category: 01 Core configuration
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: layout_type
+  label: Layout
+  category: 01 Core configuration
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - simplex
+  - duplex
+  - triplex
+  - penthouse
+  - jodi (combined flats)
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Jodi flats common in Mumbai
+- key: cross_ventilation
+  label: Cross ventilation
+  category: 01 Core configuration
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Borderline subjective; kept as bool fact
+- key: flooring
+  label: Flooring
+  category: 01 Core configuration
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - vitrified
+  - marble
+  - granite
+  - wooden
+  - ceramic
+  - kota
+  - mosaic
+  - other
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: ceiling_height_ft
+  label: Ceiling height
+  category: 01 Core configuration
+  scope: unit
+  value_type: numeric
+  allowed_values: []
+  unit_label: ft
+  authority: owner
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: kitchen_type
+  label: Kitchen type
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - closed
+  - open
+  - semi-open
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: kitchen_platform
+  label: Kitchen platform material
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - granite
+  - marble
+  - quartz
+  - kadappa
+  - other
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: study_room
+  label: Study / extra room
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: pooja_room
+  label: Pooja / prayer niche
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Physical feature only; never a filter on the customer
+- key: servant_room
+  label: Servant / helper room
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: servant_toilet
+  label: Helper toilet
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: store_room
+  label: Store room
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: toilet_type
+  label: Toilet type
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: multi_enum
+  allowed_values:
+  - western
+  - indian
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Senior citizens often ask
+- key: bathtub
+  label: Bathtub
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: terrace_private
+  label: Private terrace
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: terrace_area_sqft
+  label: Private terrace area
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: numeric
+  allowed_values: []
+  unit_label: sq ft
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: private_garden
+  label: Private garden (ground floor / row house)
+  category: 02 Rooms & layout details
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furnishing
+  label: Furnishing level
+  category: 03 Furnishing
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - unfurnished
+  - semi-furnished
+  - fully furnished
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: Level; items below are the checklist
+- key: furn_gas_stove
+  label: Gas stove / hob
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: 'Brief example: gas stove + kitchen cabinet'
+- key: furn_kitchen_cabinet
+  label: Kitchen cabinets (modular)
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: 'Brief example: gas stove + kitchen cabinet'
+- key: furn_chimney
+  label: Kitchen chimney
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_water_purifier
+  label: Water purifier (RO)
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_refrigerator
+  label: Refrigerator
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_washing_machine
+  label: Washing machine
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_microwave
+  label: Microwave
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_geyser
+  label: Geyser(s)
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_ac
+  label: Air conditioner(s)
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_fans
+  label: Ceiling fans
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_lights
+  label: Light fittings
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_wardrobes
+  label: Wardrobes
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_beds
+  label: Beds
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: furn_mattresses
+  label: Mattresses
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_sofa
+  label: Sofa
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_dining_table
+  label: Dining table
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_tv
+  label: Television
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_tv_unit
+  label: TV unit
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_study_table
+  label: Study table
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_curtains
+  label: Curtains / blinds
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_inverter
+  label: Inverter / home UPS
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_exhaust_fans
+  label: Exhaust fans
+  category: 03 Furnishing
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_shoe_rack
+  label: Shoe rack
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_mosquito_mesh
+  label: Mosquito mesh on windows
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_safety_grills
+  label: Window safety grills
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_dishwasher
+  label: Dishwasher
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: furn_modular_kitchen
+  label: Fully modular kitchen
+  category: 03 Furnishing
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: water_supply
+  label: Water source
+  category: 04 Utilities & services
+  scope: building
+  value_type: multi_enum
+  allowed_values:
+  - municipal
+  - borewell
+  - tanker
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: water_24x7
+  label: 24-hour water
+  category: 04 Utilities & services
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: water_hours
+  label: Water supply hours (if not 24x7)
+  category: 04 Utilities & services
+  scope: building
+  value_type: text
+  allowed_values: []
+  unit_label: e.g. 6-9 am, 6-8 pm
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: piped_gas
+  label: Piped gas (MGL) connection
+  category: 04 Utilities & services
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Very common ask in Thane
+- key: electricity_meter
+  label: Separate electricity meter
+  category: 04 Utilities & services
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: electricity_provider
+  label: Electricity provider
+  category: 04 Utilities & services
+  scope: building
+  value_type: enum
+  allowed_values:
+  - MSEDCL
+  - Adani
+  - Tata Power
+  - BEST
+  - Torrent
+  unit_label: ''
+  authority: computed
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Computed from locality where possible
+- key: power_backup
+  label: Power backup
+  category: 04 Utilities & services
+  scope: building
+  value_type: enum
+  allowed_values:
+  - none
+  - lift & common areas
+  - full
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: internet_fiber
+  label: Fibre broadband available
+  category: 04 Utilities & services
+  scope: building
+  value_type: multi_enum
+  allowed_values:
+  - Airtel
+  - Jio
+  - ACT
+  - Hathway
+  - local ISP
+  - none
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Work-from-home ask
+- key: dth_cable
+  label: Cable / DTH allowed
+  category: 04 Utilities & services
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: garbage_collection
+  label: Door-to-door garbage collection
+  category: 04 Utilities & services
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: solar
+  label: Solar water heating / panels
+  category: 04 Utilities & services
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: rainwater_harvesting
+  label: Rain water harvesting
+  category: 04 Utilities & services
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: stp
+  label: Sewage treatment plant
+  category: 04 Utilities & services
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: car_parking_covered
+  label: Covered car parking (count)
+  category: 05 Parking
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: 0-5
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Often a deal-breaker; hard when customer marks it required
+- key: car_parking_open
+  label: Open car parking (count)
+  category: 05 Parking
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: 0-5
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: parking_type
+  label: Parking type
+  category: 05 Parking
+  scope: unit
+  value_type: multi_enum
+  allowed_values:
+  - stilt
+  - podium
+  - basement
+  - mechanical/stack
+  - open
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: two_wheeler_parking
+  label: Two-wheeler parking
+  category: 05 Parking
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: visitor_parking
+  label: Visitor parking
+  category: 05 Parking
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: ev_charging
+  label: EV charging point
+  category: 05 Parking
+  scope: building
+  value_type: enum
+  allowed_values:
+  - none
+  - common
+  - dedicated
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: lift
+  label: Lift
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 'Brief example: lift required'
+- key: lift_count
+  label: Number of lifts
+  category: 06 Building & society amenities
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: service_lift
+  label: Service / goods lift
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: security_24x7
+  label: 24x7 security guard
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: cctv
+  label: CCTV in common areas
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: intercom
+  label: Intercom
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: gated
+  label: Gated complex
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: video_door_phone
+  label: Video door phone
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: fire_safety
+  label: Fire fighting system / sprinklers
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: clubhouse
+  label: Clubhouse
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: gym
+  label: Gym
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: swimming_pool
+  label: Swimming pool
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: kids_play_area
+  label: Children's play area
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: garden
+  label: Garden / landscaped area
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: jogging_track
+  label: Jogging track
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: indoor_games
+  label: Indoor games room
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: multipurpose_hall
+  label: Multipurpose / banquet hall
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: sports_courts
+  label: Sports courts
+  category: 06 Building & society amenities
+  scope: society
+  value_type: multi_enum
+  allowed_values:
+  - badminton
+  - tennis
+  - basketball
+  - cricket pitch
+  - squash
+  - football
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: senior_citizen_area
+  label: Senior citizen sit-out
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: pet_park
+  label: Pet park / pet area
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: coworking
+  label: Co-working / business centre
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: society_office
+  label: Society office on premises
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: shopping_in_complex
+  label: Shops / convenience store inside complex
+  category: 06 Building & society amenities
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: wheelchair_access
+  label: Wheelchair accessible entrance (ramp)
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: stretcher_lift
+  label: Stretcher-size lift
+  category: 06 Building & society amenities
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: building_type
+  label: Building type
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: enum
+  allowed_values:
+  - high-rise (>12)
+  - mid-rise (5-12)
+  - low-rise (<5)
+  - bungalow
+  - row house
+  - chawl
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Derived from total floors where possible
+- key: total_floors
+  label: Total floors
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Core column on building
+- key: year_built
+  label: Year of construction
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: YYYY
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: property_age_band
+  label: Age of property (derived)
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: enum
+  allowed_values:
+  - new (<1y)
+  - 1-5
+  - 5-10
+  - 10-20
+  - 20-30
+  - 30+
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: developer_type
+  label: Development authority / type
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: enum
+  allowed_values:
+  - private
+  - MHADA
+  - CIDCO
+  - SRA
+  - BDD/MHADA redevelopment
+  - police/govt quarters
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 'Matters: CIDCO leasehold transfer charges; SRA rent/sale lock-in'
+- key: land_tenure
+  label: Land tenure
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: enum
+  allowed_values:
+  - freehold
+  - leasehold (CIDCO/MHADA/other)
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: oc_received
+  label: Occupancy certificate (OC)
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: enum
+  allowed_values:
+  - received
+  - part OC
+  - not received
+  - unknown
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Banks and cautious tenants ask
+- key: cc_received
+  label: Commencement certificate (CC)
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: enum
+  allowed_values:
+  - received
+  - not received
+  - unknown
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: rera_project_no
+  label: MahaRERA project number
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: text
+  allowed_values: []
+  unit_label: P5xxxxxxxxxx
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: true
+  notes: Mandatory for new-project sale inventory
+- key: conveyance
+  label: Conveyance / deemed conveyance done
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: enum
+  allowed_values:
+  - done
+  - deemed conveyance done
+  - pending
+  - unknown
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: society_registered
+  label: Society formed & registered
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: redevelopment_status
+  label: Redevelopment status
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: enum
+  allowed_values:
+  - none
+  - proposed
+  - approved
+  - under redevelopment
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 'Very Mumbai-specific: tenants need to know eviction risk'
+- key: structural_audit_date
+  label: Last structural audit
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: date
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: dangerous_building_notice
+  label: Municipal dangerous-building notice
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: admin
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Exclude from matching when true
+- key: building_condition
+  label: Building exterior condition
+  category: 07 Building profile, condition & legal
+  scope: building
+  value_type: enum
+  allowed_values:
+  - excellent
+  - good
+  - needs repair
+  - poor
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Set from visit feedback
+- key: society_noc_for_rent
+  label: Society NOC needed for tenants
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: tenant_move_in_charges
+  label: Society move-in / shifting charges
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: numeric
+  allowed_values: []
+  unit_label: INR
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: non_occupancy_charges
+  label: Non-occupancy charges (paid by owner)
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: numeric
+  allowed_values: []
+  unit_label: INR/month
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: tenant_police_verification
+  label: Police verification required by society
+  category: 07 Building profile, condition & legal
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: rent_expected
+  label: Expected monthly rent
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: money
+  allowed_values: []
+  unit_label: INR/month
+  authority: owner
+  matching: hard
+  public: Band
+  applies_to:
+  - RENT
+  mvp: true
+  notes: Listing-level (each broker quotes); owner value is reference
+- key: deposit
+  label: Security deposit
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: money
+  allowed_values: []
+  unit_label: INR
+  authority: owner
+  matching: soft
+  public: Band
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: deposit_months
+  label: Deposit (months of rent, derived)
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: numeric
+  allowed_values: []
+  unit_label: months
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: maintenance_included
+  label: Maintenance included in rent
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: maintenance_amount
+  label: Maintenance amount
+  category: 08 Commercial terms – rent
+  scope: unit
+  value_type: money
+  allowed_values: []
+  unit_label: INR/month
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: rent_negotiable
+  label: Rent negotiable
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: available_from
+  label: Available from
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: date
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: licence_period_months
+  label: Licence period
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: int
+  allowed_values: []
+  unit_label: months (typ. 11)
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: lock_in_months
+  label: Lock-in period
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: int
+  allowed_values: []
+  unit_label: months
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: rent_escalation_pct
+  label: Annual escalation
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: numeric
+  allowed_values: []
+  unit_label: '% (typ. 5-10)'
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: notice_period_months
+  label: Notice period
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: int
+  allowed_values: []
+  unit_label: months
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: agreement_cost_split
+  label: Agreement registration & stamp duty borne by
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: enum
+  allowed_values:
+  - tenant
+  - owner
+  - 50-50
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: brokerage_terms
+  label: Brokerage terms
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: text
+  allowed_values: []
+  unit_label: e.g. 1 month rent + GST each side
+  authority: owner
+  matching: display
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Broker-private per listing
+- key: preferred_tenure
+  label: Preferred tenancy duration
+  category: 08 Commercial terms – rent
+  scope: listing
+  value_type: enum
+  allowed_values:
+  - short (<11m)
+  - 11 months
+  - long term (2y+)
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: price_expected
+  label: Expected price
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: money
+  allowed_values: []
+  unit_label: INR
+  authority: owner
+  matching: hard
+  public: Band
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: price_per_sqft
+  label: Price per sq ft (derived, carpet)
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: numeric
+  allowed_values: []
+  unit_label: INR/sq ft
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: price_negotiable
+  label: Price negotiable
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: all_inclusive
+  label: Price all-inclusive (parking, floor rise, etc.)
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: floor_rise_per_sqft
+  label: Floor rise
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: numeric
+  allowed_values: []
+  unit_label: INR/sq ft
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: gst_applicable
+  label: GST applicable (under construction)
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: stamp_duty_by
+  label: Stamp duty & registration borne by
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: enum
+  allowed_values:
+  - buyer
+  - seller
+  - builder offer
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: possession_status
+  label: Possession status
+  category: 09 Commercial terms – sale
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - ready to move
+  - under construction
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: possession_date
+  label: Expected possession date
+  category: 09 Commercial terms – sale
+  scope: unit
+  value_type: date
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: true
+  notes: ''
+- key: construction_progress_pct
+  label: Construction progress
+  category: 09 Commercial terms – sale
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: '%'
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: From MahaRERA quarterly updates where available
+- key: payment_plan
+  label: Payment plan
+  category: 09 Commercial terms – sale
+  scope: listing
+  value_type: enum
+  allowed_values:
+  - construction-linked
+  - down payment
+  - subvention
+  - flexi
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: loan_approved_banks
+  label: Home loan approved by
+  category: 09 Commercial terms – sale
+  scope: society
+  value_type: multi_enum
+  allowed_values:
+  - SBI
+  - HDFC
+  - ICICI
+  - Axis
+  - Kotak
+  - LIC HFL
+  - other
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: existing_loan_on_property
+  label: Outstanding loan on property
+  category: 09 Commercial terms – sale
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: N
+  applies_to:
+  - SALE_RESALE
+  mvp: false
+  notes: 'Private: owner/broker only'
+- key: transfer_fee
+  label: Society transfer fee
+  category: 09 Commercial terms – sale
+  scope: society
+  value_type: money
+  allowed_values: []
+  unit_label: INR
+  authority: any
+  matching: display
+  public: N
+  applies_to:
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: tenanted_sale
+  label: Sold with existing tenant
+  category: 09 Commercial terms – sale
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: pets_allowed
+  label: Pets allowed
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - 'no'
+  - cats only
+  - small dogs
+  - all pets
+  - case-by-case
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: 'Brief example: pet friendly'
+- key: society_pet_policy
+  label: Society pet policy
+  category: 10 House rules (conduct-based only)
+  scope: society
+  value_type: enum
+  allowed_values:
+  - allowed
+  - restricted (size/areas)
+  - not allowed
+  unit_label: ''
+  authority: any
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: Unit rule cannot be more permissive than society rule
+- key: nonveg_cooking
+  label: Non-veg cooking on premises
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - allowed
+  - not allowed
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: Replaces identity-based screening (BRD 10.2)
+- key: bachelors_allowed
+  label: Bachelors / singles
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - allowed
+  - not allowed
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: Conduct-based occupancy rule; platform vocabulary rule (BRD 10.2)
+- key: family_only
+  label: Families only
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: max_occupants
+  label: Maximum occupants
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: company_lease
+  label: Company lease
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - accepted
+  - preferred
+  - only company lease
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: students_allowed
+  label: Students allowed
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: smoking
+  label: Smoking inside unit
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - allowed
+  - not allowed
+  unit_label: ''
+  authority: owner
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  mvp: true
+  notes: ''
+- key: guest_policy
+  label: Overnight guests
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - no restriction
+  - with notice
+  - not allowed
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: home_office_use
+  label: Home office / small professional use
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - allowed
+  - not allowed
+  unit_label: ''
+  authority: owner
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: No commercial footfall
+- key: modifications_allowed
+  label: Painting / minor modifications
+  category: 10 House rules (conduct-based only)
+  scope: unit
+  value_type: enum
+  allowed_values:
+  - allowed
+  - with permission
+  - not allowed
+  unit_label: ''
+  authority: owner
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: tenant_shifting_hours
+  label: Shifting / moving hours (society)
+  category: 10 House rules (conduct-based only)
+  scope: society
+  value_type: text
+  allowed_values: []
+  unit_label: e.g. 9 am-7 pm, no Sundays
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  mvp: false
+  notes: ''
+- key: dist_rail_station
+  label: Nearest suburban railway station – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 'Also walk_min & drive_min stored; brief example: station, auto stand, school'
+- key: dist_metro_station
+  label: Nearest metro station (operational) – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: dist_metro_upcoming
+  label: Nearest upcoming metro station – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: dist_bus_stop
+  label: Nearest bus stop (TMT/BEST/NMMT) – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: dist_auto_stand
+  label: Nearest auto-rickshaw stand – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 'Also walk_min & drive_min stored; brief example: station, auto stand, school'
+- key: dist_school
+  label: Nearest school – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: 'Also walk_min & drive_min stored; brief example: station, auto stand, school'
+- key: dist_hospital
+  label: Nearest hospital – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: dist_market
+  label: Nearest market / grocery – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: dist_mall
+  label: Nearest mall – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: dist_park
+  label: Nearest public park / lake – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: dist_highway
+  label: Nearest highway access (EEH / Ghodbunder / JVLR…) – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: dist_atm_bank
+  label: Nearest bank / ATM – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: dist_pharmacy
+  label: Nearest pharmacy – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: dist_police_station
+  label: Nearest police station – distance
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: numeric
+  allowed_values: []
+  unit_label: metres + name
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: schools_within_1km
+  label: Schools within 1 km
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: drive_min_thane_station
+  label: Drive time to Thane station (peak)
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: minutes
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Pilot-specific anchor; per micro-market anchors configurable
+- key: drive_min_airport
+  label: Drive time to airport (off-peak)
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: minutes
+  authority: computed
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Mumbai / Navi Mumbai airport
+- key: commute_to_anchor
+  label: Commute to customer's anchor (office/school)
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: int
+  allowed_values: []
+  unit_label: minutes
+  authority: computed
+  matching: soft
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Computed per requirement at match time, not stored
+- key: flood_prone
+  label: Monsoon water-logging reported
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: enum
+  allowed_values:
+  - 'no'
+  - occasional
+  - frequent
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: From reports + public flood maps; important in MMR
+- key: road_access
+  label: Approach road
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: enum
+  allowed_values:
+  - main road
+  - internal road
+  - narrow lane
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: noise_source_nearby
+  label: Noise source nearby
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: building
+  value_type: multi_enum
+  allowed_values:
+  - railway line
+  - highway
+  - airport flight path
+  - construction
+  - none
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Objective proximity, not opinion
+- key: locality
+  label: Locality / micro-market
+  category: 11 Location facts (computed – brokers cannot edit)
+  scope: society
+  value_type: ref
+  allowed_values: []
+  unit_label: Dhokali, Manpada, Kolshet…
+  authority: computed
+  matching: hard
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Core column
+- key: photos_count
+  label: Photos
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: int
+  allowed_values: []
+  unit_label: count
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Units with photos ranked higher
+- key: video_walkthrough
+  label: Video walkthrough available
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: Owner-uploaded video (brief)
+- key: floor_plan
+  label: Floor plan available
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: display
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: owner_verified
+  label: Owner verified on platform
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: last_visited_at
+  label: Last site visit (any broker)
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: date
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: Freshness signal; broker identity never exposed
+- key: status_confirmed_at
+  label: Status last confirmed
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: date
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: Y
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: true
+  notes: ''
+- key: listing_accuracy_flag
+  label: Reported mismatch after visit
+  category: 12 Media, verification & freshness (system)
+  scope: unit
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: computed
+  matching: soft
+  public: N
+  applies_to:
+  - RENT
+  - SALE_NEW
+  - SALE_RESALE
+  mvp: false
+  notes: ''
+- key: developer_name
+  label: Developer
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: ref
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: soft
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: project_launch_date
+  label: Launch date
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: date
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: tower_count
+  label: Towers in project
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: int
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: unit_mix
+  label: Configurations available
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: multi_enum
+  allowed_values:
+  - 1RK…5BHK
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: land_parcel_acres
+  label: Land parcel
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: numeric
+  allowed_values: []
+  unit_label: acres
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: open_space_pct
+  label: Open space
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: numeric
+  allowed_values: []
+  unit_label: '%'
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''
+- key: sample_flat
+  label: Sample flat available
+  category: 13 New project specifics (Phase 2)
+  scope: society
+  value_type: bool
+  allowed_values: []
+  unit_label: ''
+  authority: any
+  matching: display
+  public: Y
+  applies_to:
+  - SALE_NEW
+  mvp: false
+  notes: ''

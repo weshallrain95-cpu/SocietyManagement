@@ -189,9 +189,9 @@ Unique on `(alias_normalised, society_id)`.
 Unique index: `(building_id, unit_no_normalised) WHERE merged_into_id IS NULL`.
 
 **`attribute_def`**: the dictionary, so admins can add attributes without code. The initial
-content is the founder-approved **Unit Attribute Dictionary** (draft v0.1 contains 200 attributes in
-13 categories, circulated as a spreadsheet for approval). After approval it is committed as
-`attribute_dictionary.yaml` and loaded with `manage.py load_attribute_dictionary`. The list below
+content is the founder-approved **Unit Attribute Dictionary v1.0** (200 attributes in 13
+categories, approved 2026-09-23), committed as `attribute_dictionary.yaml` and loaded with
+`manage.py load_attribute_dictionary`. The list below
 shows the columns; the full list is in that file.
 
 | Column | Type | Notes |
