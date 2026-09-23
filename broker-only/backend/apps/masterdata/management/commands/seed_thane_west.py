@@ -5,7 +5,7 @@ python manage.py seed_thane_west --demo     # + demo brokers, staff, listings, c
 """
 
 import random
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 import yaml
@@ -14,6 +14,7 @@ from django.contrib.gis.geos import MultiPolygon, Point
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from django.utils import timezone
 
 from apps.masterdata import dedupe
 from apps.masterdata.location import compute_for_building
@@ -140,7 +141,7 @@ class Command(BaseCommand):
                     rent = int(round((12000 + bhk * 9000 + rng.randint(-3000, 6000)) / 500) * 500)
                     txn = "RENT" if "RENT" in txns and rng.random() < 0.8 else txns[-1]
                     data = {"asking_rent": rent, "deposit": rent * 3} if txn == "RENT" else {"asking_price": rent * 420}
-                    data["available_from"] = date.today() + timedelta(days=rng.randint(0, 45))
+                    data["available_from"] = timezone.localdate() + timedelta(days=rng.randint(0, 45))
                     listing, created = create_listing(
                         org=org,
                         user=user,

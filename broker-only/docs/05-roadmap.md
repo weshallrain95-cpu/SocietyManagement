@@ -42,7 +42,8 @@ because it was built in one push:
 | Matching with explanations; visit plans, routing, staff dispatch, offline sync | ✅ Done |
 | Marketplace: enquiry broadcast, proposals, presence, anonymous map, WebSocket; reviews (incl. offline) | ✅ Done |
 | Real SMS/WhatsApp providers, Google Routes API, payments | ⏳ Needs accounts (DLT, WhatsApp Business, Google Cloud, Razorpay) |
-| **Mobile app (Expo) and web consoles (Next.js)** | ⏳ Next |
+| **Broker mobile app (Expo)**: Today, Leads, Customers (incl. offline), Flats, Add flat, Match, Visit plans, Field staff offline mode, live alerts, demo mode | ✅ Done — tested end to end against the real server |
+| Owner/customer link pages and web consoles (Next.js) | ⏳ Next |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 
 ## 3. Definition of done (every story)
@@ -88,6 +89,6 @@ because it was built in one push:
    and add the broker's real society names and nicknames (they become aliases).
 3. Start the account registrations with long lead times: DLT sender ID + templates, WhatsApp Business,
    Google Cloud (Maps/Places/Routes), MahaRERA agent verification process.
-4. Engineering: broker mobile app (Expo) first — Today, Leads, Customer book, Add flat, Visit plan,
-   Staff itinerary with offline mode — then the light web pages for owners and offline customers,
-   then the admin console.
+4. Engineering: the light web pages for owners and offline customers (status confirmation,
+   shortlist, visit plan, review, consent), then the admin console; a pin-review map the pilot
+   broker can open online to verify Thane West societies.

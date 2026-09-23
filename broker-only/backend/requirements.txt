@@ -14,3 +14,4 @@ openpyxl>=3.1,<4
 rapidfuzz>=3.9,<4
 h3>=4,<5
 PyYAML>=6,<7
+django-cors-headers>=4.4,<5

@@ -13,6 +13,12 @@ DEBUG = env.bool("DJANGO_DEBUG", default=False)
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-only-for-the-laptop-change-me-0123456789" if DEBUG else environ.Env.NOTSET)
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
+# Browser clients (Expo web, Next.js consoles, owner/customer link pages) on other origins.
+# The API uses bearer tokens, not cookies, so credentials are not allowed cross-origin.
+CORS_ALLOWED_ORIGINS = env.list(
+    "CORS_ALLOWED_ORIGINS",
+    default=["http://localhost:8081", "http://localhost:8089", "http://localhost:19006", "http://localhost:3000"] if DEBUG else [],
+)
 
 INSTALLED_APPS = [
     "daphne",
@@ -24,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "django.contrib.postgres",
+    "corsheaders",
     "rest_framework",
     "drf_spectacular",
     "channels",
@@ -43,6 +50,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",

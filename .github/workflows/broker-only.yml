@@ -1,4 +1,4 @@
-name: Only Broker backend
+name: Only Broker
 
 on:
   push:
@@ -36,3 +36,22 @@ jobs:
         run: DJANGO_DEBUG=true python manage.py makemigrations --check --dry-run
       - name: Tests (includes the cross-tenant RLS suite, run as a non-superuser)
         run: pytest --create-db
+
+  mobile:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: broker-only/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "22", cache: npm, cache-dependency-path: broker-only/mobile/package-lock.json}
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx expo lint
+      - name: Unit tests (in UTC, to prove India-time handling)
+        run: TZ=UTC npx jest --ci
+      - name: Web build (demo)
+        run: EXPO_PUBLIC_DEMO=1 npx expo export --platform web

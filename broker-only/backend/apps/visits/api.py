@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.contrib.gis.geos import Point
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -201,7 +202,7 @@ class SyncView(APIView):
             org_id=request.user.active_org_id, user=request.user, device_id=str(request.data.get("device_id", "unknown")), mutations=muts
         )
         # Return the fresh server state of today's plans so the device can reconcile.
-        today = [plan_json(p) for p in _plans(request).filter(date=datetime.now().date())]
+        today = [plan_json(p) for p in _plans(request).filter(date=timezone.localdate())]
         return Response({"results": results, "plans": today})
 
 

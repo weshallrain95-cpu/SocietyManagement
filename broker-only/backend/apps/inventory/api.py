@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.masterdata.models import MicroMarket, ResolvedAttribute, Society, Unit
+from apps.masterdata.normalise import normalise_unit_no
 from apps.masterdata.services import get_or_create_building, get_or_create_unit
 from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
 from apps.status.models import UnitStatus
@@ -137,7 +138,11 @@ class ListingListCreate(APIView):
             return Response({"detail": "That society is awaiting approval"}, status=400)
         society = society.resolved()
         with transaction.atomic():
-            building = get_or_create_building(society, d.pop("building", "") or None)
+            building_name = d.pop("building", "") or None
+            if not building_name:
+                # "B-1203" typed as the flat number means wing B (same rule as Excel uploads).
+                building_name = normalise_unit_no(d["unit_no"]).wing or None
+            building = get_or_create_building(society, building_name)
             unit, _ = get_or_create_unit(
                 building, d.pop("unit_no"), bhk=d["bhk"], property_type=d.pop("property_type"), floor=d.get("floor")
             )

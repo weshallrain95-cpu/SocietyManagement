@@ -36,7 +36,8 @@ model from day one.
 | Path | What |
 |------|------|
 | `backend/` | Django 5 + GeoDjango/PostGIS API, Channels (WebSocket), Celery. Apps: identity, orgs, audit, masterdata, status, inventory, crm, matching, visits, marketplace, reviews |
-| `backend/tests/` | 105 tests: isolation between brokers (RLS), de-duplication, resolver, status rules, matching, visits and offline sync, marketplace, uploads, HTTP journeys, WebSocket |
+| `backend/tests/` | 109 tests: isolation between brokers (RLS), de-duplication, resolver, status rules, matching, visits and offline sync, marketplace, uploads, HTTP journeys, WebSocket |
+| `mobile/` | Expo (React Native) broker + field-staff app for Android, iOS and web, with an offline mode and an in-app demo |
 | `infra/` | Database bootstrap SQL, Dockerfile, Docker Compose for the laptop |
 | `Makefile` | `make up`, `make seed`, `make test`, … (see docs/07) |
 

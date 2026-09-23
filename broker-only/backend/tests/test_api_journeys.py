@@ -322,3 +322,22 @@ def test_removed_staff_loses_access_immediately(suresh):
     assert staff.get("/v1/visit-plans").status_code == 200
     c.delete(f"/v1/broker-orgs/me/staff/{m.pk}")
     assert staff.get("/v1/visit-plans").status_code == 401
+
+
+def test_cors_allows_configured_browser_origin(db, settings):
+    settings.CORS_ALLOWED_ORIGINS = ["http://localhost:8081"]
+    r = APIClient().options("/v1/auth/otp/request", HTTP_ORIGIN="http://localhost:8081", HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST")
+    assert r["access-control-allow-origin"] == "http://localhost:8081"
+    r = APIClient().options("/v1/auth/otp/request", HTTP_ORIGIN="https://evil.example", HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST")
+    assert "access-control-allow-origin" not in r
+
+
+def test_wing_in_flat_number_selects_the_building(suresh, society, attrs):
+    c, _ = suresh
+    r = c.post(
+        "/v1/listings",
+        {"society_id": str(society.pk), "unit_no": "B-1502", "bhk": "2", "txn_type": "RENT", "asking_rent": 26000},
+        format="json",
+    )
+    assert r.status_code == 201, r.content
+    assert r.json()["building"] == "B"
