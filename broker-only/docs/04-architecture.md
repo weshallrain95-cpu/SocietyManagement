@@ -50,7 +50,8 @@ row-level isolation, geo queries and relational integrity are core to this produ
 flowchart TB
   subgraph Clients
     MA["Mobile app (Expo RN)<br/>customer · broker · staff · owner"]
-    WEB["Web (Next.js)<br/>admin console · broker desktop · link pages"]
+    WEB["Web (Next.js)<br/>admin console · broker desktop"]
+    LP["Link pages (Django)<br/>owners · walk-in customers"]
   end
   subgraph Edge
     CDN[CDN + WAF]
@@ -77,6 +78,7 @@ flowchart TB
   end
   MA --> CDN --> LB
   WEB --> CDN
+  LP --> CDN
   LB --> API
   LB --> WS
   API --> PG
@@ -115,6 +117,7 @@ broker-only/
       visits/               # plans, stops, routing, assignment, outcomes
       marketplace/          # enquiries, broadcast, proposals, presence, map aggregates
       reviews/              # interactions, reviews, reputation
+      linkpages/            # WhatsApp/SMS link pages for owners and offline customers
       notifications/        # templates, channels, preferences, delivery log
       billing/              # plans, entitlements, wallet, ledger, invoices
       audit/                # hash-chained audit + verification
@@ -122,7 +125,7 @@ broker-only/
     common/                 # outbox, RLS middleware, encryption fields, pagination, errors
     tests/
   mobile/                   # Expo app
-  web/                      # Next.js (admin + broker desktop + public link pages)
+  web/                      # Next.js (admin + broker desktop)
   infra/
     docker/                 # Dockerfiles
     compose/                # docker-compose.dev.yml
