@@ -18,7 +18,7 @@ from .services import create_listing
 
 # Target field -> header spellings seen in broker sheets (lower-case, punctuation stripped).
 SYNONYMS = {
-    "society": ["society", "building", "bldg", "society name", "building name", "project", "complex", "soc", "property", "name"],
+    "society": ["society", "building", "bldg", "society name", "building name", "bldg name", "soc name", "project name", "project", "complex", "soc", "property", "name"],
     "wing": ["wing", "tower", "block", "bldg no", "building no"],
     "unit_no": ["flat", "flat no", "unit", "unit no", "flat number", "room no", "apt no"],
     "floor": ["floor", "flr"],
@@ -304,11 +304,18 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
                                           "private_notes", "bhk", "carpet_sqft", "floor")}
             if p.get("available_from"):
                 data["available_from"] = date.fromisoformat(p["available_from"])
-            attributes = {}
-            from apps.masterdata.resolver import InvalidValue
+            from apps.masterdata.models import AttributeDef
+            from apps.masterdata.resolver import InvalidValue, validate_value
 
+            attributes, warnings = {}, []
+            defs = {a.key: a for a in AttributeDef.objects.filter(key__in=list(p.get("attributes", {})), active=True)}
             for k, v in p.get("attributes", {}).items():
-                attributes[k] = v
+                try:
+                    if k in defs:
+                        validate_value(defs[k], v)
+                    attributes[k] = v
+                except InvalidValue as e:
+                    warnings.append(f"Ignored {e}")  # a bad optional value never blocks the flat
             try:
                 listing, _ = create_listing(
                     org=batch.org, user=user, unit=unit, txn_type=p["txn_type"], data=data, attributes=attributes,
@@ -323,7 +330,8 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
                 dedupe.learn_alias(row.society, p["society"], SocietyAlias.Source.BROKER_UPLOAD, org=batch.org)
             row.listing = listing
             row.resolution = UploadRow.Resolution.COMMITTED
-            row.save(update_fields=["listing", "resolution"])
+            row.errors = warnings
+            row.save(update_fields=["listing", "resolution", "errors"])
             done += 1
     _recount(batch)
     if not batch.rows.filter(resolution__in=[UploadRow.Resolution.NEEDS_CONFIRMATION]).exists():

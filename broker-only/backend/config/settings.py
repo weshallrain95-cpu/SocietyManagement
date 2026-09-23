@@ -9,7 +9,7 @@ env = environ.Env()
 environ.Env.read_env(BASE_DIR / ".env", overwrite=False)
 
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
-SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-change-me" if DEBUG else environ.Env.NOTSET)
+SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-only-for-the-laptop-change-me-0123456789" if DEBUG else environ.Env.NOTSET)
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 
@@ -114,6 +114,7 @@ CELERY_BEAT_SCHEDULE = {
     "relay-outbox": {"task": "common.tasks.relay_outbox", "schedule": 1.0},
     "decay-stale-status": {"task": "apps.status.tasks.decay_stale_statuses", "schedule": 3600.0},
     "expire-enquiries": {"task": "apps.marketplace.tasks.expire_enquiries", "schedule": 600.0},
+    "rebuild-supply-map": {"task": "apps.marketplace.tasks.rebuild_supply", "schedule": 60.0},
 }
 
 REST_FRAMEWORK = {
@@ -139,6 +140,8 @@ SPECTACULAR_SETTINGS = {"TITLE": "Only Broker API", "VERSION": "0.1.0", "SERVE_I
 OB_FIELD_KEY = env("OB_FIELD_KEY", default="ZGV2LW9ubHktZmllbGQta2V5LTMyLWJ5dGVzLWxvbmc=" if DEBUG else environ.Env.NOTSET)
 OB_PHONE_PEPPER = env("OB_PHONE_PEPPER", default="dev-only-pepper" if DEBUG else environ.Env.NOTSET)
 OB_OTP_PROVIDER = env("OB_OTP_PROVIDER", default="console")  # console | msg91
+# Echo OTPs in API responses (laptop only). Never enabled outside DEBUG.
+OB_EXPOSE_DEV_OTP = DEBUG and env.bool("OB_EXPOSE_DEV_OTP", default=True)
 OB_NOTIFY_PROVIDER = env("OB_NOTIFY_PROVIDER", default="console")  # console | whatsapp
 OB_PUBLIC_BASE_URL = env("OB_PUBLIC_BASE_URL", default="http://localhost:3000")
 OB_STATUS_RULES = {

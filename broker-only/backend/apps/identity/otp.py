@@ -38,7 +38,7 @@ def request_otp(phone: str) -> str | None:
     OtpChallenge.objects.create(phone_hash=ph, code_hash=_hash(code, ph), expires_at=timezone.now() + TTL)
     if settings.OB_OTP_PROVIDER == "console":
         log.warning("DEV OTP for %s: %s", crypto.mask_phone(e164), code)
-        return code if settings.DEBUG else None
+        return code if settings.OB_EXPOSE_DEV_OTP else None
     raise NotImplementedError("SMS provider integration (MSG91/Exotel) is configured at staging")
 
 

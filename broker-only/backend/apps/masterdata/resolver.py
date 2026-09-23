@@ -177,9 +177,25 @@ def validate_value(attr: AttributeDef, value):
     return str(value).strip()
 
 
+# How brokers actually answer yes/no questions about enum attributes.
+YES_NO_ALIASES = {
+    "pets_allowed": {"yes": "case-by-case", "y": "case-by-case", "allowed": "case-by-case", "no": "no", "n": "no"},
+    "society_pet_policy": {"yes": "allowed", "no": "not allowed"},
+}
+GENERIC_YES = {"yes", "y", "ok", "allowed", "haan", "ha"}
+GENERIC_NO = {"no", "n", "not allowed", "nahi", "na"}
+
+
 def _match_enum(attr, value):
     allowed = attr.allowed_values or []
     s = str(value).strip().lower()
+    alias = YES_NO_ALIASES.get(attr.key, {}).get(s)
+    if alias in allowed:
+        return alias
+    if s in GENERIC_YES and "allowed" in allowed:
+        return "allowed"
+    if s in GENERIC_NO and "not allowed" in allowed:
+        return "not allowed"
     for a in allowed:
         if s == str(a).lower():
             return a
