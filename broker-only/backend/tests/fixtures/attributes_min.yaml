@@ -1,0 +1,20 @@
+# Minimal attribute set for automated tests only. The real dictionary is founder-approved
+# (see docs/06) and loaded from apps/masterdata/dictionary/attribute_dictionary.yaml.
+version: test
+attributes:
+  - {key: property_type, label: Property type, category: 01 Core configuration, scope: unit, value_type: enum, allowed_values: [apartment, row_house, independent_house, villa, penthouse, studio], authority: owner, matching: hard, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: bhk, label: BHK, category: 01 Core configuration, scope: unit, value_type: enum, allowed_values: ["0.5", "1", "1.5", "2", "2.5", "3", "3.5", "4", "4.5", "5"], authority: owner, matching: hard, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: carpet_area_sqft, label: Carpet area, category: 01 Core configuration, scope: unit, value_type: numeric, authority: owner, matching: soft, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: floor_no, label: Floor, category: 01 Core configuration, scope: unit, value_type: int, authority: owner, matching: soft, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: furnishing, label: Furnishing, category: 03 Furnishing, scope: unit, value_type: enum, allowed_values: [unfurnished, semi-furnished, fully furnished], authority: owner, matching: hard, public: Y, applies_to: [RENT, SALE_RESALE], mvp: true}
+  - {key: furn_gas_stove, label: Gas stove, category: 03 Furnishing, scope: unit, value_type: bool, authority: owner, matching: soft, public: Y, applies_to: [RENT, SALE_RESALE], mvp: true}
+  - {key: furn_kitchen_cabinet, label: Kitchen cabinets, category: 03 Furnishing, scope: unit, value_type: bool, authority: owner, matching: soft, public: Y, applies_to: [RENT, SALE_RESALE], mvp: true}
+  - {key: car_parking_covered, label: Covered parking, category: 05 Parking, scope: unit, value_type: int, authority: owner, matching: hard, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: lift, label: Lift, category: 06 Building & society amenities, scope: building, value_type: bool, authority: any, matching: hard, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: gym, label: Gym, category: 06 Building & society amenities, scope: society, value_type: bool, authority: any, matching: soft, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: piped_gas, label: Piped gas, category: 04 Utilities & services, scope: unit, value_type: bool, authority: owner, matching: soft, public: Y, applies_to: [RENT, SALE_NEW, SALE_RESALE], mvp: true}
+  - {key: pets_allowed, label: Pets allowed, category: 10 House rules (conduct-based only), scope: unit, value_type: enum, allowed_values: ["no", cats only, small dogs, all pets, case-by-case], authority: owner, matching: hard, public: Y, applies_to: [RENT], mvp: true}
+  - {key: nonveg_cooking, label: Non-veg cooking, category: 10 House rules (conduct-based only), scope: unit, value_type: enum, allowed_values: [allowed, not allowed], authority: owner, matching: hard, public: Y, applies_to: [RENT], mvp: true}
+  - {key: bachelors_allowed, label: Bachelors, category: 10 House rules (conduct-based only), scope: unit, value_type: enum, allowed_values: [allowed, not allowed], authority: owner, matching: hard, public: Y, applies_to: [RENT], mvp: true}
+  - {key: rent_expected, label: Expected rent, category: 08 Commercial terms – rent, scope: listing, value_type: money, authority: owner, matching: hard, public: Band, applies_to: [RENT], mvp: true}
+  - {key: price_expected, label: Expected price, category: 09 Commercial terms – sale, scope: listing, value_type: money, authority: owner, matching: hard, public: Band, applies_to: [SALE_NEW, SALE_RESALE], mvp: true}
