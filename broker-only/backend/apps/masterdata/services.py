@@ -32,7 +32,11 @@ def get_or_create_building(society: Society, name: str | None) -> Building:
     b = Building.objects.filter(society=society, name_normalised=key, merged_into__isnull=True).first()
     if b:
         return b
-    return Building.objects.create(society=society, name=(name or "Main").strip() or "Main", location=society.location)
+    b = Building.objects.create(society=society, name=(name or "Main").strip() or "Main", location=society.location)
+    from .location import compute_for_building
+
+    compute_for_building(b)  # MD-07: distances exist from the first listing onwards
+    return b
 
 
 def get_or_create_unit(building: Building, unit_no: str, *, bhk, property_type="apartment", floor=None) -> tuple[Unit, bool]:

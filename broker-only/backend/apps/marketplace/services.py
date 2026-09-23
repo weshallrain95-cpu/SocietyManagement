@@ -1,4 +1,5 @@
 """Marketplace: enquiry -> real-time broadcast -> proposals -> accept (MKT-01..11)."""
+
 from datetime import timedelta
 
 from django.conf import settings
@@ -97,7 +98,7 @@ def eligible_orgs(e: Enquiry):
         # 80% by quality, 20% random slice so new brokers get a chance.
         import random
 
-        top, rest = orgs[: int(cap * 0.8)], orgs[int(cap * 0.8):]
+        top, rest = orgs[: int(cap * 0.8)], orgs[int(cap * 0.8) :]
         orgs = top + random.sample(rest, cap - len(top))
     return orgs
 
@@ -117,10 +118,19 @@ def broadcast(enquiry_id) -> int:
         )
         if not created:
             continue
-        notify_org(org.pk, "enquiry_new", {
-            "enquiry_id": str(e.pk), "summary": e.summary_text, "match_count": count, "txn_type": e.txn_type,
-            "expires_at": e.expires_at.isoformat(), "urgency": e.urgency,
-        }, realtime_event="enquiry.new")
+        notify_org(
+            org.pk,
+            "enquiry_new",
+            {
+                "enquiry_id": str(e.pk),
+                "summary": e.summary_text,
+                "match_count": count,
+                "txn_type": e.txn_type,
+                "expires_at": e.expires_at.isoformat(),
+                "urgency": e.urgency,
+            },
+            realtime_event="enquiry.new",
+        )
         n += 1
     Enquiry.objects.filter(pk=e.pk).update(n_recipients=n)
     return n
@@ -143,17 +153,25 @@ def send_proposal(org, user, enquiry: Enquiry, *, brokerage_terms: str, message:
     if _proposals_this_month(org) >= FREE_PROPOSALS_PER_MONTH.get(org.plan_code, 20):
         raise MarketError("You have used this month's responses on your plan.")
     p, created = Proposal.objects.get_or_create(
-        enquiry=enquiry, org=org,
+        enquiry=enquiry,
+        org=org,
         defaults={
-            "sent_by": user, "brokerage_terms": brokerage_terms[:200], "message": moderate(message),
-            "match_count": delivery.match_count, "earliest_slot": earliest_slot,
+            "sent_by": user,
+            "brokerage_terms": brokerage_terms[:200],
+            "message": moderate(message),
+            "match_count": delivery.match_count,
+            "earliest_slot": earliest_slot,
             "response_s": int((timezone.now() - enquiry.created_at).total_seconds()),
         },
     )
     if not created:
         raise MarketError("You have already responded to this enquiry.")
-    notify_user(enquiry.customer_user, "proposal_new", {"enquiry_id": str(enquiry.pk), "proposal_id": str(p.pk), "broker": org.name},
-                realtime_event="proposal.new")
+    notify_user(
+        enquiry.customer_user,
+        "proposal_new",
+        {"enquiry_id": str(enquiry.pk), "proposal_id": str(p.pk), "broker": org.name},
+        realtime_event="proposal.new",
+    )
     emit("proposal.sent", org_id=org.pk)
     return p
 
@@ -174,20 +192,39 @@ def accept_proposal(user, proposal: Proposal) -> Proposal:
     e.save(update_fields=["state"])
     # The broker gets the customer (with consent given in-app) and the requirement in their CRM.
     with rls.org_context(proposal.org_id):
-        cust, _ = crm.capture_customer(org=proposal.org, user=None, phone=user.phone, name=user.display_name, source=Customer.Source.MARKETPLACE)
+        cust, _ = crm.capture_customer(
+            org=proposal.org, user=None, phone=user.phone, name=user.display_name, source=Customer.Source.MARKETPLACE
+        )
         cust.platform_user = user
         cust.consent_state = Customer.Consent.APP
         cust.consent_evidence = {"method": "app", "enquiry": str(e.pk), "at": timezone.now().isoformat()}
         cust.save(update_fields=["platform_user", "consent_state", "consent_evidence"])
-        crm.add_requirement(cust, {
-            "enquiry": e, "txn_type": e.txn_type, "property_types": e.property_types, "bhk_min": e.bhk_min,
-            "bhk_max": e.bhk_max, "budget_min": e.budget_min, "budget_max": e.budget_max,
-            "search_area": circle(e.center, e.radius_m), "must_haves": e.must_haves, "house_rule_needs": e.house_rule_needs,
-            "max_station_distance_m": e.max_station_distance_m, "move_in_by": e.move_in_by, "occupants": e.occupants, "notes": e.notes,
-        })
+        crm.add_requirement(
+            cust,
+            {
+                "enquiry": e,
+                "txn_type": e.txn_type,
+                "property_types": e.property_types,
+                "bhk_min": e.bhk_min,
+                "bhk_max": e.bhk_max,
+                "budget_min": e.budget_min,
+                "budget_max": e.budget_max,
+                "search_area": circle(e.center, e.radius_m),
+                "must_haves": e.must_haves,
+                "house_rule_needs": e.house_rule_needs,
+                "max_station_distance_m": e.max_station_distance_m,
+                "move_in_by": e.move_in_by,
+                "occupants": e.occupants,
+                "notes": e.notes,
+            },
+        )
         crm.log(cust, CustomerInteraction.Kind.SYSTEM, "Marketplace enquiry accepted your proposal", ref=proposal)
-    notify_org(proposal.org_id, "proposal_accepted", {"proposal_id": str(proposal.pk), "customer_id": str(cust.pk)},
-               realtime_event="proposal.accepted")
+    notify_org(
+        proposal.org_id,
+        "proposal_accepted",
+        {"proposal_id": str(proposal.pk), "customer_id": str(cust.pk)},
+        realtime_event="proposal.accepted",
+    )
     if e.proposals.filter(state=Proposal.State.ACCEPTED).count() >= limit:
         for other in e.proposals.filter(state=Proposal.State.SENT):
             other.state = Proposal.State.DECLINED

@@ -1,4 +1,5 @@
 """360° reviews (REV-01..05). Reviews exist only on top of a verified interaction."""
+
 from decimal import Decimal
 
 from django.conf import settings
@@ -17,8 +18,15 @@ PRIOR_MEAN = Decimal("4.0")
 PRIOR_WEIGHT = 5
 EDIT_WINDOW_DAYS = 7
 ALLOWED_TAGS = {
-    "punctual", "honest_listing", "knowledgeable", "responsive", "patient", "good_negotiator",
-    "well_organised_visits", "respectful", "clear_terms",
+    "punctual",
+    "honest_listing",
+    "knowledgeable",
+    "responsive",
+    "patient",
+    "good_negotiator",
+    "well_organised_visits",
+    "respectful",
+    "clear_terms",
 }
 
 
@@ -29,16 +37,19 @@ class ReviewError(Exception):
 def visit_completed(plan) -> Interaction:
     customer = plan.customer
     inter, created = Interaction.objects.get_or_create(
-        kind=Interaction.Kind.VISIT_COMPLETED, ref_type="visits.visitplan", ref_id=plan.pk,
+        kind=Interaction.Kind.VISIT_COMPLETED,
+        ref_type="visits.visitplan",
+        ref_id=plan.pk,
         defaults={
-            "org_id": plan.org_id, "customer_user": customer.platform_user, "customer_phone_hash": customer.phone_hash,
+            "org_id": plan.org_id,
+            "customer_user": customer.platform_user,
+            "customer_phone_hash": customer.phone_hash,
             "occurred_at": timezone.now(),
         },
     )
     if created and customer.can_message:
         _, token = create_link(ShareLink.Purpose.REVIEW, inter, hours=24 * 14, recipient_phone_hash=customer.phone_hash)
-        send_message(customer.phone, "review_request",
-                     {"url": f"{settings.OB_PUBLIC_BASE_URL}/r/{token}"}, phone_hash=customer.phone_hash)
+        send_message(customer.phone, "review_request", {"url": f"{settings.OB_PUBLIC_BASE_URL}/r/{token}"}, phone_hash=customer.phone_hash)
     return inter
 
 
@@ -60,8 +71,14 @@ def review_via_link(token: str, *, stars, tags=(), text="") -> Review:
     try:
         with transaction.atomic():
             r = Review.objects.create(
-                interaction=inter, direction=Review.Direction.C2B, reviewer_user=inter.customer_user,
-                reviewer_label="Verified visit", org_id=inter.org_id, stars=stars, tags=tags, text=text,
+                interaction=inter,
+                direction=Review.Direction.C2B,
+                reviewer_user=inter.customer_user,
+                reviewer_label="Verified visit",
+                org_id=inter.org_id,
+                stars=stars,
+                tags=tags,
+                text=text,
                 verified_offline=inter.customer_user is None,
             )
     except IntegrityError as e:
@@ -88,7 +105,9 @@ def submit(interaction: Interaction, *, reviewer, direction: str, stars, tags=()
         raise ReviewError("Direction not available yet")
     try:
         with transaction.atomic():
-            r = Review.objects.create(interaction=interaction, direction=direction, reviewer_user=reviewer, stars=stars, tags=tags, text=text, **kw)
+            r = Review.objects.create(
+                interaction=interaction, direction=direction, reviewer_user=reviewer, stars=stars, tags=tags, text=text, **kw
+            )
     except IntegrityError as e:
         raise ReviewError("Already reviewed") from e
     if direction == Review.Direction.C2B:

@@ -1,4 +1,5 @@
 """Outbound notifications. Providers are pluggable; dev uses the console + WebSocket groups."""
+
 import logging
 
 from asgiref.sync import async_to_sync

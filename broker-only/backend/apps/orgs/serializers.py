@@ -29,13 +29,29 @@ class BrokerOrgSerializer(serializers.ModelSerializer):
     class Meta:
         model = BrokerOrg
         fields = [
-            "id", "name", "office_location", "office_address", "rera_agent_no", "txn_types", "languages",
-            "verification_status", "rating_bayes", "rating_count", "median_response_s", "listing_accuracy",
-            "closures", "plan_code",
+            "id",
+            "name",
+            "office_location",
+            "office_address",
+            "rera_agent_no",
+            "txn_types",
+            "languages",
+            "verification_status",
+            "rating_bayes",
+            "rating_count",
+            "median_response_s",
+            "listing_accuracy",
+            "closures",
+            "plan_code",
         ]
         read_only_fields = [
-            "verification_status", "rating_bayes", "rating_count", "median_response_s", "listing_accuracy",
-            "closures", "plan_code",
+            "verification_status",
+            "rating_bayes",
+            "rating_count",
+            "median_response_s",
+            "listing_accuracy",
+            "closures",
+            "plan_code",
         ]
 
 

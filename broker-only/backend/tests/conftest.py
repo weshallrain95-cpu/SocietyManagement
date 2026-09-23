@@ -36,9 +36,7 @@ def thane(db):
 
 @pytest.fixture
 def society(thane):
-    return Society.objects.create(
-        canonical_name="Hiranandani Estate", locality=thane["dhokali"], location=DHOKALI, pincode="400607"
-    )
+    return Society.objects.create(canonical_name="Hiranandani Estate", locality=thane["dhokali"], location=DHOKALI, pincode="400607")
 
 
 @pytest.fixture
@@ -58,7 +56,9 @@ def make_user(phone, name=""):
 def make_org(name, phone, verified=True):
     user = make_user(phone, name)
     org = BrokerOrg.objects.create(
-        name=name, txn_types=["RENT", "SALE_RESALE"], verification_status="verified" if verified else "pending",
+        name=name,
+        txn_types=["RENT", "SALE_RESALE"],
+        verification_status="verified" if verified else "pending",
         office_location=DHOKALI,
     )
     Membership.objects.create(user=user, org=org, role=Membership.Role.PRINCIPAL)
@@ -94,3 +94,12 @@ def platform():
 
 
 TODAY = date(2026, 9, 23)
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()

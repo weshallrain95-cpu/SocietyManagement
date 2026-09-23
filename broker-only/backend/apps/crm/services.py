@@ -1,4 +1,5 @@
 """Customer book services, including offline customers who never install the app (OFF-01..14)."""
+
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
@@ -31,8 +32,9 @@ def log(customer: Customer, kind: str, summary: str = "", *, user=None, ref=None
 
 
 @transaction.atomic
-def capture_customer(*, org, user, phone: str, name: str = "", source: str = Customer.Source.WALK_IN,
-                     notes: str = "") -> tuple[Customer, bool]:
+def capture_customer(
+    *, org, user, phone: str, name: str = "", source: str = Customer.Source.WALK_IN, notes: str = ""
+) -> tuple[Customer, bool]:
     """OFF-01 / CRM-05: one record per phone number per broker; repeat capture returns the same customer."""
     e164 = crypto.normalise_phone(phone)
     ph = crypto.phone_hash(e164)
@@ -161,11 +163,14 @@ def create_shortlist(customer: Customer, listings, *, requirement=None, title=""
 def share_shortlist(sl: Shortlist, *, user) -> str:
     """OFF-03: WhatsApp/SMS link to a light web page; responses flow back into the CRM."""
     ensure_can_message(sl.customer)
-    link, token = create_link(ShareLink.Purpose.SHORTLIST, sl, hours=24 * 14, max_uses=10_000,
-                              recipient_phone_hash=sl.customer.phone_hash)
+    link, token = create_link(ShareLink.Purpose.SHORTLIST, sl, hours=24 * 14, max_uses=10_000, recipient_phone_hash=sl.customer.phone_hash)
     url = f"{settings.OB_PUBLIC_BASE_URL}/s/{token}"
-    send_message(sl.customer.phone, "shortlist_shared", {"broker": customer_org_name(sl.customer), "count": sl.items.count(), "url": url},
-                 phone_hash=sl.customer.phone_hash)
+    send_message(
+        sl.customer.phone,
+        "shortlist_shared",
+        {"broker": customer_org_name(sl.customer), "count": sl.items.count(), "url": url},
+        phone_hash=sl.customer.phone_hash,
+    )
     sl.shared_at = timezone.now()
     sl.save(update_fields=["shared_at"])
     log(sl.customer, CustomerInteraction.Kind.WHATSAPP, f"Shortlist of {sl.items.count()} flats shared", user=user, ref=sl)
@@ -181,5 +186,7 @@ def respond_to_shortlist_item(token: str, item_id, response: str) -> ShortlistIt
         item.customer_response = response
         item.responded_at = timezone.now()
         item.save(update_fields=["customer_response", "responded_at"])
-        log(item.shortlist.customer, CustomerInteraction.Kind.SHORTLIST_RESPONSE, f"{response.replace('_', ' ')}: listing {item.listing_id}")
+        log(
+            item.shortlist.customer, CustomerInteraction.Kind.SHORTLIST_RESPONSE, f"{response.replace('_', ' ')}: listing {item.listing_id}"
+        )
     return item

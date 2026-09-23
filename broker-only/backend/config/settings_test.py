@@ -1,4 +1,5 @@
 """Settings for the automated test suite: in-memory channels/cache, eager Celery, dev keys."""
+
 import os
 
 for k, v in {

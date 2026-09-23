@@ -1,4 +1,5 @@
 """Computed location facts (MD-07). Brokers cannot type 'near station'; the map decides."""
+
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.measure import D
 

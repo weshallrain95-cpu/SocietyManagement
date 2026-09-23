@@ -1,4 +1,5 @@
 """Site-visit planning and dispatch (VISIT-01..09) and offline sync (OFF-10/11)."""
+
 from datetime import datetime, timedelta
 
 from django.conf import settings
@@ -30,16 +31,34 @@ def _pt(listing):
 
 
 @transaction.atomic
-def create_plan(*, customer, listings, date, start_time, user, start_point=None, travel_mode="two_wheeler",
-                dwell_min=15, requirement=None, optimise=True) -> VisitPlan:
+def create_plan(
+    *,
+    customer,
+    listings,
+    date,
+    start_time,
+    user,
+    start_point=None,
+    travel_mode="two_wheeler",
+    dwell_min=15,
+    requirement=None,
+    optimise=True,
+) -> VisitPlan:
     listings = list(listings)
     if not listings:
         raise VisitError("Add at least one flat")
     if any(l.org_id != customer.org_id for l in listings):
         raise VisitError("A visit plan can only include your own listings")
     plan = VisitPlan.objects.create(
-        org_id=customer.org_id, customer=customer, requirement=requirement, date=date, start_time=start_time,
-        start_point=start_point, travel_mode=travel_mode, dwell_min=dwell_min, created_by=user,
+        org_id=customer.org_id,
+        customer=customer,
+        requirement=requirement,
+        date=date,
+        start_time=start_time,
+        start_point=start_point,
+        travel_mode=travel_mode,
+        dwell_min=dwell_min,
+        created_by=user,
     )
     for i, l in enumerate(listings):
         VisitStop.objects.create(org_id=plan.org_id, plan=plan, seq=i + 1, listing=l)
@@ -100,8 +119,12 @@ def key_conflicts(plan: VisitPlan) -> list[dict]:
         if key and key.needs_handover:
             out.append({"stop_id": str(s.pk), "issue": "key_needs_handover"})
         clash = VisitStop.objects.filter(
-            listing=s.listing, removed=False, slot_start__lt=s.slot_end, slot_end__gt=s.slot_start,
-            plan__state__in=["draft", "shared", "customer_confirmed", "in_progress"], plan__date=plan.date,
+            listing=s.listing,
+            removed=False,
+            slot_start__lt=s.slot_end,
+            slot_end__gt=s.slot_start,
+            plan__state__in=["draft", "shared", "customer_confirmed", "in_progress"],
+            plan__date=plan.date,
         ).exclude(plan=plan)
         if clash.exists():
             out.append({"stop_id": str(s.pk), "issue": "same_flat_booked_in_another_plan_at_overlapping_time"})
@@ -117,8 +140,12 @@ def assign(plan: VisitPlan, staff_user, *, stop_ids=None) -> int:
         qs = qs.filter(pk__in=stop_ids)
     n = qs.update(assigned_staff=staff_user, staff_ack_at=None)
     _bump(plan, "visit_stop.assigned", actor=None)
-    notify_user(staff_user, "visit_assigned", {"plan_id": str(plan.pk), "date": plan.date.isoformat(), "stops": n},
-                realtime_event="visit_stop.assigned")
+    notify_user(
+        staff_user,
+        "visit_assigned",
+        {"plan_id": str(plan.pk), "date": plan.date.isoformat(), "stops": n},
+        realtime_event="visit_stop.assigned",
+    )
     return n
 
 
@@ -129,11 +156,19 @@ def acknowledge(plan: VisitPlan, staff_user) -> int:
 def share_with_customer(plan: VisitPlan, *, user) -> str:
     """VISIT-02 / OFF-04: works for app and offline customers alike."""
     crm.ensure_can_message(plan.customer)
-    link, token = create_link(ShareLink.Purpose.VISIT_PLAN, plan, hours=24 * 7, max_uses=10_000,
-                              recipient_phone_hash=plan.customer.phone_hash)
-    send_message(plan.customer.phone, "visit_plan_shared", {
-        "date": plan.date.isoformat(), "stops": len(live_stops(plan)), "url": f"{settings.OB_PUBLIC_BASE_URL}/v/{token}",
-    }, phone_hash=plan.customer.phone_hash)
+    link, token = create_link(
+        ShareLink.Purpose.VISIT_PLAN, plan, hours=24 * 7, max_uses=10_000, recipient_phone_hash=plan.customer.phone_hash
+    )
+    send_message(
+        plan.customer.phone,
+        "visit_plan_shared",
+        {
+            "date": plan.date.isoformat(),
+            "stops": len(live_stops(plan)),
+            "url": f"{settings.OB_PUBLIC_BASE_URL}/v/{token}",
+        },
+        phone_hash=plan.customer.phone_hash,
+    )
     if plan.state == VisitPlan.State.DRAFT:
         plan.state = VisitPlan.State.SHARED
         plan.save(update_fields=["state"])
@@ -148,18 +183,20 @@ def public_plan_view(token: str) -> dict:
         stops = []
         for s in live_stops(plan):
             b = s.listing.unit.building
-            stops.append({
-                "seq": s.seq,
-                "society": b.society.canonical_name,
-                "building": b.name,
-                # Exact flat number only after the customer confirms (VISIT-02).
-                "flat": s.listing.unit.unit_no if confirmed else None,
-                "bhk": float(s.listing.unit.bhk),
-                "rent_or_price": s.listing.price,
-                "slot_start": s.slot_start.isoformat() if s.slot_start else None,
-                "location": {"lat": b.location.y, "lng": b.location.x},
-                "staff": s.assigned_staff.display_name if s.assigned_staff else None,
-            })
+            stops.append(
+                {
+                    "seq": s.seq,
+                    "society": b.society.canonical_name,
+                    "building": b.name,
+                    # Exact flat number only after the customer confirms (VISIT-02).
+                    "flat": s.listing.unit.unit_no if confirmed else None,
+                    "bhk": float(s.listing.unit.bhk),
+                    "rent_or_price": s.listing.price,
+                    "slot_start": s.slot_start.isoformat() if s.slot_start else None,
+                    "location": {"lat": b.location.y, "lng": b.location.x},
+                    "staff": s.assigned_staff.display_name if s.assigned_staff else None,
+                }
+            )
         return {"date": plan.date.isoformat(), "state": plan.state, "stops": stops, "version": plan.version}
 
 
@@ -186,10 +223,16 @@ def notify_owners(plan: VisitPlan) -> int:
         if not phone or s.owner_notice != VisitStop.OwnerNotice.NOT_REQUIRED:
             continue
         link, token = create_link(ShareLink.Purpose.VISIT_NOTICE, s, hours=48)
-        send_message(phone, "visit_notice", {
-            "flat": str(s.listing.unit), "when": s.slot_start.isoformat() if s.slot_start else plan.date.isoformat(),
-            "url": f"{settings.OB_PUBLIC_BASE_URL}/o/{token}",
-        }, phone_hash=crypto.phone_hash(phone))
+        send_message(
+            phone,
+            "visit_notice",
+            {
+                "flat": str(s.listing.unit),
+                "when": s.slot_start.isoformat() if s.slot_start else plan.date.isoformat(),
+                "url": f"{settings.OB_PUBLIC_BASE_URL}/o/{token}",
+            },
+            phone_hash=crypto.phone_hash(phone),
+        )
         s.owner_notice = VisitStop.OwnerNotice.SENT
         s.save(update_fields=["owner_notice"])
         n += 1
@@ -202,11 +245,14 @@ def owner_acknowledges(token: str, ok: bool) -> VisitStop:
         s = VisitStop.objects.get(pk=link.target_id)
         s.owner_notice = VisitStop.OwnerNotice.ACKNOWLEDGED if ok else VisitStop.OwnerNotice.DECLINED
         s.save(update_fields=["owner_notice"])
-        ws_send(f"broker.{s.org_id}", "visit_plan.updated", {"plan_id": str(s.plan_id), "stop_id": str(s.pk), "owner_notice": s.owner_notice})
+        ws_send(
+            f"broker.{s.org_id}", "visit_plan.updated", {"plan_id": str(s.plan_id), "stop_id": str(s.pk), "owner_notice": s.owner_notice}
+        )
     return s
 
 
 # --- live changes (VISIT-06) -------------------------------------------------
+
 
 @transaction.atomic
 def add_stop(plan: VisitPlan, listing, *, position=None) -> VisitStop:
@@ -218,8 +264,9 @@ def add_stop(plan: VisitPlan, listing, *, position=None) -> VisitStop:
         if s.seq >= pos:
             s.seq += 1
             s.save(update_fields=["seq"])
-    stop = VisitStop.objects.create(org_id=plan.org_id, plan=plan, seq=pos, listing=listing,
-                                    assigned_staff=stops[0].assigned_staff if stops else None)
+    stop = VisitStop.objects.create(
+        org_id=plan.org_id, plan=plan, seq=pos, listing=listing, assigned_staff=stops[0].assigned_staff if stops else None
+    )
     retime(plan)
     _bump(plan, "visit_plan.updated")
     return stop
@@ -263,6 +310,7 @@ def _bump(plan: VisitPlan, event: str, actor=None):
 
 # --- at the flat (VISIT-07) --------------------------------------------------
 
+
 def check_in(stop: VisitStop, *, lat=None, lng=None, at=None) -> VisitStop:
     stop.checkin_at = at or timezone.now()
     if lat is not None and lng is not None:
@@ -288,8 +336,13 @@ def record_outcome(stop: VisitStop, outcome: str, *, user, reasons=(), note="", 
         # Visit evidence feeds the master status (Data Model §4 rule 3).
         from apps.status import services as st
 
-        st.report(stop.listing.unit, stop.listing.txn_type, "LET" if stop.listing.txn_type == "RENT" else "SOLD",
-                  st.Actor("visit_feedback", org=stop.listing.org, user=user), reason="found let at site visit")
+        st.report(
+            stop.listing.unit,
+            stop.listing.txn_type,
+            "LET" if stop.listing.txn_type == "RENT" else "SOLD",
+            st.Actor("visit_feedback", org=stop.listing.org, user=user),
+            reason="found let at site visit",
+        )
     if not stop.plan.stops.filter(removed=False, outcome="").exists():
         complete_plan(stop.plan)
     return stop
@@ -307,6 +360,7 @@ def complete_plan(plan: VisitPlan) -> None:
 
 # --- offline sync (OFF-10/11) -------------------------------------------------
 
+
 def apply_mutations(*, org_id, user, device_id: str, mutations: list[dict]) -> list[dict]:
     """Apply queued field-app mutations exactly once.
 
@@ -323,8 +377,15 @@ def apply_mutations(*, org_id, user, device_id: str, mutations: list[dict]) -> l
         with transaction.atomic():
             result, detail = _apply_one(org_id, user, m)
             SyncMutation.objects.create(
-                idempotency_key=key, org_id=org_id, user=user, device_id=device_id[:64], entity=m.get("entity", "")[:30],
-                payload=m, client_ts=m.get("client_ts") or timezone.now(), result=result, detail=detail,
+                idempotency_key=key,
+                org_id=org_id,
+                user=user,
+                device_id=device_id[:64],
+                entity=m.get("entity", "")[:30],
+                payload=m,
+                client_ts=m.get("client_ts") or timezone.now(),
+                result=result,
+                detail=detail,
             )
         out.append({"idempotency_key": key, "result": result, "detail": detail})
     return out

@@ -1,4 +1,5 @@
 """The broker's customer book (CRM-*, OFF-*). Private to the broker org via RLS."""
+
 from django.conf import settings
 from django.contrib.gis.db import models as gis
 from django.contrib.postgres.fields import ArrayField
@@ -60,7 +61,12 @@ class Customer(BaseModel):
 
     @property
     def can_message(self) -> bool:
-        return self.consent_state in (self.Consent.OTP_CONFIRMED, self.Consent.LINK_CONFIRMED, self.Consent.APP, self.Consent.ATTESTED_VERBAL)
+        return self.consent_state in (
+            self.Consent.OTP_CONFIRMED,
+            self.Consent.LINK_CONFIRMED,
+            self.Consent.APP,
+            self.Consent.ATTESTED_VERBAL,
+        )
 
 
 class Requirement(BaseModel):

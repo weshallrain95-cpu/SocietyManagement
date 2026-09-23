@@ -4,6 +4,7 @@ Signals that are missing (no coordinates, no pin code, no confirmed alias) are l
 the weighted average rather than counted as zero, so a clean exact-name match can still auto-match.
 Ambiguity is caught by the runner-up gap instead.
 """
+
 from dataclasses import dataclass, field
 
 from django.contrib.gis.db.models.functions import Distance
@@ -70,8 +71,16 @@ def name_similarity(a: NormalisedName, b: NormalisedName) -> float:
     return best
 
 
-def find_candidates(raw_name: str, *, point=None, pincode: str = "", locality: Locality | None = None,
-                    micro_market=None, include_provisional_for_org=None, limit: int = 5) -> list[Candidate]:
+def find_candidates(
+    raw_name: str,
+    *,
+    point=None,
+    pincode: str = "",
+    locality: Locality | None = None,
+    micro_market=None,
+    include_provisional_for_org=None,
+    limit: int = 5,
+) -> list[Candidate]:
     q = normalise_name(raw_name)
     if not q.tokens:
         return []
@@ -86,7 +95,10 @@ def find_candidates(raw_name: str, *, point=None, pincode: str = "", locality: L
         base = base.filter(locality__micro_market=micro_market)
 
     ids = set(
-        base.annotate(sim=TrigramSimilarity("name_normalised", q.text)).filter(sim__gt=0.2).order_by("-sim").values_list("id", flat=True)[:30]
+        base.annotate(sim=TrigramSimilarity("name_normalised", q.text))
+        .filter(sim__gt=0.2)
+        .order_by("-sim")
+        .values_list("id", flat=True)[:30]
     )
     alias_hits = (
         SocietyAlias.objects.filter(society__in=base)

@@ -1,4 +1,5 @@
 """Load the Unit Attribute Dictionary from the founder-review spreadsheet or the committed YAML."""
+
 from pathlib import Path
 
 import yaml
@@ -96,6 +97,4 @@ def rows_from_yaml(path) -> tuple[list[dict], str]:
 def write_yaml(rows: list[dict], path, version: str) -> None:
     clean = [{k: v for k, v in r.items() if k != "review"} for r in rows]
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    Path(path).write_text(
-        yaml.safe_dump({"version": version, "attributes": clean}, allow_unicode=True, sort_keys=False), encoding="utf-8"
-    )
+    Path(path).write_text(yaml.safe_dump({"version": version, "attributes": clean}, allow_unicode=True, sort_keys=False), encoding="utf-8")

@@ -1,4 +1,5 @@
 """Only Broker settings. Everything environment-specific comes from env vars (.env on the laptop)."""
+
 from datetime import timedelta
 from pathlib import Path
 
@@ -69,11 +70,7 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-DATABASES = {
-    "default": env.db_url(
-        "DATABASE_URL", default="postgis://ob_app:ob_app_dev_password@localhost:5432/onlybroker"
-    )
-}
+DATABASES = {"default": env.db_url("DATABASE_URL", default="postgis://ob_app:ob_app_dev_password@localhost:5432/onlybroker")}
 DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 # Every request runs in one transaction so the RLS context (SET LOCAL) is scoped to it.
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
@@ -121,7 +118,7 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["apps.identity.authentication.OrgAwareJWTAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.CursorPagination",
+    "DEFAULT_PAGINATION_CLASS": "common.api.Paginated",
     "PAGE_SIZE": 50,
     "DEFAULT_THROTTLE_RATES": {"otp": "5/15min", "public_link": "30/min"},
     "TEST_REQUEST_DEFAULT_FORMAT": "json",

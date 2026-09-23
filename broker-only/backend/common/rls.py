@@ -8,6 +8,7 @@ never leak across requests on a pooled connection.
 System jobs that need cross-broker *aggregates* (map cells, anonymised status
 notifications) run inside :func:`platform_context`.
 """
+
 from contextlib import contextmanager
 
 from django.db import connection, migrations, transaction
@@ -46,9 +47,7 @@ def org_context(org_id):
     """Run a block as broker org ``org_id`` (for Celery tasks, consumers and tests)."""
     with transaction.atomic():
         with connection.cursor() as cur:
-            cur.execute(
-                "SELECT current_setting('app.broker_org_id', true), current_setting('app.rls_bypass', true)"
-            )
+            cur.execute("SELECT current_setting('app.broker_org_id', true), current_setting('app.rls_bypass', true)")
             prev_org, prev_bypass = cur.fetchone()
         set_org(org_id)
         _set("app.rls_bypass", "")
@@ -94,8 +93,7 @@ def enable_rls(table: str, column: str = "broker_org_id") -> migrations.RunSQL:
             RLS_FUNCTION_SQL,
             f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY',
             f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY',
-            f'CREATE POLICY org_isolation ON "{table}" USING (ob_rls_allows({column})) '
-            f"WITH CHECK (ob_rls_allows({column}))",
+            f'CREATE POLICY org_isolation ON "{table}" USING (ob_rls_allows({column})) WITH CHECK (ob_rls_allows({column}))',
         ],
         reverse_sql=[
             f'DROP POLICY IF EXISTS org_isolation ON "{table}"',
@@ -112,8 +110,7 @@ def forbid_update_delete(table: str) -> migrations.RunSQL:
         sql=[
             f"""CREATE OR REPLACE FUNCTION {fn}() RETURNS trigger LANGUAGE plpgsql AS $$
                 BEGIN RAISE EXCEPTION '{table} is append-only'; END $$;""",
-            f'CREATE TRIGGER {fn}_trg BEFORE UPDATE OR DELETE ON "{table}" '
-            f"FOR EACH ROW EXECUTE FUNCTION {fn}()",
+            f'CREATE TRIGGER {fn}_trg BEFORE UPDATE OR DELETE ON "{table}" FOR EACH ROW EXECUTE FUNCTION {fn}()',
         ],
         reverse_sql=[f'DROP TRIGGER IF EXISTS {fn}_trg ON "{table}"', f"DROP FUNCTION IF EXISTS {fn}()"],
     )

@@ -54,9 +54,7 @@ class Membership(BaseModel):
     ended_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["user", "org"], condition=models.Q(active=True), name="one_active_membership")
-        ]
+        constraints = [models.UniqueConstraint(fields=["user", "org"], condition=models.Q(active=True), name="one_active_membership")]
 
     @property
     def can_manage(self):

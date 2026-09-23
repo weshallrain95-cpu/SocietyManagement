@@ -1,4 +1,5 @@
 """Canonical hashing shared by the audit log and the unit status ledger."""
+
 import hashlib
 import json
 from datetime import date, datetime

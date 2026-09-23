@@ -1,4 +1,5 @@
 """NFR-04: one broker's inventory must never be readable or writable by another."""
+
 import pytest
 from django.db import DataError, ProgrammingError, connection
 from django.utils import timezone
@@ -71,17 +72,26 @@ def test_customer_books_are_isolated(broker_a, broker_b):
 
 def test_every_broker_private_table_has_forced_rls():
     private = {
-        "inventory_listing", "inventory_keycustody", "inventory_uploadbatch", "inventory_uploadrow",
-        "inventory_savedcolumnmapping", "crm_customer", "crm_requirement", "crm_customerinteraction",
-        "crm_shortlist", "crm_shortlistitem", "matching_matchrun", "matching_matchresult",
-        "visits_visitplan", "visits_visitstop", "visits_syncmutation",
+        "inventory_listing",
+        "inventory_keycustody",
+        "inventory_uploadbatch",
+        "inventory_uploadrow",
+        "inventory_savedcolumnmapping",
+        "crm_customer",
+        "crm_requirement",
+        "crm_customerinteraction",
+        "crm_shortlist",
+        "crm_shortlistitem",
+        "matching_matchrun",
+        "matching_matchresult",
+        "visits_visitplan",
+        "visits_visitstop",
+        "visits_syncmutation",
     }
     with connection.cursor() as cur:
         cur.execute("SELECT relname FROM pg_class WHERE relrowsecurity AND relforcerowsecurity")
         forced = {r[0] for r in cur.fetchall()}
-        cur.execute(
-            "SELECT table_name FROM information_schema.columns WHERE column_name = 'broker_org_id' AND table_schema = 'public'"
-        )
+        cur.execute("SELECT table_name FROM information_schema.columns WHERE column_name = 'broker_org_id' AND table_schema = 'public'")
         with_org_column = {r[0] for r in cur.fetchall()}
     assert private <= forced
     assert with_org_column <= forced, f"tables with broker_org_id but no RLS: {with_org_column - forced}"

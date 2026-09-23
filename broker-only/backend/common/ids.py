@@ -1,4 +1,5 @@
 """UUIDv7 (time-ordered) ids: index-friendly primary keys that still leak nothing sequential."""
+
 import os
 import time
 import uuid

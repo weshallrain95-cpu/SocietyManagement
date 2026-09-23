@@ -16,6 +16,7 @@ from apps.visits import services as v
 from apps.visits.models import VisitStop
 from common import rls
 from common.crypto import token_hash
+from common.links import LinkError
 from common.models import ShareLink
 
 from .conftest import DHOKALI, make_user
@@ -34,8 +35,7 @@ def tour(thane, attrs, broker_a):
             s = Society.objects.create(canonical_name=name, locality=thane["dhokali"], location=Point(lng, lat, srid=4326))
             b = Building.objects.create(society=s, name="A", location=s.location)
             u = Unit.objects.create(building=b, unit_no="101", bhk=2)
-            listing, _ = create_listing(org=org, user=user, unit=u, txn_type="RENT", data={"asking_rent": 22000},
-                                        owner_phone="9819000100")
+            listing, _ = create_listing(org=org, user=user, unit=u, txn_type="RENT", data={"asking_rent": 22000}, owner_phone="9819000100")
             set_keys(listing, holder_type="office")
             listings.append(listing)
         customer, _ = crm.capture_customer(org=org, user=user, phone="9876511111", name="Riya", source="phone_call")
@@ -46,8 +46,9 @@ def tour(thane, attrs, broker_a):
 
 
 def _plan(t):
-    return v.create_plan(customer=t["customer"], listings=t["listings"], date=date(2026, 10, 3), start_time=time(11, 0),
-                         user=t["user"], start_point=DHOKALI)
+    return v.create_plan(
+        customer=t["customer"], listings=t["listings"], date=date(2026, 10, 3), start_time=time(11, 0), user=t["user"], start_point=DHOKALI
+    )
 
 
 def test_route_is_optimised_and_timed(tour):
@@ -59,13 +60,13 @@ def test_route_is_optimised_and_timed(tour):
 
         def length(order):
             path = [start] + [pts[i] for i in order]
-            return sum(routing.haversine_m(a, b) for a, b in zip(path, path[1:]))
+            return sum(routing.haversine_m(a, b) for a, b in zip(path, path[1:], strict=False))
 
         chosen = length(range(len(pts)))
         assert chosen <= min(length(p) for p in itertools.permutations(range(len(pts)))) + 1
         # The entry order (North, South, Middle) zig-zags and must not be what we kept.
         assert [s.listing.unit.building.society.canonical_name for s in stops] != ["North Tower", "South Court", "Middle Park"]
-        assert all(a.slot_end <= b.slot_start for a, b in zip(stops, stops[1:]))
+        assert all(a.slot_end <= b.slot_start for a, b in zip(stops, stops[1:], strict=False))
         assert plan.total_travel_min > 0
 
 
@@ -117,9 +118,28 @@ def test_offline_sync_is_idempotent_and_server_wins_on_structure(tour):
         s1, s2, s3 = v.live_stops(plan)
         v.remove_stop(plan, s3)  # broker removes a stop while staff is offline
         muts = [
-            {"idempotency_key": "k1", "entity": "checkin", "stop_id": str(s1.pk), "client_ts": "2026-10-03T11:05:00+05:30", "lat": s1.listing.unit.building.location.y, "lng": s1.listing.unit.building.location.x},
-            {"idempotency_key": "k2", "entity": "outcome", "stop_id": str(s1.pk), "outcome": "liked", "client_ts": "2026-10-03T11:20:00+05:30"},
-            {"idempotency_key": "k3", "entity": "outcome", "stop_id": str(s3.pk), "outcome": "rejected", "client_ts": "2026-10-03T12:00:00+05:30"},
+            {
+                "idempotency_key": "k1",
+                "entity": "checkin",
+                "stop_id": str(s1.pk),
+                "client_ts": "2026-10-03T11:05:00+05:30",
+                "lat": s1.listing.unit.building.location.y,
+                "lng": s1.listing.unit.building.location.x,
+            },
+            {
+                "idempotency_key": "k2",
+                "entity": "outcome",
+                "stop_id": str(s1.pk),
+                "outcome": "liked",
+                "client_ts": "2026-10-03T11:20:00+05:30",
+            },
+            {
+                "idempotency_key": "k3",
+                "entity": "outcome",
+                "stop_id": str(s3.pk),
+                "outcome": "rejected",
+                "client_ts": "2026-10-03T12:00:00+05:30",
+            },
         ]
         res = v.apply_mutations(org_id=org.pk, user=staff, device_id="phone-1", mutations=muts)
         assert [r["result"] for r in res] == ["applied", "applied", "conflict"]
@@ -156,7 +176,7 @@ def test_completed_visit_unlocks_offline_review(tour):
     assert r.verified_offline
     org.refresh_from_db()
     assert org.rating_count == 1 and float(org.rating_bayes) == pytest.approx(4.17, abs=0.01)
-    with pytest.raises(Exception):
+    with pytest.raises(LinkError):
         reviews.review_via_link("review-click", stars=1)
 
 

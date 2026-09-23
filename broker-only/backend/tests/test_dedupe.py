@@ -66,8 +66,9 @@ def test_merge_repoints_buildings_units_and_listings(registry, thane, attrs, bro
 
     from apps.inventory.models import Listing
 
-    dup = Society.objects.create(canonical_name="Hira Nandani Estate", locality=thane["dhokali"], location=DHOKALI,
-                                 status=Society.Status.PROVISIONAL)
+    dup = Society.objects.create(
+        canonical_name="Hira Nandani Estate", locality=thane["dhokali"], location=DHOKALI, status=Society.Status.PROVISIONAL
+    )
     b_real = get_or_create_building(registry["he"], "Rodas A")
     b_dup = get_or_create_building(dup, "A Rodas") if False else get_or_create_building(dup, "Rodas A")
     u_real = Unit.objects.create(building=b_real, unit_no="1203", bhk=2)

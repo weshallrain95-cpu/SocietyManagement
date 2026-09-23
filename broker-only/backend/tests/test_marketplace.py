@@ -6,7 +6,8 @@ from django.utils import timezone
 
 from apps.crm.models import Customer, Requirement
 from apps.inventory.services import create_listing
-from apps.marketplace import presence, services as mkt, supply
+from apps.marketplace import presence, supply
+from apps.marketplace import services as mkt
 from apps.marketplace.models import EnquiryDelivery
 from apps.masterdata.models import Building, Unit
 from apps.orgs.models import ServiceArea
@@ -32,17 +33,32 @@ def market(society, attrs, broker_a, broker_b):
     with rls.org_context(org_a.pk):
         for i in range(6):
             u = Unit.objects.create(building=b, unit_no=f"{i + 1}01", bhk=2)
-            create_listing(org=org_a, user=user_a, unit=u, txn_type="RENT", data={"asking_rent": 20000 + i * 1000},
-                           attributes={"pets_allowed": "all pets"})
+            create_listing(
+                org=org_a,
+                user=user_a,
+                unit=u,
+                txn_type="RENT",
+                data={"asking_rent": 20000 + i * 1000},
+                attributes={"pets_allowed": "all pets"},
+            )
     presence.heartbeat(org_a.pk, user_a.pk)
     riya = make_user("9876543210", "Riya")
     return {"far": far_org, "pending": pending_org, "riya": riya}
 
 
 def _enquiry(user, **kw):
-    data = {"txn_type": "RENT", "bhk_min": 2, "bhk_max": 2, "budget_max": 25000, "center": DHOKALI, "radius_m": 3000,
-            "area_label": "Dhokali", "house_rule_needs": {"pets": "dog"}, "must_haves": {"furn_gas_stove": True},
-            "urgency": "urgent"}
+    data = {
+        "txn_type": "RENT",
+        "bhk_min": 2,
+        "bhk_max": 2,
+        "budget_max": 25000,
+        "center": DHOKALI,
+        "radius_m": 3000,
+        "area_label": "Dhokali",
+        "house_rule_needs": {"pets": "dog"},
+        "must_haves": {"furn_gas_stove": True},
+        "urgency": "urgent",
+    }
     data.update(kw)
     return mkt.create_enquiry(user, data)
 
@@ -112,8 +128,9 @@ def test_price_band_hidden_below_k_anonymity(society, attrs, broker_a):
     org, user = broker_a
     b = Building.objects.create(society=society, name="Solo", location=society.location)
     with rls.org_context(org.pk):
-        create_listing(org=org, user=user, unit=Unit.objects.create(building=b, unit_no="1", bhk=1), txn_type="RENT",
-                       data={"asking_rent": 15000})
+        create_listing(
+            org=org, user=user, unit=Unit.objects.create(building=b, unit_no="1", bhk=1), txn_type="RENT", data={"asking_rent": 15000}
+        )
     with rls.platform_context():
         supply.rebuild()
     [cluster] = supply.map_view(bbox=(72.90, 19.15, 73.05, 19.30), zoom=13, txn_type="RENT")["clusters"]

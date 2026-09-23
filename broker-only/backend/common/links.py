@@ -1,4 +1,5 @@
 """Create and redeem tokenised share links."""
+
 from datetime import timedelta
 
 from django.db import transaction

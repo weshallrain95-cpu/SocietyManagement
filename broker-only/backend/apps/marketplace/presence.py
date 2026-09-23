@@ -1,4 +1,5 @@
 """Broker presence (MKT-11): a heartbeat every ~60 s keeps a broker 'online' for 10 minutes."""
+
 from django.conf import settings
 from django.core.cache import cache
 

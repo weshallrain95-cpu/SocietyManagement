@@ -4,7 +4,7 @@ from django.utils import timezone
 from apps.masterdata.models import OwnershipClaim
 from apps.status import services as st
 from apps.status.models import State, StatusConfirmation, StatusEvent
-from common.links import resolve_link
+from common.links import LinkError, resolve_link
 
 from .conftest import make_user
 
@@ -93,7 +93,7 @@ def test_confirmation_link_is_single_use(unit, broker_a, owner):
     conf2 = st.request_owner_confirmation(unit, "RENT", previous_state=State.LET, org=broker_a[0], owner=owner)
     token = conf2._token
     resolve_link(token, "status_confirmation", consume=True)
-    with pytest.raises(Exception):
+    with pytest.raises(LinkError):
         resolve_link(token, "status_confirmation", consume=True)
 
 

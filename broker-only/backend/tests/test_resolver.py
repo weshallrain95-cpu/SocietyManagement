@@ -26,7 +26,9 @@ def test_owner_beats_brokers(unit, broker_a, broker_b):
 def test_fresh_report_outweighs_stale_one(unit, broker_a, broker_b):
     """Data Model §6.3 worked example."""
     resolver.record(unit, "pets_allowed", "no", source_type="broker", org=broker_b[0], observed_at=timezone.now() - timedelta(days=200))
-    resolver.record(unit, "pets_allowed", "all pets", source_type="broker", org=broker_a[0], observed_at=timezone.now() - timedelta(days=10))
+    resolver.record(
+        unit, "pets_allowed", "all pets", source_type="broker", org=broker_a[0], observed_at=timezone.now() - timedelta(days=10)
+    )
     ra = _resolved(unit, "pets_allowed")
     assert ra.value == "all pets" and not ra.disputed
 
@@ -64,10 +66,16 @@ def test_mirrors_to_unit_columns(unit, broker_a):
     assert float(unit.bhk) == 2.5
 
 
-@pytest.mark.parametrize("key,value,expected", [
-    ("lift", "Yes", True), ("lift", "nahi", False), ("car_parking_covered", "1", 1),
-    ("furnishing", "Semi furnished", "semi-furnished"), ("carpet_area_sqft", "1,050", 1050.0),
-])
+@pytest.mark.parametrize(
+    "key,value,expected",
+    [
+        ("lift", "Yes", True),
+        ("lift", "nahi", False),
+        ("car_parking_covered", "1", 1),
+        ("furnishing", "Semi furnished", "semi-furnished"),
+        ("carpet_area_sqft", "1,050", 1050.0),
+    ],
+)
 def test_value_validation(attrs, key, value, expected):
     from apps.masterdata.models import AttributeDef
 

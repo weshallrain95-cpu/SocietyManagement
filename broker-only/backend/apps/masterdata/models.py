@@ -1,4 +1,5 @@
 """Master data: the shared, canonical registry of places and units (Data Model §3.2)."""
+
 from django.conf import settings
 from django.contrib.gis.db import models as gis
 from django.contrib.postgres.fields import ArrayField

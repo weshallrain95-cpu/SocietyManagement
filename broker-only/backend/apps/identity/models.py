@@ -12,9 +12,7 @@ class UserManager(BaseUserManager):
 
     def create_user(self, phone: str, display_name: str = "", password=None, **extra):
         e164 = crypto.normalise_phone(phone)
-        user = self.model(
-            phone_hash=crypto.phone_hash(e164), phone_enc=crypto.encrypt(e164), display_name=display_name, **extra
-        )
+        user = self.model(phone_hash=crypto.phone_hash(e164), phone_enc=crypto.encrypt(e164), display_name=display_name, **extra)
         if password:
             user.set_password(password)
         else:

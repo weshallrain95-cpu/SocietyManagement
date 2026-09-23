@@ -1,4 +1,5 @@
 """Broker-private inventory. Every table here is protected by Postgres row-level security."""
+
 from django.conf import settings
 from django.db import models
 

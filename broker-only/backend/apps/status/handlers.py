@@ -1,4 +1,5 @@
 """Side effects of status changes, run by the outbox relay (platform context)."""
+
 from common.events import handles
 from common.notify import notify_org
 

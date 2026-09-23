@@ -5,6 +5,7 @@ Downgrades are cheap, upgrades are expensive:
   * making it available again after LET/SOLD/OFF_MARKET needs the verified owner,
     or (with no verified owner on the platform) independent broker consensus.
 """
+
 from datetime import timedelta
 
 from django.conf import settings
@@ -75,12 +76,15 @@ def _validate(txn_type, state):
 
 
 @transaction.atomic
-def report(unit, txn_type: str, new_state: str, actor: Actor, *, reason: str = "", available_from=None,
-           licence_end_date=None) -> UnitStatus:
+def report(
+    unit, txn_type: str, new_state: str, actor: Actor, *, reason: str = "", available_from=None, licence_end_date=None
+) -> UnitStatus:
     """Apply a status claim from any actor. Returns the (possibly unchanged) master status."""
     _validate(txn_type, new_state)
     st = UnitStatus.objects.select_for_update().get(pk=get_status(unit, txn_type).pk)
-    StatusReport.objects.create(unit=unit, txn_type=txn_type, reported_state=new_state, actor_type=actor.type, org=actor.org, user=actor.user)
+    StatusReport.objects.create(
+        unit=unit, txn_type=txn_type, reported_state=new_state, actor_type=actor.type, org=actor.org, user=actor.user
+    )
     now = timezone.now()
 
     if new_state in DOWNGRADES:
@@ -210,9 +214,7 @@ def request_owner_confirmation(unit, txn_type, *, previous_state, org, owner) ->
     conf = StatusConfirmation.objects.create(
         unit=unit, txn_type=txn_type, requested_state=State.AVAILABLE, previous_state=previous_state, requested_by_org=org, owner=owner
     )
-    link, token = create_link(
-        ShareLink.Purpose.STATUS_CONFIRMATION, conf, hours=settings.OB_STATUS_RULES["confirmation_ttl_hours"]
-    )
+    link, token = create_link(ShareLink.Purpose.STATUS_CONFIRMATION, conf, hours=settings.OB_STATUS_RULES["confirmation_ttl_hours"])
     conf.link = link
     conf.save(update_fields=["link"])
     send_message(

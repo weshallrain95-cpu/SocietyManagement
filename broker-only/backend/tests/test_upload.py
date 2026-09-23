@@ -21,7 +21,7 @@ SHEET = [
     ["Shanti Niwas", "", "7", "1BHK", "15000", "", "", "", "", "", ""],
     ["Sai Krupa Residency", "", "301", "2", "18000", "", "", "", "", "", ""],
     ["Hiranandani Estate", "", "", "2BHK", "20000", "", "", "", "", "", "missing flat"],
-    ["Hiranandani Estate", "Rodas A", "1205", "two", "=HYPERLINK(\"x\")", "", "", "", "", "", ""],
+    ["Hiranandani Estate", "Rodas A", "1205", "two", '=HYPERLINK("x")', "", "", "", "", "", ""],
 ]
 
 
@@ -79,7 +79,7 @@ def test_mapping_is_remembered(society, attrs, thane, broker_a):
 
 def test_csv_upload(society, attrs, thane, broker_a):
     org, user = broker_a
-    csv_bytes = "Society,Flat,BHK,Rent\nHiranandani Estate,1601,3,45000\n".encode()
+    csv_bytes = b"Society,Flat,BHK,Rent\nHiranandani Estate,1601,3,45000\n"
     with rls.org_context(org.pk):
         batch = upload.create_batch(org=org, user=user, filename="x.csv", content=csv_bytes, micro_market=thane["mm"])
         assert batch.rows.get().resolution == UploadRow.Resolution.AUTO
@@ -89,6 +89,8 @@ def test_csv_upload(society, attrs, thane, broker_a):
 def test_other_broker_cannot_see_batch(society, attrs, thane, broker_a, broker_b):
     org, user = broker_a
     with rls.org_context(org.pk):
-        batch = upload.create_batch(org=org, user=user, filename="x.csv", content=b"Society,Flat,BHK\nHiranandani Estate,1,2\n", micro_market=thane["mm"])
+        batch = upload.create_batch(
+            org=org, user=user, filename="x.csv", content=b"Society,Flat,BHK\nHiranandani Estate,1,2\n", micro_market=thane["mm"]
+        )
     with rls.org_context(broker_b[0].pk):
         assert not UploadRow.objects.filter(batch_id=batch.pk).exists()

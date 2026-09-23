@@ -1,5 +1,6 @@
 """Visit ordering. Google Routes API (waypoint optimisation) is used when configured; this local
 fallback (nearest neighbour + 2-opt on street-adjusted distances) always works, including offline."""
+
 import math
 
 ROAD_FACTOR = 1.35

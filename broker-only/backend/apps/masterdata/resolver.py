@@ -1,4 +1,5 @@
 """One unit, one truth: resolve competing observations into a single value (Data Model §6)."""
+
 import math
 from collections import defaultdict
 from decimal import Decimal
@@ -85,9 +86,7 @@ def resolve(subject_type: str, subject_id, attr: AttributeDef) -> ResolvedAttrib
     if len(ranked) > 1:
         run_key, run_w = ranked[1]
         disputed = run_w >= DISPUTE_RATIO * win_w and len(actors[run_key]) >= 2
-    return _store(
-        subject_type, subject_id, attr, values[win_key], best_source[win_key][1], support=len(actors[win_key]), disputed=disputed
-    )
+    return _store(subject_type, subject_id, attr, values[win_key], best_source[win_key][1], support=len(actors[win_key]), disputed=disputed)
 
 
 def _store(subject_type, subject_id, attr, value, source, *, support, disputed) -> ResolvedAttribute:
@@ -106,8 +105,9 @@ def _store(subject_type, subject_id, attr, value, source, *, support, disputed) 
     return ra
 
 
-def record(subject, attr_key: str, value, *, source_type: str, user=None, org=None, confidence=1.0,
-           observed_at=None, resolve_now: bool = True) -> AttributeObservation | None:
+def record(
+    subject, attr_key: str, value, *, source_type: str, user=None, org=None, confidence=1.0, observed_at=None, resolve_now: bool = True
+) -> AttributeObservation | None:
     """Add an observation (validated against the dictionary) and re-resolve."""
     attr = AttributeDef.objects.filter(key=attr_key, active=True).first()
     if attr is None:

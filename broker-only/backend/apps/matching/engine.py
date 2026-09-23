@@ -5,6 +5,7 @@ Rules
     values never exclude; they cost score and show as "≈ not confirmed" (docs/06 rule 7).
   * Every criterion produces an explanation chip: ok (✔), fail (✖) or unknown (≈).
 """
+
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -170,27 +171,42 @@ def _house_rules(needs: dict, attrs: dict, occupants):
     if needs.get("pets"):
         pet = str(needs["pets"]).lower()
         rule, society = val("pets_allowed"), val("society_pet_policy")
-        blocked = rule == "no" or society == "not allowed" or (rule == "cats only" and pet != "cat") or (
-            rule == "small dogs" and pet not in ("dog", "small dog", "small_dog")
+        blocked = (
+            rule == "no"
+            or society == "not allowed"
+            or (rule == "cats only" and pet != "cat")
+            or (rule == "small dogs" and pet not in ("dog", "small dog", "small_dog"))
         )
         yield _chip("pets_allowed", "Pets", "fail" if blocked else ("unknown" if rule is None else "ok"), rule or ""), blocked, rule is None
     if needs.get("nonveg_cooking"):
         rule = val("nonveg_cooking")
-        yield _chip("nonveg_cooking", "Non-veg cooking", "fail" if rule == "not allowed" else ("unknown" if rule is None else "ok")), rule == "not allowed", rule is None
+        yield (
+            _chip("nonveg_cooking", "Non-veg cooking", "fail" if rule == "not allowed" else ("unknown" if rule is None else "ok")),
+            rule == "not allowed",
+            rule is None,
+        )
     if needs.get("bachelors"):
         rule, fam = val("bachelors_allowed"), val("family_only")
         blocked = rule == "not allowed" or fam is True
         yield _chip("bachelors_allowed", "Bachelors", "fail" if blocked else ("unknown" if rule is None else "ok")), blocked, rule is None
     if needs.get("smoking"):
         rule = val("smoking")
-        yield _chip("smoking", "Smoking", "fail" if rule == "not allowed" else ("unknown" if rule is None else "ok")), rule == "not allowed", rule is None
+        yield (
+            _chip("smoking", "Smoking", "fail" if rule == "not allowed" else ("unknown" if rule is None else "ok")),
+            rule == "not allowed",
+            rule is None,
+        )
     if needs.get("company_lease"):
         rule = val("company_lease")
         yield _chip("company_lease", "Company lease", "ok" if rule else "unknown"), False, rule is None
     if occupants:
         cap = val("max_occupants")
         blocked = cap is not None and occupants > cap
-        yield _chip("max_occupants", "Occupants", "fail" if blocked else ("unknown" if cap is None else "ok"), str(cap or "")), blocked, cap is None
+        yield (
+            _chip("max_occupants", "Occupants", "fail" if blocked else ("unknown" if cap is None else "ok"), str(cap or "")),
+            blocked,
+            cap is None,
+        )
 
 
 def load_facts(listings: list[Listing], txn_type: str) -> list[Facts]:
@@ -198,9 +214,9 @@ def load_facts(listings: list[Listing], txn_type: str) -> list[Facts]:
     units = {l.unit_id: l.unit for l in listings}
     buildings = {u.building_id for u in units.values()}
     societies = {u.building.society_id for u in units.values()}
-    resolved = ResolvedAttribute.objects.filter(
-        subject_id__in=list(units) + list(buildings) + list(societies)
-    ).values_list("subject_id", "attr_id", "value", "disputed")
+    resolved = ResolvedAttribute.objects.filter(subject_id__in=list(units) + list(buildings) + list(societies)).values_list(
+        "subject_id", "attr_id", "value", "disputed"
+    )
     by_subject: dict = {}
     for sid, key, value, disputed in resolved:
         by_subject.setdefault(sid, {})[key] = (value, disputed)
@@ -231,9 +247,8 @@ def load_facts(listings: list[Listing], txn_type: str) -> list[Facts]:
 
 def run(req, *, org_id, include_unconfirmed=True, include_excluded=False) -> list[Result]:
     """Match against the org's own listings. Caller must be in that org's RLS context."""
-    qs = (
-        Listing.objects.filter(org_id=org_id, txn_type=req.txn_type, archived_at__isnull=True, withdrawn_by_owner=False)
-        .select_related("unit__building__society")
+    qs = Listing.objects.filter(org_id=org_id, txn_type=req.txn_type, archived_at__isnull=True, withdrawn_by_owner=False).select_related(
+        "unit__building__society"
     )
     live = [State.AVAILABLE] + ([State.AVAILABLE_UNCONFIRMED] if include_unconfirmed else [])
     qs = qs.filter(unit__statuses__txn_type=req.txn_type, unit__statuses__state__in=live)

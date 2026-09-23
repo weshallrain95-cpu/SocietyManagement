@@ -4,26 +4,79 @@ Pure functions, no database access, heavily unit-tested: this is what stops
 "Hira Nandani Est.", "Hiranandani Estate" and "HIRANANDANI ESTATE CHS" from
 becoming three different societies.
 """
+
 import re
 import unicodedata
 from dataclasses import dataclass, field
 
 # Abbreviations and spelling variants -> canonical token.
 EXPANSIONS = {
-    "est": "estate", "estt": "estate", "encl": "enclave", "encl.": "enclave", "hts": "heights", "ht": "heights",
-    "apt": "apartment", "apts": "apartment", "appt": "apartment", "apartments": "apartment", "aptmt": "apartment",
-    "bldg": "building", "bldgs": "building", "blds": "building", "bld": "building", "buildings": "building",
-    "twr": "tower", "twrs": "tower", "towers": "tower", "resi": "residency", "res": "residency",
-    "residences": "residency", "residence": "residency", "cplx": "complex", "comp": "complex",
-    "soc": "society", "socy": "society", "sty": "society", "nagr": "nagar", "ngr": "nagar",
-    "pk": "park", "gdn": "garden", "gdns": "garden", "gardens": "garden", "vly": "valley", "vihar": "vihar",
-    "chsl": "chs", "c.h.s": "chs", "c.h.s.": "chs", "c.h.s.l": "chs", "cghs": "chs",
-    "phs": "phase", "ph": "phase", "sec": "sector", "sect": "sector", "no": "", "rd": "road", "mg": "mg",
+    "est": "estate",
+    "estt": "estate",
+    "encl": "enclave",
+    "encl.": "enclave",
+    "hts": "heights",
+    "ht": "heights",
+    "apt": "apartment",
+    "apts": "apartment",
+    "appt": "apartment",
+    "apartments": "apartment",
+    "aptmt": "apartment",
+    "bldg": "building",
+    "bldgs": "building",
+    "blds": "building",
+    "bld": "building",
+    "buildings": "building",
+    "twr": "tower",
+    "twrs": "tower",
+    "towers": "tower",
+    "resi": "residency",
+    "res": "residency",
+    "residences": "residency",
+    "residence": "residency",
+    "cplx": "complex",
+    "comp": "complex",
+    "soc": "society",
+    "socy": "society",
+    "sty": "society",
+    "nagr": "nagar",
+    "ngr": "nagar",
+    "pk": "park",
+    "gdn": "garden",
+    "gdns": "garden",
+    "gardens": "garden",
+    "vly": "valley",
+    "vihar": "vihar",
+    "chsl": "chs",
+    "c.h.s": "chs",
+    "c.h.s.": "chs",
+    "c.h.s.l": "chs",
+    "cghs": "chs",
+    "phs": "phase",
+    "ph": "phase",
+    "sec": "sector",
+    "sect": "sector",
+    "no": "",
+    "rd": "road",
+    "mg": "mg",
     "ext": "extension",
     # Common Devanagari-transliteration spellings.
-    "istet": "estate", "estet": "estate", "isteit": "estate", "sosaiti": "society", "sosayati": "society",
-    "sosaayatee": "society", "apaartament": "apartment", "apartament": "apartment", "tavar": "tower", "taavar": "tower",
-    "paark": "park", "haits": "heights", "rejidensi": "residency", "rejeedensee": "residency", "extn": "extension", "st": "saint",
+    "istet": "estate",
+    "estet": "estate",
+    "isteit": "estate",
+    "sosaiti": "society",
+    "sosayati": "society",
+    "sosaayatee": "society",
+    "apaartament": "apartment",
+    "apartament": "apartment",
+    "tavar": "tower",
+    "taavar": "tower",
+    "paark": "park",
+    "haits": "heights",
+    "rejidensi": "residency",
+    "rejeedensee": "residency",
+    "extn": "extension",
+    "st": "saint",
 }
 # Multi-word legal suffixes collapsed before tokenising.
 PHRASES = [
@@ -33,17 +86,89 @@ PHRASES = [
 ]
 # Generic words: kept, but carry little identity (weak tokens).
 WEAK = {
-    "chs", "society", "apartment", "building", "tower", "heights", "residency", "complex", "estate", "enclave",
-    "park", "nagar", "garden", "phase", "sector", "the", "and", "of", "new", "old", "co", "op", "hsg", "valley",
-    "palace", "plaza", "villa", "villas", "homes", "home", "city", "township", "court", "castle", "mansion",
-    "road", "marg", "lane", "niwas", "sadan", "bhavan", "bhawan", "kunj", "dham", "vihar", "angan", "wing", "block", "bldg",
+    "chs",
+    "society",
+    "apartment",
+    "building",
+    "tower",
+    "heights",
+    "residency",
+    "complex",
+    "estate",
+    "enclave",
+    "park",
+    "nagar",
+    "garden",
+    "phase",
+    "sector",
+    "the",
+    "and",
+    "of",
+    "new",
+    "old",
+    "co",
+    "op",
+    "hsg",
+    "valley",
+    "palace",
+    "plaza",
+    "villa",
+    "villas",
+    "homes",
+    "home",
+    "city",
+    "township",
+    "court",
+    "castle",
+    "mansion",
+    "road",
+    "marg",
+    "lane",
+    "niwas",
+    "sadan",
+    "bhavan",
+    "bhawan",
+    "kunj",
+    "dham",
+    "vihar",
+    "angan",
+    "wing",
+    "block",
+    "bldg",
 }
 # Locality words commonly appended to names in broker sheets (pilot + neighbours).
 LOCALITY_WORDS = {
-    "thane", "thane west", "thane w", "ghodbunder", "ghodbunder road", "gb road", "g b road", "dhokali", "manpada",
-    "kolshet", "majiwada", "kapurbawdi", "kasarvadavali", "owale", "waghbil", "patlipada", "vasant vihar",
-    "pokhran", "pokhran road", "hiranandani meadows", "balkum", "wagle estate", "naupada", "panchpakhadi",
-    "mumbai", "navi mumbai", "kalyan", "dombivli", "kharghar", "ulwe", "panvel",
+    "thane",
+    "thane west",
+    "thane w",
+    "ghodbunder",
+    "ghodbunder road",
+    "gb road",
+    "g b road",
+    "dhokali",
+    "manpada",
+    "kolshet",
+    "majiwada",
+    "kapurbawdi",
+    "kasarvadavali",
+    "owale",
+    "waghbil",
+    "patlipada",
+    "vasant vihar",
+    "pokhran",
+    "pokhran road",
+    "hiranandani meadows",
+    "balkum",
+    "wagle estate",
+    "naupada",
+    "panchpakhadi",
+    "mumbai",
+    "navi mumbai",
+    "kalyan",
+    "dombivli",
+    "kharghar",
+    "ulwe",
+    "panvel",
 }
 _DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 _WING = re.compile(
@@ -91,7 +216,7 @@ def normalise_name(raw: str) -> NormalisedName:
     m = _WING.search(s)
     if m:
         building_hint = (m.group("a") or m.group("b") or "").upper()
-        s = s[: m.start()] + " " + s[m.end():]
+        s = s[: m.start()] + " " + s[m.end() :]
 
     s = re.sub(r"[^\w\s]", " ", s)
     expanded = []
@@ -113,9 +238,7 @@ def normalise_name(raw: str) -> NormalisedName:
     tokens = s.split()
     # Split brand words ("hira nandani" vs "hiranandani") are handled by comparing compact forms downstream.
     strong = [t for t in tokens if t not in WEAK and not t.isdigit()]
-    return NormalisedName(
-        text=" ".join(tokens), tokens=tokens, strong=strong, locality_hint=locality_hint, building_hint=building_hint
-    )
+    return NormalisedName(text=" ".join(tokens), tokens=tokens, strong=strong, locality_hint=locality_hint, building_hint=building_hint)
 
 
 def skeleton(s: str) -> str:
@@ -150,7 +273,7 @@ def normalise_unit_no(raw: str) -> UnitNo:
     fm = _FLOOR_WORD.search(s)
     if fm:
         floor = int(fm.group(1))
-        s = s[: fm.start()] + s[fm.end():]
+        s = s[: fm.start()] + s[fm.end() :]
     s = re.sub(r"\b(flat|flt|unit|room|rm|shop|no|number|apt|apartment)\b\.?", " ", s)
     wing = ""
     wm = re.match(r"^\s*([a-z])\s*(?:wing)?\s*[-/ ]\s*(\d{2,4})\b", s) or re.match(r"^\s*([a-z])(\d{3,4})\b", s)
@@ -170,12 +293,56 @@ def normalise_unit_no(raw: str) -> UnitNo:
 
 # Minimal Devanagari -> Latin transliteration (Marathi/Hindi names in broker sheets).
 _DV_VOWELS = {"अ": "a", "आ": "aa", "इ": "i", "ई": "ee", "उ": "u", "ऊ": "oo", "ए": "e", "ऐ": "ai", "ओ": "o", "औ": "au", "ऋ": "ru"}
-_DV_SIGNS = {"ा": "aa", "ि": "i", "ी": "ee", "ु": "u", "ू": "oo", "े": "e", "ै": "ai", "ो": "o", "ौ": "au", "ृ": "ru", "ं": "n", "ः": "h", "ँ": "n"}
+_DV_SIGNS = {
+    "ा": "aa",
+    "ि": "i",
+    "ी": "ee",
+    "ु": "u",
+    "ू": "oo",
+    "े": "e",
+    "ै": "ai",
+    "ो": "o",
+    "ौ": "au",
+    "ृ": "ru",
+    "ं": "n",
+    "ः": "h",
+    "ँ": "n",
+}
 _DV_CONS = {
-    "क": "k", "ख": "kh", "ग": "g", "घ": "gh", "ङ": "n", "च": "ch", "छ": "chh", "ज": "j", "झ": "jh", "ञ": "n",
-    "ट": "t", "ठ": "th", "ड": "d", "ढ": "dh", "ण": "n", "त": "t", "थ": "th", "द": "d", "ध": "dh", "न": "n",
-    "प": "p", "फ": "ph", "ब": "b", "भ": "bh", "म": "m", "य": "y", "र": "r", "ल": "l", "ळ": "l", "व": "v",
-    "श": "sh", "ष": "sh", "स": "s", "ह": "h",
+    "क": "k",
+    "ख": "kh",
+    "ग": "g",
+    "घ": "gh",
+    "ङ": "n",
+    "च": "ch",
+    "छ": "chh",
+    "ज": "j",
+    "झ": "jh",
+    "ञ": "n",
+    "ट": "t",
+    "ठ": "th",
+    "ड": "d",
+    "ढ": "dh",
+    "ण": "n",
+    "त": "t",
+    "थ": "th",
+    "द": "d",
+    "ध": "dh",
+    "न": "n",
+    "प": "p",
+    "फ": "ph",
+    "ब": "b",
+    "भ": "bh",
+    "म": "m",
+    "य": "y",
+    "र": "r",
+    "ल": "l",
+    "ळ": "l",
+    "व": "v",
+    "श": "sh",
+    "ष": "sh",
+    "स": "s",
+    "ह": "h",
 }
 _DV_DIGITS = {chr(0x0966 + i): str(i) for i in range(10)}
 

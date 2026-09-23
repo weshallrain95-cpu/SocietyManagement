@@ -1,4 +1,5 @@
 """Transactional outbox: ``emit`` inside the business transaction, handlers run after commit."""
+
 import logging
 from collections import defaultdict
 from collections.abc import Callable

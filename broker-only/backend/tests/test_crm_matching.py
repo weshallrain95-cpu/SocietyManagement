@@ -7,8 +7,8 @@ from django.utils import timezone
 from apps.crm import services as crm
 from apps.crm.models import Customer
 from apps.inventory.services import create_listing
-from apps.masterdata.models import Building, LocationFact, OwnershipClaim, Poi, Society, Unit
 from apps.masterdata.location import compute_for_building
+from apps.masterdata.models import Building, LocationFact, OwnershipClaim, Poi, Society, Unit
 from apps.matching.engine import run
 from apps.matching.services import match_requirement
 from apps.status import services as st
@@ -27,7 +27,9 @@ def pois(db):
 
 
 def _unit(society, no, bhk=2, bname="A"):
-    b = Building.objects.filter(society=society, name=bname).first() or Building.objects.create(society=society, name=bname, location=society.location)
+    b = Building.objects.filter(society=society, name=bname).first() or Building.objects.create(
+        society=society, name=bname, location=society.location
+    )
     return Unit.objects.create(building=b, unit_no=no, bhk=bhk)
 
 
@@ -38,7 +40,9 @@ def inventory(society, attrs, pois, broker_a, broker_b):
     nopets = _unit(society, "1204")
     big = _unit(society, "1401", bhk=3)
     pricey = _unit(society, "1502")
-    far_soc = Society.objects.create(canonical_name="Far Away Towers", locality=society.locality, location=Point(72.9300, 19.2700, srid=4326))
+    far_soc = Society.objects.create(
+        canonical_name="Far Away Towers", locality=society.locality, location=Point(72.9300, 19.2700, srid=4326)
+    )
     far = _unit(far_soc, "101")
     for b in Building.objects.all():
         compute_for_building(b)
@@ -46,16 +50,21 @@ def inventory(society, attrs, pois, broker_a, broker_b):
     with rls.org_context(org.pk):
         L = {}
         L["good"], _ = create_listing(org=org, user=user, unit=good, txn_type="RENT", data={"asking_rent": 24000}, attributes=common)
-        L["nopets"], _ = create_listing(org=org, user=user, unit=nopets, txn_type="RENT", data={"asking_rent": 22000},
-                                        attributes={**common, "pets_allowed": "no"})
-        L["big"], _ = create_listing(org=org, user=user, unit=big, txn_type="RENT", data={"asking_rent": 25000, "bhk": 3}, attributes=common)
+        L["nopets"], _ = create_listing(
+            org=org, user=user, unit=nopets, txn_type="RENT", data={"asking_rent": 22000}, attributes={**common, "pets_allowed": "no"}
+        )
+        L["big"], _ = create_listing(
+            org=org, user=user, unit=big, txn_type="RENT", data={"asking_rent": 25000, "bhk": 3}, attributes=common
+        )
         L["pricey"], _ = create_listing(org=org, user=user, unit=pricey, txn_type="RENT", data={"asking_rent": 31000}, attributes=common)
         L["far"], _ = create_listing(org=org, user=user, unit=far, txn_type="RENT", data={"asking_rent": 20000}, attributes=common)
     # Broker B lists a perfect flat too; A must never see it.
     borg, buser = broker_b
     other = _unit(society, "1101")
     with rls.org_context(borg.pk):
-        L["b_perfect"], _ = create_listing(org=borg, user=buser, unit=other, txn_type="RENT", data={"asking_rent": 21000}, attributes=common)
+        L["b_perfect"], _ = create_listing(
+            org=borg, user=buser, unit=other, txn_type="RENT", data={"asking_rent": 21000}, attributes=common
+        )
     return L
 
 
@@ -65,12 +74,18 @@ def test_riya_requirement(inventory, broker_a):
     with rls.org_context(org.pk):
         riya, created = crm.capture_customer(org=org, user=user, phone="98765 43210", name="Riya", source="phone_call")
         assert created
-        req = crm.add_requirement(riya, {
-            "txn_type": "RENT", "bhk_min": 2, "bhk_max": 2, "budget_max": 25000,
-            "search_area": _circle(DHOKALI, 2000),
-            "must_haves": {"furn_gas_stove": True, "furn_kitchen_cabinet": True},
-            "house_rule_needs": {"pets": "dog"},
-        })
+        req = crm.add_requirement(
+            riya,
+            {
+                "txn_type": "RENT",
+                "bhk_min": 2,
+                "bhk_max": 2,
+                "budget_max": 25000,
+                "search_area": _circle(DHOKALI, 2000),
+                "must_haves": {"furn_gas_stove": True, "furn_kitchen_cabinet": True},
+                "house_rule_needs": {"pets": "dog"},
+            },
+        )
         mr = match_requirement(req)
         results = {r.listing_id: r for r in mr.results.all()}
         ok = [lid for lid, r in results.items() if not r.excluded]
@@ -104,8 +119,17 @@ def test_unknown_values_do_not_exclude(society, attrs, broker_a):
     with rls.org_context(org.pk):
         create_listing(org=org, user=user, unit=u, txn_type="RENT", data={"asking_rent": 20000})
         c, _ = crm.capture_customer(org=org, user=user, phone="9876543212")
-        req = crm.add_requirement(c, {"txn_type": "RENT", "bhk_min": 2, "bhk_max": 2, "budget_max": 25000,
-                                      "must_haves": {"furn_gas_stove": True}, "house_rule_needs": {"pets": "dog"}})
+        req = crm.add_requirement(
+            c,
+            {
+                "txn_type": "RENT",
+                "bhk_min": 2,
+                "bhk_max": 2,
+                "budget_max": 25000,
+                "must_haves": {"furn_gas_stove": True},
+                "house_rule_needs": {"pets": "dog"},
+            },
+        )
         [r] = run(req, org_id=org.pk)
         chips = {c["key"]: c["result"] for c in r.explanation}
         assert chips["furn_gas_stove"] == "unknown" and chips["pets_allowed"] == "unknown"
@@ -129,6 +153,7 @@ def test_location_facts_are_computed(inventory):
 
 
 # --- offline customers -------------------------------------------------------
+
 
 def test_offline_customer_capture_is_deduplicated(broker_a):
     org, user = broker_a
@@ -203,6 +228,7 @@ def test_owner_verified_rule_beats_listing_broker(inventory, broker_a):
     resolver.record(unit, "pets_allowed", "no", source_type="owner_verified", user=owner)
     with rls.org_context(org.pk):
         c, _ = crm.capture_customer(org=org, user=user, phone="9876500006")
-        req = crm.add_requirement(c, {"txn_type": "RENT", "bhk_min": 2, "bhk_max": 2, "budget_max": 25000,
-                                      "house_rule_needs": {"pets": "dog"}})
+        req = crm.add_requirement(
+            c, {"txn_type": "RENT", "bhk_min": 2, "bhk_max": 2, "budget_max": 25000, "house_rule_needs": {"pets": "dog"}}
+        )
         assert inventory["good"].pk not in {r.listing.pk for r in run(req, org_id=org.pk)}

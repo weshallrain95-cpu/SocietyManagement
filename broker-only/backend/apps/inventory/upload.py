@@ -1,4 +1,5 @@
 """Bulk inventory upload (INV-03, PRD J4): parse -> map columns -> resolve -> review -> commit."""
+
 import csv
 import hashlib
 import io
@@ -18,7 +19,21 @@ from .services import create_listing
 
 # Target field -> header spellings seen in broker sheets (lower-case, punctuation stripped).
 SYNONYMS = {
-    "society": ["society", "building", "bldg", "society name", "building name", "bldg name", "soc name", "project name", "project", "complex", "soc", "property", "name"],
+    "society": [
+        "society",
+        "building",
+        "bldg",
+        "society name",
+        "building name",
+        "bldg name",
+        "soc name",
+        "project name",
+        "project",
+        "complex",
+        "soc",
+        "property",
+        "name",
+    ],
     "wing": ["wing", "tower", "block", "bldg no", "building no"],
     "unit_no": ["flat", "flat no", "unit", "unit no", "flat number", "room no", "apt no"],
     "floor": ["floor", "flr"],
@@ -76,7 +91,7 @@ def read_table(filename: str, content: bytes) -> tuple[list[str], list[dict]]:
         ws = load_workbook(io.BytesIO(content), read_only=True, data_only=True).worksheets[0]
         it = ws.iter_rows(values_only=True)
         headers = [str(h).strip() if h is not None else "" for h in next(it)]
-        rows = [dict(zip(headers, r)) for r in it if any(v not in (None, "") for v in r)]
+        rows = [dict(zip(headers, r, strict=False)) for r in it if any(v not in (None, "") for v in r)]
     else:
         text = content.decode("utf-8-sig", errors="replace")
         reader = csv.DictReader(io.StringIO(text))
@@ -162,8 +177,15 @@ def parse_row(raw: dict, mapping: dict, default_txn: str) -> tuple[dict, list[st
         parsed["wing"] = str(get.get("wing") or u.wing or normalise_name(parsed.get("society", "")).building_hint or "")
         parsed["floor"] = int(get["floor"]) if str(get.get("floor") or "").strip().lstrip("-").isdigit() else u.floor
     parsed["txn_type"] = _txn(get.get("txn_type"), default_txn)
-    for field, fn in (("bhk", _bhk), ("asking_rent", _money), ("asking_price", _money), ("deposit", _money),
-                      ("maintenance", _money), ("available_from", _date), ("carpet_sqft", _money)):
+    for field, fn in (
+        ("bhk", _bhk),
+        ("asking_rent", _money),
+        ("asking_price", _money),
+        ("deposit", _money),
+        ("maintenance", _money),
+        ("available_from", _date),
+        ("carpet_sqft", _money),
+    ):
         if get.get(field) not in (None, ""):
             try:
                 parsed[field] = fn(get[field])
@@ -188,8 +210,9 @@ def parse_row(raw: dict, mapping: dict, default_txn: str) -> tuple[dict, list[st
     return parsed, errors
 
 
-def create_batch(*, org, user, filename: str, content: bytes, micro_market=None, default_txn_type="RENT",
-                 mapping: dict | None = None) -> UploadBatch:
+def create_batch(
+    *, org, user, filename: str, content: bytes, micro_market=None, default_txn_type="RENT", mapping: dict | None = None
+) -> UploadBatch:
     headers, rows = read_table(filename, content)
     sig = header_signature(headers)
     if mapping is None:
@@ -198,8 +221,12 @@ def create_batch(*, org, user, filename: str, content: bytes, micro_market=None,
     else:
         SavedColumnMapping.objects.update_or_create(org=org, header_signature=sig, defaults={"mapping": mapping})
     batch = UploadBatch.objects.create(
-        org=org, uploaded_by=user, filename=filename[:200], micro_market=micro_market,
-        default_txn_type=default_txn_type, column_mapping=mapping,
+        org=org,
+        uploaded_by=user,
+        filename=filename[:200],
+        micro_market=micro_market,
+        default_txn_type=default_txn_type,
+        column_mapping=mapping,
     )
     resolve_batch(batch, rows)
     return batch
@@ -213,8 +240,14 @@ def resolve_batch(batch: UploadBatch, rows: list[dict]) -> None:
     for i, raw in enumerate(rows, start=2):  # row 1 is the header in the broker's sheet
         raw_json = {k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in raw.items()}
         parsed, errors = parse_row(raw, batch.column_mapping, batch.default_txn_type)
-        row = UploadRow(org=batch.org, batch=batch, row_no=i, raw=raw_json, errors=errors,
-                        parsed={k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in parsed.items()})
+        row = UploadRow(
+            org=batch.org,
+            batch=batch,
+            row_no=i,
+            raw=raw_json,
+            errors=errors,
+            parsed={k: (v.isoformat() if hasattr(v, "isoformat") else v) for k, v in parsed.items()},
+        )
         if errors:
             row.resolution = UploadRow.Resolution.ERROR
         else:
@@ -225,8 +258,12 @@ def resolve_batch(batch: UploadBatch, rows: list[dict]) -> None:
 
                 point = Point(parsed["lng"], parsed["lat"], srid=4326)
             cands = dedupe.find_candidates(
-                parsed["society"], point=point, pincode=parsed.get("pincode", ""), locality=locality,
-                micro_market=batch.micro_market, include_provisional_for_org=batch.org,
+                parsed["society"],
+                point=point,
+                pincode=parsed.get("pincode", ""),
+                locality=locality,
+                micro_market=batch.micro_market,
+                include_provisional_for_org=batch.org,
             )
             decision = dedupe.decide(cands)
             row.candidates = [c.as_dict() for c in cands[:3]]
@@ -259,9 +296,7 @@ def resolve_row(row: UploadRow, *, user, society_id=None, propose: dict | None =
     if skip:
         row.resolution = UploadRow.Resolution.SKIPPED
     elif society_id:
-        society = Society.objects.get(
-            pk=society_id, status__in=[Society.Status.ACTIVE, Society.Status.PROVISIONAL]
-        )
+        society = Society.objects.get(pk=society_id, status__in=[Society.Status.ACTIVE, Society.Status.PROVISIONAL])
         if society.status == Society.Status.PROVISIONAL and society.proposed_by_org_id != row.org_id:
             raise ValueError("That society is not available yet")
         row.society = society
@@ -273,13 +308,19 @@ def resolve_row(row: UploadRow, *, user, society_id=None, propose: dict | None =
         locality = Locality.objects.get(pk=propose["locality_id"])
         point = Point(float(propose["lng"]), float(propose["lat"]), srid=4326)
         row.society = propose_society(
-            name=propose.get("name") or row.parsed["society"], locality=locality, location=point, org=row.org,
-            address=propose.get("address", ""), pincode=propose.get("pincode", ""), user=user,
+            name=propose.get("name") or row.parsed["society"],
+            locality=locality,
+            location=point,
+            org=row.org,
+            address=propose.get("address", ""),
+            pincode=propose.get("pincode", ""),
+            user=user,
         )
         from common.notify import queue_for_admin
 
-        queue_for_admin("provisional_society", row.society, f"New society proposed: {row.society.canonical_name}",
-                        {"candidates": row.candidates})
+        queue_for_admin(
+            "provisional_society", row.society, f"New society proposed: {row.society.canonical_name}", {"candidates": row.candidates}
+        )
         row.resolution = UploadRow.Resolution.PROVISIONAL
     else:
         raise ValueError("Choose a society, propose a new one, or skip the row")
@@ -298,10 +339,23 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
         with transaction.atomic():
             p = row.parsed
             building = get_or_create_building(row.society, p.get("wing") or None)
-            unit, _ = get_or_create_unit(building, p["unit_no"], bhk=p["bhk"], floor=p.get("floor"),
-                                         property_type=p.get("property_type") or "apartment")
-            data = {k: p.get(k) for k in ("asking_rent", "asking_price", "deposit", "maintenance", "owner_name",
-                                          "private_notes", "bhk", "carpet_sqft", "floor")}
+            unit, _ = get_or_create_unit(
+                building, p["unit_no"], bhk=p["bhk"], floor=p.get("floor"), property_type=p.get("property_type") or "apartment"
+            )
+            data = {
+                k: p.get(k)
+                for k in (
+                    "asking_rent",
+                    "asking_price",
+                    "deposit",
+                    "maintenance",
+                    "owner_name",
+                    "private_notes",
+                    "bhk",
+                    "carpet_sqft",
+                    "floor",
+                )
+            }
             if p.get("available_from"):
                 data["available_from"] = date.fromisoformat(p["available_from"])
             from apps.masterdata.models import AttributeDef
@@ -318,8 +372,15 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
                     warnings.append(f"Ignored {e}")  # a bad optional value never blocks the flat
             try:
                 listing, _ = create_listing(
-                    org=batch.org, user=user, unit=unit, txn_type=p["txn_type"], data=data, attributes=attributes,
-                    owner_phone=_safe_phone(p.get("owner_phone")), origin="upload", source_type="upload",
+                    org=batch.org,
+                    user=user,
+                    unit=unit,
+                    txn_type=p["txn_type"],
+                    data=data,
+                    attributes=attributes,
+                    owner_phone=_safe_phone(p.get("owner_phone")),
+                    origin="upload",
+                    source_type="upload",
                 )
             except InvalidValue as e:
                 row.errors = [str(e)]

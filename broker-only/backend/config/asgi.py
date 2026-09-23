@@ -10,6 +10,4 @@ from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from apps.marketplace.routing import websocket_urlpatterns  # noqa: E402
 from apps.marketplace.ws_auth import JwtQueryAuthMiddleware  # noqa: E402
 
-application = ProtocolTypeRouter(
-    {"http": django_asgi, "websocket": JwtQueryAuthMiddleware(URLRouter(websocket_urlpatterns))}
-)
+application = ProtocolTypeRouter({"http": django_asgi, "websocket": JwtQueryAuthMiddleware(URLRouter(websocket_urlpatterns))})
