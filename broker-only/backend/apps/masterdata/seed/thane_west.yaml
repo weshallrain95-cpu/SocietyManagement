@@ -1,0 +1,64 @@
+# Thane West pilot seed (D3). Coordinates are APPROXIMATE (±200 m) and marked unverified;
+# the pilot broker and ops will correct pins in the admin console before go-live.
+micro_market: {name: Thane West, launch_state: pilot}
+localities:
+  - {name: Dhokali, lat: 19.2270, lng: 72.9780, pincodes: ["400607"]}
+  - {name: Manpada, lat: 19.2335, lng: 72.9725, pincodes: ["400610"]}
+  - {name: Kolshet, lat: 19.2235, lng: 72.9915, pincodes: ["400607"]}
+  - {name: Majiwada, lat: 19.2170, lng: 72.9820, pincodes: ["400601"]}
+  - {name: Kapurbawdi, lat: 19.2150, lng: 72.9770, pincodes: ["400607"]}
+  - {name: Balkum, lat: 19.2125, lng: 72.9870, pincodes: ["400608"]}
+  - {name: Hiranandani Estate, lat: 19.2585, lng: 72.9690, pincodes: ["400607"]}
+  - {name: Vasant Vihar, lat: 19.2230, lng: 72.9630, pincodes: ["400610"]}
+  - {name: Pokhran Road, lat: 19.2200, lng: 72.9680, pincodes: ["400606", "400610"]}
+  - {name: Patlipada, lat: 19.2450, lng: 72.9760, pincodes: ["400607"]}
+  - {name: Waghbil, lat: 19.2500, lng: 72.9750, pincodes: ["400615"]}
+  - {name: Kasarvadavali, lat: 19.2640, lng: 72.9725, pincodes: ["400615"]}
+  - {name: Owale, lat: 19.2750, lng: 72.9700, pincodes: ["400615"]}
+societies:
+  - {name: Hiranandani Estate, locality: Hiranandani Estate, lat: 19.2585, lng: 72.9690, kind: layout, aliases: ["HE", "Hira Nandani Estate", "Hiranandani Est"]}
+  - {name: Rodas Enclave, locality: Hiranandani Estate, lat: 19.2600, lng: 72.9660, kind: layout, aliases: ["HE Rodas", "Rodas"]}
+  - {name: Lodha Amara, locality: Kolshet, lat: 19.2230, lng: 72.9930, kind: project, aliases: ["Amara"]}
+  - {name: Lodha Luxuria, locality: Majiwada, lat: 19.2180, lng: 72.9800, kind: project, aliases: ["Luxuria"]}
+  - {name: Kalpataru Parkcity, locality: Kolshet, lat: 19.2250, lng: 72.9900, kind: project, aliases: ["Park City", "Kalpataru Park City"]}
+  - {name: Kalpataru Immensa, locality: Kolshet, lat: 19.2210, lng: 72.9895, kind: project, aliases: ["Immensa"]}
+  - {name: Rustomjee Urbania, locality: Majiwada, lat: 19.2130, lng: 72.9830, kind: layout, aliases: ["Urbania"]}
+  - {name: Runwal Garden City, locality: Balkum, lat: 19.2135, lng: 72.9885, kind: project, aliases: ["Runwal Gardens"]}
+  - {name: Dosti Imperia, locality: Manpada, lat: 19.2340, lng: 72.9740, kind: project, aliases: ["Dosti"]}
+  - {name: Tulsi Dham, locality: Manpada, lat: 19.2330, lng: 72.9765, kind: layout, aliases: ["Tulsidham"]}
+  - {name: Neelkanth Greens, locality: Manpada, lat: 19.2380, lng: 72.9780, kind: layout, aliases: ["Nilkanth Greens"]}
+  - {name: Vasant Vihar, locality: Vasant Vihar, lat: 19.2230, lng: 72.9630, kind: layout, aliases: []}
+  - {name: Hiranandani Meadows, locality: Pokhran Road, lat: 19.2235, lng: 72.9690, kind: layout, aliases: ["Meadows"]}
+  - {name: Dosti Vihar, locality: Pokhran Road, lat: 19.2150, lng: 72.9650, kind: layout, aliases: []}
+  - {name: Puranik City, locality: Kasarvadavali, lat: 19.2640, lng: 72.9740, kind: layout, aliases: ["Puranik"]}
+  - {name: Cosmos Jewels, locality: Kasarvadavali, lat: 19.2620, lng: 72.9710, kind: project, aliases: []}
+  - {name: Godrej Emerald, locality: Owale, lat: 19.2700, lng: 72.9665, kind: project, aliases: []}
+pois:
+  - {type: rail_station, name: Thane, lat: 19.1862, lng: 72.9757}
+  - {type: metro_upcoming, name: Kapurbawdi (Metro 4), lat: 19.2150, lng: 72.9775}
+  - {type: metro_upcoming, name: Manpada (Metro 4), lat: 19.2320, lng: 72.9745}
+  - {type: metro_upcoming, name: Tikuji-ni-wadi (Metro 4), lat: 19.2405, lng: 72.9750}
+  - {type: metro_upcoming, name: Dongripada (Metro 4), lat: 19.2480, lng: 72.9755}
+  - {type: metro_upcoming, name: Vijay Garden (Metro 4), lat: 19.2560, lng: 72.9745}
+  - {type: metro_upcoming, name: Kasarvadavali (Metro 4), lat: 19.2650, lng: 72.9730}
+  - {type: auto_stand, name: Dhokali Naka, lat: 19.2272, lng: 72.9772}
+  - {type: auto_stand, name: Manpada Signal, lat: 19.2330, lng: 72.9735}
+  - {type: auto_stand, name: Kapurbawdi Junction, lat: 19.2152, lng: 72.9785}
+  - {type: auto_stand, name: Hiranandani Estate Gate, lat: 19.2575, lng: 72.9705}
+  - {type: auto_stand, name: Majiwada Junction, lat: 19.2178, lng: 72.9845}
+  - {type: bus_stop, name: Dhokali (TMT), lat: 19.2268, lng: 72.9768}
+  - {type: bus_stop, name: Manpada (TMT), lat: 19.2328, lng: 72.9730}
+  - {type: school, name: Vasant Vihar High School, lat: 19.2240, lng: 72.9640}
+  - {type: school, name: Hiranandani Foundation School, lat: 19.2590, lng: 72.9670}
+  - {type: school, name: Lokpuram Public School, lat: 19.2215, lng: 72.9650}
+  - {type: school, name: Singhania School, lat: 19.2010, lng: 72.9760}
+  - {type: hospital, name: Jupiter Hospital, lat: 19.2090, lng: 72.9730}
+  - {type: hospital, name: Bethany Hospital, lat: 19.2190, lng: 72.9660}
+  - {type: mall, name: Viviana Mall, lat: 19.2079, lng: 72.9716}
+  - {type: mall, name: Korum Mall, lat: 19.2027, lng: 72.9723}
+  - {type: mall, name: R Mall, lat: 19.2335, lng: 72.9705}
+  - {type: market, name: Manpada Market, lat: 19.2338, lng: 72.9752}
+  - {type: market, name: Majiwada Market, lat: 19.2172, lng: 72.9838}
+  - {type: highway, name: Ghodbunder Road – Kapurbawdi, lat: 19.2155, lng: 72.9790}
+  - {type: highway, name: Eastern Express Highway – Teen Haath Naka, lat: 19.1960, lng: 72.9740}
+  - {type: park, name: Upvan Lake, lat: 19.2210, lng: 72.9560}

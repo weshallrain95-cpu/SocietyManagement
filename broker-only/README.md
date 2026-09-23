@@ -29,6 +29,18 @@ model from day one.
 | 04 | [Architecture & Infrastructure](docs/04-architecture.md) | Stack, components, real-time broadcast, APIs, security, laptop dev server, production deployment |
 | 05 | [Roadmap & Delivery Plan](docs/05-roadmap.md) | Phases, sprint plan, open decisions needing the founder's call |
 | 06 | [Making the Attribute Dictionary Manageable](docs/06-attribute-data-entry.md) | How 200 attributes become ~10 taps for brokers, ≤ 10 questions for owners and one screen for customers |
+| 07 | [Laptop Dev Server: Setup & Runbook](docs/07-dev-setup.md) | How to run everything on your laptop, connect phones, and what has been verified |
+
+## Code
+
+| Path | What |
+|------|------|
+| `backend/` | Django 5 + GeoDjango/PostGIS API, Channels (WebSocket), Celery. Apps: identity, orgs, audit, masterdata, status, inventory, crm, matching, visits, marketplace, reviews |
+| `backend/tests/` | 105 tests: isolation between brokers (RLS), de-duplication, resolver, status rules, matching, visits and offline sync, marketplace, uploads, HTTP journeys, WebSocket |
+| `infra/` | Database bootstrap SQL, Dockerfile, Docker Compose for the laptop |
+| `Makefile` | `make up`, `make seed`, `make test`, … (see docs/07) |
+
+Quick start: `cd broker-only && make up && make seed`, then open <http://localhost:8000/v1/docs>.
 
 ## Source
 

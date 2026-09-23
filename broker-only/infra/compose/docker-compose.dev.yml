@@ -1,0 +1,46 @@
+# Laptop dev server. From broker-only/:  make up   (or: docker compose -f infra/compose/docker-compose.dev.yml up)
+name: onlybroker
+
+x-backend: &backend
+  build: {context: ../.., dockerfile: infra/docker/backend.Dockerfile}
+  env_file: [../../backend/.env]
+  environment:
+    DATABASE_URL: postgis://ob_app:ob_app_dev_password@db:5432/onlybroker
+    REDIS_URL: redis://redis:6379/0
+  volumes: ["../../backend:/app"]
+  depends_on:
+    db: {condition: service_healthy}
+    redis: {condition: service_started}
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment: {POSTGRES_PASSWORD: postgres}
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../db/01-init.sql:/docker-entrypoint-initdb.d/99-onlybroker.sql:ro
+    # Query over TCP: the image's temporary init server only listens on the socket, so this
+    # turns healthy only after 01-init.sql has created the database and the real server is up.
+    healthcheck: {test: ["CMD-SHELL", "psql -h 127.0.0.1 -U postgres -d onlybroker -c 'select 1'"], interval: 5s, retries: 30}
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  api:
+    <<: *backend
+    # runserver with daphne installed serves HTTP *and* WebSockets on :8000
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    ports: ["8000:8000"]
+
+  worker:
+    <<: *backend
+    command: celery -A config worker -l info --concurrency 2
+
+  beat:
+    <<: *backend
+    command: celery -A config beat -l info
+
+volumes:
+  pgdata:

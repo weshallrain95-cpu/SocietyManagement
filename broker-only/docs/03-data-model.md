@@ -407,6 +407,9 @@ stateDiagram-v2
    with `SELECT … FOR UPDATE` on the unit row and a version check.
 5. Other brokers with listings on the unit are notified of state changes **without learning who
    made the change**.
+6. *Holds belong to the broker who placed them.* While a unit is `ON_HOLD` (token / negotiation),
+   another broker's "available" report does not release it. Only the holding broker or the owner
+   can, and a hold expires to `AVAILABLE_UNCONFIRMED` after 7 days (configurable).
 
 ## 5. Society and building de-duplication
 
@@ -442,12 +445,18 @@ score = 0.40·name_sim          (max of trigram, token-set Jaro-Winkler on stron
       + 0.10·locality_match    (hint ∈ society locality or aliases)
       + 0.10·pincode_match
 ```
+Signals that are missing for a row (no coordinates, no pin code, no confirmed alias) are left
+out of the weighted average rather than counted as zero, and the name is compared against the
+canonical name **and every learned alias**. A strong location match can never rescue a different
+name (score is capped at name + 0.15). A locality hint only counts when it names a real locality
+("Thane" is a city, not a locality).
+
 Thresholds (tunable per micro-market):
 
 | Score | Action |
 |-------|--------|
 | ≥ 0.90 and runner-up gap ≥ 0.10 | **Auto-match**; add alias; row → `auto` |
-| 0.60 – 0.90 | **Broker confirms** from the top 3 candidates (map + photo); confirmation adds an alias |
+| 0.60 – 0.90, and name similarity ≥ 0.75 | **Broker confirms** from the top 3 candidates (map + photo); confirmation adds an alias |
 | < 0.60 | **Provisional society** proposal → admin queue (with nearest candidates shown to the admin) |
 
 The same scoring runs for the building (within the society) and unit number normalisation

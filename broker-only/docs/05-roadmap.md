@@ -28,6 +28,23 @@ own benefit, and that inventory later feeds the marketplace.
 | S7 | Reviews + reputation, notifications (FCM, WhatsApp, SMS), anti-spam, DPDP desk | Reviews UI, notification preferences, admin queues | End-to-end pilot script passes on staging |
 | S8 | Hardening: load test (k6), security review, pen-test fixes, runbooks, staging → pilot | Polish, crash-free ≥ 99.5% | Pilot go-live in Thane West |
 
+## 2a. Progress (2026-09-23)
+
+The **backend** for S0–S7 is built and tested (105 automated tests), ahead of the sprint plan
+because it was built in one push:
+
+| Area | Status |
+|------|--------|
+| Foundations: OTP auth, roles, RLS isolation, outbox, hash-chained audit, CI workflow, laptop Docker stack | ✅ Done |
+| Master data: Thane West seed, normalisation, de-duplication, aliases, merge, location facts, attribute resolver | ✅ Done (seed coordinates approximate, to be verified with the pilot broker) |
+| Inventory: listings, keys, status engine with owner links, Excel/CSV upload with review | ✅ Done |
+| CRM incl. **offline customers** (consent without app, shortlist/visit links, interaction log, profile claim) | ✅ Done |
+| Matching with explanations; visit plans, routing, staff dispatch, offline sync | ✅ Done |
+| Marketplace: enquiry broadcast, proposals, presence, anonymous map, WebSocket; reviews (incl. offline) | ✅ Done |
+| Real SMS/WhatsApp providers, Google Routes API, payments | ⏳ Needs accounts (DLT, WhatsApp Business, Google Cloud, Razorpay) |
+| **Mobile app (Expo) and web consoles (Next.js)** | ⏳ Next |
+| Attribute dictionary v1 | ⏳ Waiting on founder approval (D11) |
+
 ## 3. Definition of done (every story)
 
 - Acceptance criteria from the PRD met, with automated tests (unit + API; RLS tests for private data).
@@ -66,9 +83,11 @@ own benefit, and that inventory later feeds the marketplace.
 
 ## 6. Immediate next steps
 
-1. Founder reviews docs 01–05 and answers D1–D10.
-2. Phase 0 scaffold: `broker-only/backend`, `broker-only/web`, `broker-only/mobile`,
-   `broker-only/infra/compose/docker-compose.dev.yml`, `Makefile` (`make up`, `make seed`,
-   `make test`), CI workflow with path filters.
-3. Compile the Thane West seed list (societies + aliases) with the pilot brokers.
-4. Register DLT sender ID/templates and the WhatsApp Business account (lead time 1–3 weeks).
+1. Founder: return the attribute dictionary spreadsheet with decisions (D11); answer D1, D2, D4, D5, D7–D10.
+2. Founder + pilot broker: run the laptop stack (docs/07), check the Thane West society list and pins,
+   and add the broker's real society names and nicknames (they become aliases).
+3. Start the account registrations with long lead times: DLT sender ID + templates, WhatsApp Business,
+   Google Cloud (Maps/Places/Routes), MahaRERA agent verification process.
+4. Engineering: broker mobile app (Expo) first — Today, Leads, Customer book, Add flat, Visit plan,
+   Staff itinerary with offline mode — then the light web pages for owners and offline customers,
+   then the admin console.

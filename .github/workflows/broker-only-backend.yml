@@ -1,0 +1,38 @@
+name: Only Broker backend
+
+on:
+  push:
+    paths: ["broker-only/**", ".github/workflows/broker-only-backend.yml"]
+  pull_request:
+    paths: ["broker-only/**", ".github/workflows/broker-only-backend.yml"]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: broker-only/backend
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env: {POSTGRES_PASSWORD: postgres}
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 20
+    env:
+      DATABASE_URL: postgis://ob_app:ob_app_dev_password@localhost:5432/onlybroker
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip, cache-dependency-path: broker-only/backend/requirements*.txt}
+      - name: System libraries (GDAL/GEOS/PROJ)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gdal-bin libgdal-dev postgresql-client
+      - name: Database roles and extensions (as superuser, like the laptop)
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f ../infra/db/01-init.sql
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Migrations are in sync
+        run: DJANGO_DEBUG=true python manage.py makemigrations --check --dry-run
+      - name: Tests (includes the cross-tenant RLS suite, run as a non-superuser)
+        run: pytest --create-db
