@@ -44,7 +44,9 @@ because it was built in one push:
 | Real SMS/WhatsApp providers, Google Routes API, payments | ⏳ Needs accounts (DLT, WhatsApp Business, Google Cloud, Razorpay) |
 | **Broker mobile app (Expo)**: Today, Leads, Customers (incl. offline), Flats, Add flat, Match, Visit plans, Field staff offline mode, live alerts, demo mode | ✅ Done — tested end to end against the real server |
 | **Owner/customer link pages**: availability check, visit notice, shortlist, visit plan, consent, review | ✅ Done — server-rendered, tested in a real browser |
-| Admin console and broker desktop (Next.js), pin-review map for the pilot broker | ⏳ Next |
+| **Ops (admin) console** at `/ops/`: broker verification, review queue (new societies: approve / merge / reject), society pins (paste a Google Maps link or drag the pin) and names, whole-area pin map, tamper check | ✅ Done |
+| **Pin-check page for the pilot broker** (online link; answers applied with `apply_pin_review`) | ✅ Done |
+| Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 
 ## 3. Definition of done (every story)

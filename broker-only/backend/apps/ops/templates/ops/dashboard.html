@@ -1,0 +1,20 @@
+{% extends "ops/base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<h1>Today</h1>
+<div class="grid">
+  <a class="card stat" href="{% url 'ops-brokers' %}" style="text-decoration:none;color:inherit"><span class="muted">Brokers waiting for verification</span><b>{{ counts.pending_brokers }}</b></a>
+  <a class="card stat" href="{% url 'ops-queue' %}" style="text-decoration:none;color:inherit"><span class="muted">Open review items</span><b>{{ counts.open_items }}</b></a>
+  <a class="card stat" href="{% url 'ops-queue' %}?kind=provisional_society" style="text-decoration:none;color:inherit"><span class="muted">New societies to check</span><b>{{ counts.provisional }}</b></a>
+  <div class="card stat"><span class="muted">Brokers verified / total</span><b>{{ brokers.verified }} / {{ brokers.total }}</b></div>
+  <div class="card stat"><span class="muted">Active societies</span><b>{{ societies }}</b></div>
+</div>
+<div class="grid">
+  <div class="card"><h2>Open items by kind</h2>
+    {% for k in by_kind %}<div><a href="{% url 'ops-queue' %}?kind={{ k.kind }}">{{ k.kind }}</a> · {{ k.n }}</div>{% empty %}<p class="muted">Nothing waiting.</p>{% endfor %}
+  </div>
+  <div class="card"><h2>Recent activity</h2>
+    {% for e in recent %}<div class="muted">{{ e.at|date:"d M, H:i" }} · <b>{{ e.action }}</b> {{ e.actor_label }}</div>{% empty %}<p class="muted">No activity yet.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

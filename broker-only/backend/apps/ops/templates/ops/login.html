@@ -1,0 +1,16 @@
+{% extends "ops/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="card" style="max-width:380px;margin:40px auto;width:100%">
+  <h1>Ops sign in</h1>
+  <p class="muted">For the Only Broker operations team.</p>
+  {% if form.errors %}<div class="msg error">Phone or password is wrong, or this account is not staff.</div>{% endif %}
+  <form method="post" style="display:flex;flex-direction:column;gap:10px">
+    {% csrf_token %}
+    <label>Phone <input type="tel" name="username" autocomplete="username" required style="width:100%"></label>
+    <label>Password <input type="password" name="password" autocomplete="current-password" required style="width:100%"></label>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="primary">Sign in</button>
+  </form>
+</div>
+{% endblock %}

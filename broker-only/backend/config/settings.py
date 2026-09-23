@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.marketplace",
     "apps.reviews",
     "apps.linkpages",
+    "apps.ops",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +88,8 @@ DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 AUTH_USER_MODEL = "identity.User"
 AUTHENTICATION_BACKENDS = ["apps.identity.backends.PhoneBackend"]
+LOGIN_URL = "ops-login"
+LOGIN_REDIRECT_URL = "ops-home"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},

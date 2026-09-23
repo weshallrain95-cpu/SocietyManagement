@@ -1,0 +1,42 @@
+{% extends "ops/base.html" %}
+{% block title %}Review queue{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+<div class="tabs">
+  <a href="?" class="{% if not kind %}on{% endif %}">All</a>
+  {% for k in kinds %}<a href="?kind={{ k }}" class="{% if kind == k %}on{% endif %}">{{ k }}</a>{% endfor %}
+</div>
+{% for r in rows %}
+<div class="card">
+  <div><span class="chip warn">{{ r.item.kind }}</span> <span class="muted">{{ r.item.created_at|date:"d M, H:i" }}</span></div>
+  <p><b>{{ r.item.summary }}</b></p>
+  {% if r.society %}
+    <p class="muted">Society: <a href="{% url 'ops-society' r.society.pk %}">{{ r.society.canonical_name }}</a> · {{ r.society.locality.name }} · status {{ r.society.status }}</p>
+  {% endif %}
+  {% if r.item.data.link %}<p class="muted">Link sent: <a href="{{ r.item.data.link }}" target="_blank" rel="noopener noreferrer">{{ r.item.data.link|truncatechars:80 }}</a></p>{% endif %}
+  {% if r.item.kind == "provisional_society" and r.society and r.society.status == "provisional" %}
+    {% if r.candidates %}
+      <p class="muted">Possible existing matches:</p>
+      {% for c in r.candidates %}
+      <form method="post" action="{% url 'ops-queue-act' r.item.pk %}" class="inline">
+        {% csrf_token %}<input type="hidden" name="into" value="{{ c.society.pk }}">
+        <span>{{ c.society.canonical_name }} · {{ c.society.locality.name }} <span class="chip">{{ c.score|floatformat:2 }}</span></span>
+        <button name="action" value="merge">Same place — merge</button>
+      </form>
+      {% endfor %}
+    {% else %}<p class="muted">No similar existing society found.</p>{% endif %}
+    <form method="post" action="{% url 'ops-queue-act' r.item.pk %}" class="inline">
+      {% csrf_token %}
+      <button class="primary" name="action" value="approve">New society — approve</button>
+      <button class="bad" name="action" value="reject">Not real — reject</button>
+    </form>
+  {% else %}
+    <form method="post" action="{% url 'ops-queue-act' r.item.pk %}" class="inline">
+      {% csrf_token %}
+      <input type="text" name="note" placeholder="What did you do?" maxlength="300" style="flex:1">
+      <button class="primary" name="action" value="resolve">Mark done</button>
+    </form>
+  {% endif %}
+</div>
+{% empty %}<div class="card"><p class="muted">Nothing waiting. 🎉</p></div>{% endfor %}
+{% endblock %}

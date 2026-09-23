@@ -1,0 +1,36 @@
+{% extends "ops/base.html" %}
+{% block title %}Brokers{% endblock %}
+{% block content %}
+<h1>Broker verification</h1>
+<div class="tabs">
+  <a href="?state=pending" class="{% if state == 'pending' %}on{% endif %}">Waiting</a>
+  <a href="?state=verified" class="{% if state == 'verified' %}on{% endif %}">Verified</a>
+  <a href="?state=rejected" class="{% if state == 'rejected' %}on{% endif %}">Rejected</a>
+  <a href="?state=suspended" class="{% if state == 'suspended' %}on{% endif %}">Suspended</a>
+</div>
+<div class="card scroll">
+<table>
+  <tr><th>Firm</th><th>RERA agent no.</th><th>Office</th><th>People</th><th>Signed up</th><th>Decision</th></tr>
+  {% for o in orgs %}
+  <tr>
+    <td><b>{{ o.name }}</b>{% if o.verification_note %}<div class="muted">{{ o.verification_note }}</div>{% endif %}</td>
+    <td>{{ o.rera_agent_no|default:"—" }}{% if o.rera_verified_at %} <span class="chip ok">checked</span>{% endif %}
+      {% if o.rera_agent_no %}<div class="muted">Check on maharera.maharashtra.gov.in</div>{% endif %}</td>
+    <td>{{ o.office_address|default:"—" }}</td>
+    <td>{{ o.members }}</td>
+    <td>{{ o.created_at|date:"d M Y" }}</td>
+    <td>
+      <form method="post" action="{% url 'ops-broker-decide' o.pk %}" class="inline">
+        {% csrf_token %}
+        {% if o.rera_agent_no and not o.rera_verified_at %}<label class="muted"><input type="checkbox" name="rera_verified" value="1"> RERA number checked</label>{% endif %}
+        <input type="text" name="note" placeholder="Reason (needed to reject/suspend)" maxlength="300">
+        {% if state != 'verified' %}<button class="primary" name="decision" value="verified">Verify</button>{% endif %}
+        {% if state == 'pending' %}<button class="bad" name="decision" value="rejected">Reject</button>{% endif %}
+        {% if state == 'verified' %}<button class="bad" name="decision" value="suspended">Suspend</button>{% endif %}
+      </form>
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="6" class="muted">No brokers here.</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}

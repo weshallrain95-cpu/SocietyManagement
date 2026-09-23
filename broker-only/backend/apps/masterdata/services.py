@@ -1,6 +1,10 @@
+import re
+
+from django.contrib.gis.geos import Point
 from django.db import transaction
 
 from apps.audit.services import audit
+from common.notify import queue_for_admin
 
 from . import dedupe
 from .models import Building, Locality, Society, SocietyAlias, Unit
@@ -11,7 +15,46 @@ class MasterDataError(Exception):
     pass
 
 
-def propose_society(*, name: str, locality: Locality, location, org, address: str = "", pincode: str = "", user=None) -> Society:
+_MAPS_PATTERNS = (
+    re.compile(r"@(-?\d+\.\d+),(-?\d+\.\d+)"),
+    re.compile(r"[?&](?:q|query|ll|destination)=(-?\d+\.\d+),\s*(-?\d+\.\d+)"),
+    re.compile(r"^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$"),
+)
+
+
+def parse_maps_link(text: str):
+    """Coordinates from a Google Maps URL or a pasted "19.26, 72.96"; None for short links (resolved by ops)."""
+    for pat in _MAPS_PATTERNS:
+        m = pat.search(text or "")
+        if m:
+            lat, lng = float(m.group(1)), float(m.group(2))
+            if 18.5 <= lat <= 20.5 and 72.5 <= lng <= 73.6:  # MMR bounds: rejects swapped or foreign coordinates
+                return Point(lng, lat, srid=4326)
+    return None
+
+
+@transaction.atomic
+def move_society_pin(society: Society, point, *, user, reason: str) -> dict:
+    """Move a society (and its buildings still on the old pin) and recompute distance facts."""
+    from .location import compute_for_building
+
+    old = society.location
+    society.location = point
+    society.save(update_fields=["location"])
+    moved = 0
+    for b in society.buildings.filter(merged_into__isnull=True):
+        if b.location.equals_exact(old, tolerance=1e-7):
+            b.location = point
+            b.save(update_fields=["location"])
+            moved += 1
+        compute_for_building(b)
+    audit(user, "society.pin_moved", society, {"from": [old.y, old.x], "to": [point.y, point.x], "reason": reason[:200]})
+    return {"buildings_moved": moved}
+
+
+def propose_society(
+    *, name: str, locality: Locality, location, org, address: str = "", pincode: str = "", user=None, candidates=None
+) -> Society:
     """MD-04: unknown names never create an active society; they become a provisional proposal."""
     s = Society.objects.create(
         canonical_name=name.strip(),
@@ -24,6 +67,7 @@ def propose_society(*, name: str, locality: Locality, location, org, address: st
         provenance={"source": "broker_proposal"},
     )
     audit(user, "society.proposed", s, {"name": name, "org": str(org.pk) if org else None})
+    queue_for_admin("provisional_society", s, f"New society proposed: {s.canonical_name}", {"candidates": candidates or []})
     return s
 
 

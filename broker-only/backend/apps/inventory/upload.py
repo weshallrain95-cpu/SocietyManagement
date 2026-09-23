@@ -315,11 +315,7 @@ def resolve_row(row: UploadRow, *, user, society_id=None, propose: dict | None =
             address=propose.get("address", ""),
             pincode=propose.get("pincode", ""),
             user=user,
-        )
-        from common.notify import queue_for_admin
-
-        queue_for_admin(
-            "provisional_society", row.society, f"New society proposed: {row.society.canonical_name}", {"candidates": row.candidates}
+            candidates=row.candidates,
         )
         row.resolution = UploadRow.Resolution.PROVISIONAL
     else:

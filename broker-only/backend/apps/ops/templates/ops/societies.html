@@ -1,0 +1,16 @@
+{% extends "ops/base.html" %}
+{% block title %}Societies{% endblock %}
+{% block content %}
+<h1>Societies</h1>
+<form class="inline"><input type="search" name="q" value="{{ q }}" placeholder="Search a name, spelling mistakes are fine" style="flex:1"><button>Search</button></form>
+<div class="card scroll">
+<table>
+  <tr><th>Name</th><th>Locality</th><th>Status</th><th>Pin</th></tr>
+  {% for s in rows %}
+  <tr><td><a href="{% url 'ops-society' s.pk %}">{{ s.canonical_name }}</a></td><td>{{ s.locality.name }}</td>
+    <td><span class="chip {% if s.status == 'active' %}ok{% else %}warn{% endif %}">{{ s.status }}</span></td>
+    <td><code>{{ s.location.y|floatformat:5 }}, {{ s.location.x|floatformat:5 }}</code></td></tr>
+  {% empty %}<tr><td colspan="4" class="muted">No match.</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}

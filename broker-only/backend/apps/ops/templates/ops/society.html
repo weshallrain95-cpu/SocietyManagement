@@ -1,0 +1,55 @@
+{% extends "ops/base.html" %}
+{% block title %}{{ s.canonical_name }}{% endblock %}
+{% block head %}{% include "ops/leaflet.html" %}{% endblock %}
+{% block content %}
+<p class="muted"><a href="{% url 'ops-societies' %}">Societies</a> ›</p>
+<h1>{{ s.canonical_name }}</h1>
+<p class="muted">{{ s.locality.name }} · <span class="chip {% if s.status == 'active' %}ok{% else %}warn{% endif %}">{{ s.status }}</span> · pin <code>{{ s.location.y|floatformat:6 }}, {{ s.location.x|floatformat:6 }}</code> · <a href="{{ gmaps }}" target="_blank" rel="noopener noreferrer">open in Google Maps</a></p>
+<div id="map" class="map" data-lat="{{ s.location.y|stringformat:'f' }}" data-lng="{{ s.location.x|stringformat:'f' }}"></div>
+<div class="grid">
+  <div class="card">
+    <h2>Move the pin</h2>
+    <p class="muted">Paste a Google Maps link (open the building in Google Maps → Share → Copy link, then open that link and copy the long address from the browser bar), or type “19.2601, 72.9663”. You can also drag the pin on the map above.</p>
+    <form method="post" class="inline" id="pinform">
+      {% csrf_token %}<input type="hidden" name="action" value="pin">
+      <input type="text" name="link" id="link" placeholder="Google Maps link or lat, lng" required style="flex:1">
+      <input type="text" name="reason" placeholder="Why (optional)" maxlength="200">
+      <button class="primary">Move pin</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Other names people use</h2>
+    <p class="muted">Uploads using these spellings match this society automatically.</p>
+    {% for a in aliases %}
+    <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="remove_alias"><input type="hidden" name="alias_id" value="{{ a.pk }}">
+      <span>{{ a.alias_raw }} <span class="muted">· {{ a.source }} · used {{ a.confirmations }}×</span></span><button class="bad">Remove</button></form>
+    {% empty %}<p class="muted">None yet.</p>{% endfor %}
+    <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="add_alias">
+      <input type="text" name="alias" placeholder="e.g. Hiranandani Meadows" maxlength="120" required style="flex:1"><button>Add name</button></form>
+  </div>
+</div>
+<div class="card scroll">
+  <h2>Buildings / wings</h2>
+  <table><tr><th>Building</th><th>Flats known</th><th>Nearest station / school / hospital</th></tr>
+  {% for b in buildings %}<tr><td>{{ b.name|default:"(main)" }}</td><td>{{ b.n_units }}</td>
+    <td class="muted">{% for f in b.location_facts.all %}{{ f.poi_name }} {{ f.distance_m }} m{% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}</td></tr>
+  {% empty %}<tr><td colspan="3" class="muted">No buildings yet.</td></tr>{% endfor %}
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var el = document.getElementById("map");
+  if (!window.L) { el.textContent = "Map could not load (offline?). The pin tools still work."; return; }
+  var ll = [parseFloat(el.dataset.lat), parseFloat(el.dataset.lng)];
+  var map = L.map(el).setView(ll, 17);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+  var m = L.marker(ll, { draggable: true }).addTo(map).bindPopup("Drag me to the gate, then press Move pin").openPopup();
+  m.on("dragend", function () {
+    var p = m.getLatLng();
+    document.getElementById("link").value = p.lat.toFixed(6) + ", " + p.lng.toFixed(6);
+  });
+})();
+</script>
+{% endblock %}

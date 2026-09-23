@@ -1,0 +1,30 @@
+{% extends "ops/base.html" %}
+{% block title %}Pin map{% endblock %}
+{% block head %}{% include "ops/leaflet.html" %}{% endblock %}
+{% block content %}
+<h1>Pin map</h1>
+<p class="muted">Every society we know. <span class="chip ok">green</span> active, <span class="chip warn">amber</span> waiting for review. Click a pin to open it and fix its position.</p>
+<div id="map" class="map" style="height:70vh"></div>
+{{ pins|json_script:"pins" }}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var el = document.getElementById("map");
+  if (!window.L) { el.textContent = "Map could not load (offline?)."; return; }
+  var pins = JSON.parse(document.getElementById("pins").textContent);
+  var map = L.map(el).setView([19.2, 72.97], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+  var bounds = [];
+  pins.forEach(function (p) {
+    var c = p.status === "active" ? "#1E7A46" : "#C98A00";
+    var mk = L.circleMarker([p.lat, p.lng], { radius: 7, color: "#fff", weight: 2, fillColor: c, fillOpacity: 1 }).addTo(map);
+    var a = document.createElement("a"); a.href = p.url; a.textContent = p.name;
+    var box = document.createElement("div"); box.appendChild(a); box.appendChild(document.createTextNode(" · " + p.locality));
+    mk.bindPopup(box);
+    bounds.push([p.lat, p.lng]);
+  });
+  if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
+})();
+</script>
+{% endblock %}

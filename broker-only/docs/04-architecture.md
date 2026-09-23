@@ -27,7 +27,8 @@
 | Object storage | **S3** (prod) / **MinIO** (laptop) | Photos, videos, uploads; presigned URLs |
 | Video | AWS MediaConvert (prod) / ffmpeg worker (dev) → HLS | Owner walkthrough videos |
 | Mobile app | **React Native (Expo, TypeScript)**: one app with customer / broker / staff / owner modes | One codebase for Android and iOS; OTA updates; shared TypeScript types with the web |
-| Web (admin + broker desktop) | **Next.js 15 (React, TypeScript)** + a component library (shadcn/ui) + MapLibre GL | Desktop consoles |
+| Ops (admin) console | **Server-rendered Django** (`apps.ops`, at `/ops/`) + Leaflet with OSM tiles | Small internal team, staff session login, same deployment and same service functions as the API, every action audited (decided 2026-09-24) |
+| Broker desktop (later) | **Next.js 15 (React, TypeScript)** + a component library (shadcn/ui) + MapLibre GL | Deferred until brokers ask for bulk work on a big screen; the Expo web build covers desktop use until then |
 | Owner/customer link pages | **Server-rendered Django templates** (`apps.linkpages`) | Opened from WhatsApp/SMS on any phone: no JavaScript needed, small pages for slow connections, same address as the API so no extra deployment (decided 2026-09-24) |
 | Maps | **Google Maps Platform** (Places autocomplete, geocoding, Routes API with waypoint optimisation) on mobile; **MapLibre + OSM tiles** on the admin console to control cost | Google has the best Indian address and POI coverage; OSM is enough for internal tools |
 | Push | Firebase Cloud Messaging (Android + iOS via APNs) | |
@@ -50,7 +51,8 @@ row-level isolation, geo queries and relational integrity are core to this produ
 flowchart TB
   subgraph Clients
     MA["Mobile app (Expo RN)<br/>customer · broker · staff · owner"]
-    WEB["Web (Next.js)<br/>admin console · broker desktop"]
+    OPS["Ops console (Django /ops/)<br/>verification · review queue · pins · audit"]
+    WEB["Broker desktop (Next.js, later)"]
     LP["Link pages (Django)<br/>owners · walk-in customers"]
   end
   subgraph Edge
@@ -121,11 +123,12 @@ broker-only/
       notifications/        # templates, channels, preferences, delivery log
       billing/              # plans, entitlements, wallet, ledger, invoices
       audit/                # hash-chained audit + verification
-      adminops/             # queues, DPDP desk, dashboards APIs
+      ops/                  # ops console at /ops/: broker verification, review queue, pins, aliases, audit check
     common/                 # outbox, RLS middleware, encryption fields, pagination, errors
     tests/
   mobile/                   # Expo app
-  web/                      # Next.js (admin + broker desktop)
+  web/                      # Next.js broker desktop (later)
+  tools/pin-review/         # the pin-check page the pilot broker opens by link
   infra/
     docker/                 # Dockerfiles
     compose/                # docker-compose.dev.yml

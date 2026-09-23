@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block title %}Ops{% endblock %} · Only Broker</title>
+{% block head %}{% endblock %}
+<style>
+  :root { --ground:#F3F5F4; --surface:#FFF; --ink:#15201F; --muted:#5B6866; --line:#DCE2DF; --brand:#0E3B43; --brand-ink:#FFF;
+    --ok:#1E7A46; --ok-soft:#E3F3E9; --warn:#9A6200; --warn-soft:#FFF3DC; --bad:#B3261E; --bad-soft:#FBE4E2; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --ground:#0C1413; --surface:#152120; --ink:#E8EFED; --muted:#9AAAA7; --line:#2A3A38;
+    --brand:#5FB3BF; --brand-ink:#0C1413; --ok:#6CCB94; --ok-soft:#173326; --warn:#E8B45A; --warn-soft:#33280F; --bad:#F08A83; --bad-soft:#3A1C1A; color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  header { background:var(--brand); color:var(--brand-ink); padding:10px 16px; display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; }
+  header b { font-size:17px; margin-right:8px; }
+  header a { color:inherit; text-decoration:none; opacity:.8; padding:4px 0; border-bottom:2px solid transparent; }
+  header a.on { opacity:1; border-color:currentColor; }
+  header .sp { flex:1; }
+  .badge { display:inline-block; min-width:20px; padding:0 6px; border-radius:999px; background:var(--warn-soft); color:var(--warn); font-size:12px; font-weight:700; text-align:center; }
+  main { max-width:1100px; margin:0 auto; padding:18px 16px 40px; display:flex; flex-direction:column; gap:16px; }
+  h1 { font-size:22px; margin:0; } h2 { font-size:16px; margin:0; }
+  .muted { color:var(--muted); font-size:13px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+  .stat b { font-size:26px; font-variant-numeric:tabular-nums; display:block; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+  .scroll { overflow-x:auto; }
+  form.inline { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:0; }
+  input[type=text], input[type=search], input[type=password], input[type=tel], select { font:inherit; padding:7px 9px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--ink); min-width:0; }
+  button { font:600 14px system-ui,sans-serif; padding:7px 12px; border-radius:8px; border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--brand); color:var(--brand-ink); border-color:var(--brand); }
+  button.bad { color:var(--bad); }
+  a { color:var(--brand); }
+  .chip { font-size:12px; padding:2px 8px; border-radius:999px; background:var(--ground); border:1px solid var(--line); white-space:nowrap; }
+  .chip.ok { background:var(--ok-soft); color:var(--ok); border-color:transparent; }
+  .chip.warn { background:var(--warn-soft); color:var(--warn); border-color:transparent; }
+  .chip.bad { background:var(--bad-soft); color:var(--bad); border-color:transparent; }
+  .msg { padding:10px 12px; border-radius:10px; }
+  .msg.success { background:var(--ok-soft); color:var(--ok); } .msg.error { background:var(--bad-soft); color:var(--bad); }
+  .tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .tabs a { padding:4px 10px; border-radius:999px; border:1px solid var(--line); text-decoration:none; color:var(--ink); font-size:13px; }
+  .tabs a.on { background:var(--brand); color:var(--brand-ink); border-color:var(--brand); }
+  .map { height:420px; border-radius:12px; border:1px solid var(--line); }
+  code { font-size:12px; }
+</style>
+</head>
+<body>
+{% if user.is_authenticated and user.is_staff %}
+<header>
+  <b>Only Broker · Ops</b>
+  <a href="{% url 'ops-home' %}" class="{% if nav == 'home' %}on{% endif %}">Home</a>
+  <a href="{% url 'ops-brokers' %}" class="{% if nav == 'brokers' %}on{% endif %}">Brokers {% if counts.pending_brokers %}<span class="badge">{{ counts.pending_brokers }}</span>{% endif %}</a>
+  <a href="{% url 'ops-queue' %}" class="{% if nav == 'queue' %}on{% endif %}">Review queue {% if counts.open_items %}<span class="badge">{{ counts.open_items }}</span>{% endif %}</a>
+  <a href="{% url 'ops-societies' %}" class="{% if nav == 'societies' %}on{% endif %}">Societies</a>
+  <a href="{% url 'ops-map' %}" class="{% if nav == 'map' %}on{% endif %}">Pin map</a>
+  <a href="{% url 'ops-audit' %}" class="{% if nav == 'audit' %}on{% endif %}">Audit</a>
+  <span class="sp"></span>
+  <form method="post" action="{% url 'ops-logout' %}" class="inline">{% csrf_token %}<button>Sign out</button></form>
+</header>
+{% endif %}
+<main>
+  {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

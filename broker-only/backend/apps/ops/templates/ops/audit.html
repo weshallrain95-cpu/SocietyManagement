@@ -1,0 +1,18 @@
+{% extends "ops/base.html" %}
+{% block title %}Audit{% endblock %}
+{% block content %}
+<h1>Tamper check</h1>
+<div class="grid">
+  <div class="card"><h2>Audit trail</h2>
+    {% if audit.ok %}<p><span class="chip ok">intact</span> {{ audit.checked }} records checked, none altered.</p>
+    {% else %}<p><span class="chip bad">broken</span> Record #{{ audit.broken_at_seq }} was altered or deleted. Escalate now.</p>{% endif %}</div>
+  <div class="card"><h2>Flat status history</h2>
+    {% if ledger.ok %}<p><span class="chip ok">intact</span> {{ ledger.checked }} status changes checked, none altered.</p>
+    {% else %}<p><span class="chip bad">broken</span> Entry #{{ ledger.broken_at_seq }} was altered or deleted. Escalate now.</p>{% endif %}</div>
+</div>
+<div class="card scroll"><h2>Latest 100 actions</h2>
+<table><tr><th>#</th><th>When</th><th>Who</th><th>What</th><th>On</th></tr>
+{% for e in events %}<tr><td>{{ e.seq }}</td><td>{{ e.at|date:"d M Y, H:i" }}</td><td>{{ e.actor_label|default:e.actor_id|default:"system" }}</td><td>{{ e.action }}</td><td class="muted">{{ e.target_type }}</td></tr>
+{% empty %}<tr><td colspan="5" class="muted">Nothing yet.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

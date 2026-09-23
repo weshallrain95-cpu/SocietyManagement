@@ -26,6 +26,7 @@ make seed      # Thane West master data + demo brokers, listings, customers
 
 Open:
 - API docs (Swagger): <http://localhost:8000/v1/docs>
+- Ops console: <http://localhost:8000/ops/> (same login as Django admin below)
 - Django admin: <http://localhost:8000/django-admin/> (phone `9000000000`, password `onlybroker-dev-admin`)
 - Health: <http://localhost:8000/health>
 
@@ -104,3 +105,18 @@ Attributes removed from the file are deactivated, never deleted, so old data sta
 | Live server: OTP login, RLS-scoped listings, fuzzy search, map, WebSocket heartbeat | ✅ |
 | `docker compose config` | ✅ |
 | Building the API image | ⚠️ Not verified in the cloud sandbox, whose network blocks the Debian package mirror. Expected to build normally on the laptop; tell Claude the error if it doesn't |
+
+## 9. Applying the pilot broker's pin check
+
+The broker marks each Thane West society as correct or wrong on the pin-check page (source in
+`tools/pin-review/`). Claude exports the answers as one JSON file per society, then:
+
+```bash
+python manage.py apply_pin_review pins/ --dry-run   # shows what would change
+python manage.py apply_pin_review pins/
+```
+
+"Correct" marks the society verified; "wrong" with a readable Google Maps link moves the pin
+and recalculates distances; a short `maps.app.goo.gl` link goes to the ops review queue
+(Pin corrections), where ops opens it and pastes the full link on the society page.
+Nicknames the broker typed are added as other names for that society.
