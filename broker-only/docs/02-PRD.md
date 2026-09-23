@@ -102,7 +102,7 @@ sequenceDiagram
 | MD-05 | Admin **merge** of duplicate societies/buildings/units with full re-pointing of listings and aliases, and undo | P0 | Merge is atomic; audit entry; undo within 30 days |
 | MD-06 | Every unit has **its own map location**, inherited from building and adjustable within 150 m by admin/owner | P0 | Distance-based attributes are recomputed on location change |
 | MD-07 | **Computed location facts** per building: distance and walk time to nearest railway/metro station, auto-rickshaw stand, bus stop, schools, hospitals, markets (from POI data) | P0 | Distances shown as facts ("650 m / 8 min walk to Thane stn"). Brokers can't overwrite them |
-| MD-08 | Unit attributes: BHK/type, carpet area (RERA carpet), floor/total floors, facing, furnishing (+ item checklist: gas stove, kitchen cabinet, wardrobes, ACs…), parking, amenities (lift, power backup, gym, pool…), **house rules** (pets, smoking, non-veg, bachelors/family, max occupants), age of building, OC status | P0 | Attribute dictionary is data-driven (admin can add attributes without code changes) |
+| MD-08 | Unit attributes as defined in the **approved Unit Attribute Dictionary** (founder-approved; loaded from `backend/apps/masterdata/dictionary/attribute_dictionary.yaml`). Draft v0.1 covers: BHK/type, carpet area (RERA carpet), floor/total floors, facing, furnishing (+ item checklist: gas stove, kitchen cabinet, wardrobes, ACs…), parking, amenities (lift, power backup, gym, pool…), **house rules** (pets, smoking, non-veg, bachelors/family, max occupants), age of building, OC status | P0 | Attribute dictionary is data-driven (admin can add attributes without code changes) |
 | MD-09 | **One unit, one truth:** conflicting attribute values from different sources are resolved by the trust hierarchy; conflicts are flagged "disputed" (Data Model §6) | P0 | UI shows the resolved value + source badge (Computed / Owner / Verified / Broker consensus / Single broker) |
 | MD-10 | Any party (customer after a visit, broker, owner) can **suggest a correction** to a unit variable | P1 | Suggestion enters the resolver; the suggester's trust weight applies |
 | MD-11 | Media: photos and **owner-uploaded video walkthroughs** per unit; the broker's own media stays on their listing unless shared to master | P1 | Video ≤ 2 min, transcoded to HLS; photos auto-resized; EXIF location stripped from public copies |
@@ -254,6 +254,39 @@ a removed staff member loses access immediately and their held keys are flagged 
 | ADM-08 | DPDP operations: data export/deletion requests, consent reports, grievance tickets | P0 |
 | ADM-09 | Impersonation for support: read-only, time-boxed, audited, with user notified | P1 |
 
+### 3.15 Offline customer servicing (OFF)
+
+Brokers pay for the platform, and most of their business still starts **offline**: walk-ins at
+the office, phone calls, referrals, society notice boards. The platform has to serve those
+customers fully even when **the customer never installs the app**, and it must keep working when
+**the broker or staff has no network** (basements, lift lobbies, patchy suburbs).
+
+**Principles**
+- An offline customer is a first-class customer in the broker's book. Every broker feature (match,
+  visit plan, owner notice, reviews) works for them.
+- Customers reach the platform through **links, not installs**: WhatsApp or SMS links open light
+  web pages; a printable PDF is available for customers who want paper.
+- Offline customers are the broker's own leads and **never consume lead credits** and are **never
+  broadcast** to other brokers.
+- The customer's consent is captured without the app (DPDP).
+
+| ID | Requirement | Priority | Acceptance criteria |
+|----|-------------|----------|---------------------|
+| OFF-01 | **Quick capture** of an offline customer: mobile number, name, source (`walk_in`, `phone_call`, `referral`, `hoarding/board`, `whatsapp_group`, `other`), requirement in the same structure as an enquiry. Voice-note attachment allowed | P0 | New customer + requirement saved in ≤ 60 s on mobile; works offline (queued) |
+| OFF-02 | **Consent without the app:** (a) OTP sent to the customer's phone and read out to the broker, or (b) a WhatsApp/SMS consent link the customer taps, or (c) broker-attested verbal consent (timestamped, reason recorded, flagged for later link confirmation) | P0 | Until consent is confirmed, only name + number + requirement are stored and no messages other than the consent request are sent |
+| OFF-03 | **Shortlist link:** broker shares selected units as a WhatsApp/SMS link → a web page with photos, resolved attributes, computed distances, society-level location, and "I'm interested / Not for me" buttons per unit | P0 | Responses flow back into the CRM timeline and match feedback |
+| OFF-04 | **Visit plan link:** date/time proposal and confirmation, itinerary with map, the staff member's name and number, day-of updates (delays, reorders) by WhatsApp/SMS | P0 | Same visit plan object as for app customers (VISIT-02/06) |
+| OFF-05 | **Printable sheets:** PDF shortlist and visit itinerary (broker's branding, QR code back to the live link) | P1 | Generated in < 5 s; no owner contact or flat number unless the broker chooses to include them |
+| OFF-06 | **Walk-in office mode (desktop):** big-screen requirement capture, instant matching with side-by-side units, "send to customer's WhatsApp" in one click | P1 | Designed for a broker across the desk from the customer |
+| OFF-07 | **Call & interaction log:** log phone calls, office meetings and WhatsApp conversations against the customer (manual now; automatic with masked calling, NOTIF-04) | P0 (manual) | Timeline shows every touchpoint regardless of channel |
+| OFF-08 | **Reviews from offline customers:** after a completed visit or closed deal, the customer receives a one-time review link. Reviews count towards broker reputation and are labelled "verified visit" | P0 | Because visit completion is recorded by staff check-in, no app is needed to prove the interaction |
+| OFF-09 | **Profile claim:** if an offline customer later installs the app with the same number, they see their own requirements, shared shortlists and visit plans with that broker (never the broker's private notes) and can continue in-app | P1 | Linkage via phone hash; customer must pass OTP |
+| OFF-10 | **Offline-capable field app:** today's itinerary, stop details, key instructions (encrypted on device), customer contact and outcome forms are available with no network; actions are queued and synced with idempotency keys | P0 | Staff can complete a full day's visits in airplane mode and sync later without duplicates |
+| OFF-11 | **Sync conflict rules:** server state wins for plan structure (stops added/removed by the broker); device wins for outcomes and check-in times it recorded; conflicts are shown to the broker | P0 | Covered by automated sync tests |
+| OFF-12 | **Offline inventory lookup:** broker can search their own listings (last synced copy, including key custody) without network | P1 | Local encrypted store; wiped on logout or on remote revoke |
+| OFF-13 | **Owner offline flows:** owners who never install the app still confirm status (STAT-05), acknowledge visits (VISIT-05) and review brokers (REV-01) via links; brokers can record an owner's phone confirmation, flagged as "broker-recorded" (lower trust than an owner click) | P0 | Status source shows "owner (link)" vs "owner (via broker)" |
+| OFF-14 | **Bulk import of the broker's existing customer list** (Excel/CSV/phone contacts, with consent status "not yet confirmed") | P1 | Imported contacts are not messaged until the broker triggers a consent request |
+
 ## 4. Non-functional requirements (NFR)
 
 | ID | Category | Requirement |
@@ -284,6 +317,7 @@ In MVP (all P0 items), in short:
 - Broker CRM, matching with explanations, visit plans with route order, staff assignment, owner visit notice, live changes, visit outcomes
 - Customer↔Broker reviews
 - Push + WhatsApp + SMS notifications
+- Offline customer servicing: quick capture, consent without app, shortlist and visit-plan links, offline-capable field app, offline-customer reviews (all OFF P0 items)
 - Admin console essentials (ADM-01..05, 07, 08)
 
 Not in MVP: payments, chat, masked calling, builder module, owner app (owners use links),
@@ -340,6 +374,7 @@ PII is never sent to analytics; user IDs are pseudonymous.
 | Owner locates brokers, invites, tracks, rates | OWN-01…03, REV-01 |
 | Owner video; any party updates variables | MD-10, MD-11, OWN-05 |
 | 360° reviews | REV-01…05 |
+| Brokers serve walk-in / phone customers who never install the app (founder review, 2026-09-23) | OFF-01…14 |
 | Religion / diet surprises at the site | MD-08 (house rules), MATCH-02, BRD §10.2 |
 | Universe of societies (MMR) | MD-01, MD-02 |
 | Same unit, many brokers | INV-02 |

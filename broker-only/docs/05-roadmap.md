@@ -22,8 +22,8 @@ own benefit, and that inventory later feeds the marketplace.
 | S1 | Master data models, seed import (localities, societies, POIs), `normalise_name`, society search, location-fact computation | Society search + map picker; admin master-data workbench v1 | Search "hira nandani" → correct society; unit shows "650 m to station" |
 | S2 | Listings, keys, attribute dictionary + observations + resolver, status engine + ledger + owner confirmation link | Add-listing flow, inventory list/map, owner confirmation web page | Broker adds 10 units; LET → AVAILABLE needs owner YES via link |
 | S3 | Excel upload pipeline + resolution queue, provisional societies, merge | Upload wizard (desktop), resolution UI, admin merge | Upload of 500 messy rows ≥ 80% auto-matched; admin merges duplicates |
-| S4 | CRM, requirements, matching engine with explanations | Customer book, requirement form, match results | Riya's requirement → ranked matches with ✔/✖ reasons |
-| S5 | Visit plans, route optimisation, staff assignment, owner visit notice, live updates (WS), outcomes | Plan builder, share link, staff itinerary, check-in/outcome | Full tour: plan → share → assign → live reorder → outcomes |
+| S4 | CRM, requirements, **offline customers (quick capture, consent without app, interaction log)**, matching engine with explanations | Customer book, requirement form, match results | Riya's requirement → ranked matches with ✔/✖ reasons |
+| S5 | Visit plans, **shortlist/visit share links**, **offline sync API**, route optimisation, staff assignment, owner visit notice, live updates (WS), outcomes | Plan builder, share link, staff itinerary, check-in/outcome | Full tour: plan → share → assign → live reorder → outcomes |
 | S6 | Presence, map aggregates (H3), enquiry + broadcast + proposals, entitlements | Customer map, enquiry composer, broker alert + proposal, customer proposal list | Enquiry "beeps" on 5 broker phones in < 3 s |
 | S7 | Reviews + reputation, notifications (FCM, WhatsApp, SMS), anti-spam, DPDP desk | Reviews UI, notification preferences, admin queues | End-to-end pilot script passes on staging |
 | S8 | Hardening: load test (k6), security review, pen-test fixes, runbooks, staging → pilot | Polish, crash-free ≥ 99.5% | Pilot go-live in Thane West |
@@ -54,9 +54,10 @@ own benefit, and that inventory later feeds the marketplace.
 |---|----------|----------------|----------------|
 | D1 | Final product name and domain | Keep "Only Broker" as the working name; check the trademark before public launch | Branding, app-store listing, DLT sender ID |
 | D2 | Monetisation at pilot | Free for the pilot; introduce plans and credits at public launch | Adoption vs. early revenue signal |
-| D3 | Pilot micro-market | Thane West (the brief's Dhokali example) | Seeding effort is per micro-market |
+| D3 | Pilot micro-market | ✅ **Decided 2026-09-23: Thane West**; a pilot broker is already engaged | Seeding effort is per micro-market |
 | D4 | Number of proposals a customer can accept | 3 | Balance between customer choice and broker lead value |
 | D5 | Rules for broker consensus without an owner | 2 independent brokers within 7 days | Status accuracy vs. speed |
+| D11 | Unit Attribute Dictionary v0.1 | Pending founder approval (spreadsheet circulated 2026-09-23) | Drives forms, uploads, matching |
 | D6 | House-rule catalogue content | Conduct-based only (BRD §10.2) | Legal and platform-policy exposure |
 | D7 | Mobile stack | React Native (Expo) | One team for mobile + web |
 | D8 | Hosting | AWS ap-south-1 | Data residency; managed PostGIS |

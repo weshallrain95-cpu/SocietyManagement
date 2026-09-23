@@ -188,7 +188,11 @@ Unique on `(alias_normalised, society_id)`.
 
 Unique index: `(building_id, unit_no_normalised) WHERE merged_into_id IS NULL`.
 
-**`attribute_def`**: the dictionary, so admins can add attributes without code.
+**`attribute_def`**: the dictionary, so admins can add attributes without code. The initial
+content is the founder-approved **Unit Attribute Dictionary** (draft v0.1 contains 200 attributes in
+13 categories, circulated as a spreadsheet for approval). After approval it is committed as
+`attribute_dictionary.yaml` and loaded with `manage.py load_attribute_dictionary`. The list below
+shows the columns; the full list is in that file.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -289,8 +293,25 @@ Unique `(broker_org_id, unit_id, txn_type) WHERE archived_at IS NULL`.
 `lockbox`), `holder_user_id` NULL, `instructions_enc`, `from_ts`, `to_ts`.
 
 **`customer`** (broker's book): `broker_org_id` (RLS), `phone_hash`, `phone_enc`, `name`,
-`source` (`marketplace`, `phone`, `walk_in`, `referral`), `platform_user_id NULL`, `stage`,
-`tags[]`, `notes`.
+`source` (`marketplace`, `phone_call`, `walk_in`, `referral`, `board`, `whatsapp_group`,
+`import`, `other`), `platform_user_id NULL` (set when an offline customer claims their profile),
+`consent_state` (`none`, `attested_verbal`, `otp_confirmed`, `link_confirmed`, `withdrawn`),
+`consent_evidence jsonb`, `stage`, `tags[]`, `notes`.
+
+**`customer_interaction`** (offline + online touchpoints, OFF-07): `broker_org_id` (RLS),
+`customer_id`, `kind` (`call_in`, `call_out`, `office_meeting`, `whatsapp`, `sms`, `link_opened`,
+`shortlist_response`, `note`), `occurred_at`, `duration_s`, `summary`, `by_user_id`.
+
+**`share_link`** (shortlist, visit plan, review, consent, status confirmation): `id`,
+`purpose`, `token_hash`, `target_type/target_id`, `recipient_phone_hash`, `expires_at`,
+`max_uses`, `uses`, `revoked_at`. Tokens are shown once and never stored in clear.
+
+**`shortlist`** / **`shortlist_item`**: `broker_org_id` (RLS), `customer_id`, `requirement_id`,
+items → `listing_id`, `customer_response` (`interested`, `not_for_me`, `null`), `responded_at`.
+
+**`sync_mutation`** (offline field app, OFF-10/11): `device_id`, `user_id`, `idempotency_key`
+UNIQUE, `entity`, `payload`, `client_ts`, `applied_at`, `result` (`applied`, `duplicate`,
+`conflict`), `conflict_detail`.
 
 **`requirement`**: `broker_org_id` (RLS; NULL for the customer's own enquiry copy), `customer_id`,
 `enquiry_id NULL`, `txn_type`, `property_types[]`, `bhk_min/max`, `budget_min/max_paise`,
