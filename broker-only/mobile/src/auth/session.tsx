@@ -1,9 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { createApi, DEFAULT_API_URL, DEMO_FORCED, type Api, type Role, type Tokens } from '@/api';
 import { LiveConnection, wsUrl, type LiveEvent } from '@/lib/live';
 import { OfflineQueue, newKey } from '@/lib/offlineQueue';
+import { kv } from '@/lib/kv';
 import { getItem, removeItem, setItem } from '@/lib/storage';
 
 const TOKENS = 'ob.tokens';
@@ -31,7 +31,7 @@ interface Session {
 }
 
 const Ctx = createContext<Session | null>(null);
-export const queue = new OfflineQueue(AsyncStorage);
+export const queue = new OfflineQueue(kv);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -54,9 +54,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [t, s] = await Promise.all([getItem(TOKENS), AsyncStorage.getItem(SETTINGS)]);
+      const [t, s] = await Promise.all([getItem(TOKENS), kv.getItem(SETTINGS)]);
       if (s) setSettings((prev) => ({ ...prev, ...JSON.parse(s), ...(DEMO_FORCED ? { demo: true } : {}) }));
-      else await AsyncStorage.setItem(SETTINGS, JSON.stringify(settings));
+      else await kv.setItem(SETTINGS, JSON.stringify(settings));
       if (t) store.set(JSON.parse(t));
       setReady(true);
     })();
@@ -94,7 +94,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     async (s: Partial<Settings>) => {
       const next = { ...settings, ...s };
       setSettings(next);
-      await AsyncStorage.setItem(SETTINGS, JSON.stringify(next));
+      await kv.setItem(SETTINGS, JSON.stringify(next));
     },
     [settings],
   );

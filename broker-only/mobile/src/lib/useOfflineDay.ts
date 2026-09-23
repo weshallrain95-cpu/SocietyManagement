@@ -1,11 +1,11 @@
 // Field staff: today's plans cached on the device, actions queued, auto-sync when back online.
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { useCallback, useEffect, useState } from 'react';
 
 import type { SyncMutation, VisitPlan } from '@/api';
 import { useSession } from '@/auth/session';
 import { indiaDate } from '@/lib/format';
+import { kv } from '@/lib/kv';
 
 const CACHE = 'ob.staff.day.v1';
 
@@ -43,7 +43,7 @@ export function useOfflineDay() {
       const fresh = (await api.visitPlans()).filter((p) => p.date >= today && !['completed', 'cancelled'].includes(p.state));
       fresh.sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
       setPlans(fresh);
-      await AsyncStorage.setItem(CACHE, JSON.stringify(fresh));
+      await kv.setItem(CACHE, JSON.stringify(fresh));
       setLastSync(new Date().toISOString());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Sync failed');
@@ -55,7 +55,7 @@ export function useOfflineDay() {
 
   useEffect(() => {
     (async () => {
-      const cached = await AsyncStorage.getItem(CACHE);
+      const cached = await kv.getItem(CACHE);
       if (cached) setPlans(JSON.parse(cached));
       await loadPending();
       sync();

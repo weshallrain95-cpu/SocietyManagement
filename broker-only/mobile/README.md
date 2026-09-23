@@ -16,6 +16,11 @@ Live mode talks to the backend (`broker-only/backend`). Set the server address i
 Demo logins: broker `9820000001`, field staff `9820010000`, OTP `123456`.
 Against the dev server, the OTP is shown on screen (development only).
 
+## Shareable demo link
+
+`npm run demo:single` packs the demo into one self-contained HTML file (`dist/only-broker-demo.html`)
+that opens from any link, including sandboxed viewers: assets are embedded and storage falls back to memory.
+
 ## What's inside
 
 | Path | What |
