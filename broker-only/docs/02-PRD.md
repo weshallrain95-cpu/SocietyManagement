@@ -375,7 +375,7 @@ PII is never sent to analytics; user IDs are pseudonymous.
 | Owner video; any party updates variables | MD-10, MD-11, OWN-05 |
 | 360° reviews | REV-01…05 |
 | Brokers serve walk-in / phone customers who never install the app (founder review, 2026-09-23) | OFF-01…14 |
-| Religion / diet surprises at the site | MD-08 (house rules), MATCH-02, BRD §10.2 |
+| Surprises at the site that change which flats are suitable | MD-08 (conduct-based house rules), MATCH-02, BRD §10.2 |
 | Universe of societies (MMR) | MD-01, MD-02 |
 | Same unit, many brokers | INV-02 |
 | Misspelled / short building names don't corrupt the DB | MD-03, MD-04, MD-05, Data Model §5 |

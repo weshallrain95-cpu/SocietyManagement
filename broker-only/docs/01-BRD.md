@@ -160,9 +160,8 @@ deal. Brokerage stays between broker and client, off-platform. This is the clear
    within limits.
 6. **360° reviews.** Customer ↔ Broker ↔ Owner can review each other, but only after a verified
    interaction such as a completed visit or a closed deal.
-7. **No identity-based filtering (see §10.2).** The platform never records or filters on a person's
-   religion, caste, community, ethnicity, nationality or similar protected identity. Owner **house
-   rules** based on conduct (pets, smoking, non-veg cooking on the premises, bachelors/family,
+7. **Conduct-based house rules only (see §10.2).** The platform never records or filters on who a
+   person *is*, only on how a home will be *used*. Owner **house rules** based on conduct (pets, smoking, non-veg cooking on the premises, bachelors/family,
    occupancy limits) are recorded as **unit attributes shown up front**, so a tour doesn't fall apart
    when a mismatch surfaces at the site.
 
@@ -195,24 +194,24 @@ deal. Brokerage stays between broker and client, off-platform. This is the clear
 | **Consumer Protection (E-Commerce) Rules 2020** | Clear disclosures, no misleading claims | "Promoted" labels; truthful status labels; review integrity |
 | **Data localisation (prudent)** | Keep personal data in India | Host in an India region (e.g. AWS ap-south-1 Mumbai) |
 
-### 10.2 The "religion / diet at the site" problem: our position
+### 10.2 Conduct-based house rules (founder decision, 2026-09-23)
 
-The brief describes a real situation: at the site the broker learns something about the customer
-that changes which flats are suitable. The platform addresses this **by making every unit's house
-rules explicit up front, not by profiling customers**:
+The brief describes a real situation: a tour falls apart at the site because something that
+matters to the owner surfaces only then. The platform prevents this by **making every unit's house
+rules explicit up front**:
 
 - Owners (or brokers on their behalf) declare **conduct-based house rules** from an admin-curated
-  list: pets, smoking, non-veg cooking on premises, bachelors / family only, max occupants, company
-  lease only, etc.
+  catalogue: pets, smoking, non-veg cooking on premises, bachelors or families, maximum occupants,
+  company lease, guests, home-office use.
 - Customers state their **own needs** in the same terms, e.g. "I have a dog" or "we cook non-veg".
 - Matching excludes clashes **before** the visit, so the tour is stable.
-- The platform **does not** capture religion, caste, community or similar identity fields, offers no
-  such filter, and moderation removes identity-based rules or remarks ("X community only") from
-  free text.
+- **Platform vocabulary rule:** the product describes homes and how they are used, never the
+  personal identity of the people using them. No form, filter, label, template or report uses
+  identity terms. The house-rule catalogue is the only place occupancy conditions can be expressed,
+  and moderation removes free-text remarks that try to set identity-based conditions.
 
-Why this matters: identity-based filtering creates legal exposure (constitutional
-anti-discrimination principles, evolving state-level housing law, app-store content policies) and
-reputational risk. The conduct-based approach still solves the broker's operational problem.
+This protects the platform legally (anti-discrimination principles, app-store content policies)
+and reputationally, and still solves the broker's operational problem.
 
 ## 11. Assumptions
 

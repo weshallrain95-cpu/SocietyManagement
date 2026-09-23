@@ -28,6 +28,7 @@ model from day one.
 | 03 | [Data Model](docs/03-data-model.md) | Entities, ERD, table specs, unit status state machine, society de-duplication, one-unit-one-truth resolution |
 | 04 | [Architecture & Infrastructure](docs/04-architecture.md) | Stack, components, real-time broadcast, APIs, security, laptop dev server, production deployment |
 | 05 | [Roadmap & Delivery Plan](docs/05-roadmap.md) | Phases, sprint plan, open decisions needing the founder's call |
+| 06 | [Making the Attribute Dictionary Manageable](docs/06-attribute-data-entry.md) | How 200 attributes become ~10 taps for brokers, ≤ 10 questions for owners and one screen for customers |
 
 ## Source
 
