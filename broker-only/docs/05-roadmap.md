@@ -46,6 +46,7 @@ because it was built in one push:
 | **Owner/customer link pages**: availability check, visit notice, shortlist, visit plan, consent, review | ✅ Done — server-rendered, tested in a real browser |
 | **Ops (admin) console** at `/ops/`: broker verification, review queue (new societies: approve / merge / reject), society pins (paste a Google Maps link or drag the pin) and names, whole-area pin map, tamper check | ✅ Done |
 | **Pin-check page for the pilot broker** (online link; answers applied with `apply_pin_review`) | ✅ Done |
+| **Building layouts and flat-number checks** (MD-10): wing picker in the app, live check as the broker types, uploads refuse impossible flats, ops edits layouts, spreadsheet import + template for MahaRERA / field-survey data | ✅ Done |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 
@@ -83,6 +84,7 @@ because it was built in one push:
 | D7 | Mobile stack | React Native (Expo) | One team for mobile + web |
 | D8 | Hosting | AWS ap-south-1 | Data residency; managed PostGIS |
 | D9 | Master-data sources and licences | MahaRERA + OSM first; evaluate paid data vendors | Data quality and legal use |
+| D12 | Who may create buildings | ✅ **Decided 2026-09-24: closed universe.** Brokers and owners pick from our wings; a new name is only a request that ops approves (MD-04, MD-10) | Upload quality: typos become matches, not duplicates |
 | D10 | Repository | Keep `broker-only/` in this repo on its own branch for now; move to a **dedicated repository** before Phase 1 code grows | Clean history and permissions; CI separation |
 
 ## 6. Immediate next steps
@@ -92,6 +94,8 @@ because it was built in one push:
    and add the broker's real society names and nicknames (they become aliases).
 3. Start the account registrations with long lead times: DLT sender ID + templates, WhatsApp Business,
    Google Cloud (Maps/Places/Routes), MahaRERA agent verification process.
-4. Engineering: the admin console (verification queue, society merges, disputes, audit), then
-   the broker desktop (Excel upload with review), and a pin-review map the pilot broker can open
-   online to verify Thane West societies.
+4. Data: fill the building-layout sheet (`tools/building-layouts/`) for Thane West — MahaRERA pages
+   for newer projects, the pilot broker and a field visit for older ones — and load it with
+   `import_building_layouts`.
+5. Engineering next: put the backend on a staging server so the pilot broker can use the real app
+   (not just the demo); then real SMS/WhatsApp once the accounts exist.

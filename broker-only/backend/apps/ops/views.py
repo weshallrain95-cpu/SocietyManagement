@@ -19,9 +19,17 @@ from django.views.decorators.http import require_POST
 from apps.audit.models import AuditEvent
 from apps.audit.services import audit, verify_chain
 from apps.masterdata import dedupe
-from apps.masterdata.models import Society, SocietyAlias
-from apps.masterdata.normalise import normalise_name
-from apps.masterdata.services import MasterDataError, approve_provisional, merge_societies, move_society_pin, parse_maps_link
+from apps.masterdata.layout import expected_units, layout_dict
+from apps.masterdata.models import Building, Society, SocietyAlias
+from apps.masterdata.normalise import normalise_building, normalise_name
+from apps.masterdata.services import (
+    MasterDataError,
+    approve_provisional,
+    get_or_create_building,
+    merge_societies,
+    move_society_pin,
+    parse_maps_link,
+)
 from apps.orgs.models import BrokerOrg
 from apps.status.services import verify_ledger
 from common.models import ReviewQueueItem
@@ -191,6 +199,26 @@ def society(request, pk):
             else:
                 r = move_society_pin(s, point, user=request.user, reason=request.POST.get("reason", "ops edit"))
                 messages.success(request, f"Pin moved; distances recalculated ({r['buildings_moved']} buildings moved with it).")
+        elif action == "layout":
+            b = get_object_or_404(Building, pk=request.POST.get("building_id"), society=s)
+            try:
+                _save_layout(b, request.POST, user=request.user)
+                messages.success(request, f"{b.name}: layout saved.")
+            except ValueError as e:
+                messages.error(request, f"{b.name}: {e}")
+        elif action == "add_wing" and request.POST.get("wing", "").strip():
+            name = request.POST["wing"].strip()[:80]
+            if s.buildings.filter(name_normalised=normalise_building(name), merged_into__isnull=True).exists():
+                messages.error(request, f"{name} already exists.")
+            else:
+                b = get_or_create_building(s, name)
+                audit(request.user, "building.added", b, {"society": str(s.pk)})
+                messages.success(request, f"Wing {name} added. Now fill in its floors.")
+        elif action == "wings_complete":
+            s.wings_complete = request.POST.get("value") == "1"
+            s.save(update_fields=["wings_complete"])
+            audit(request.user, "society.wings_complete", s, {"value": s.wings_complete})
+            messages.success(request, "Brokers can no longer add wings here." if s.wings_complete else "Brokers may add new wings again.")
         elif action == "add_alias" and request.POST.get("alias", "").strip():
             dedupe.learn_alias(s, request.POST["alias"].strip(), SocietyAlias.Source.ADMIN)
             audit(request.user, "society.alias_added", s, {"alias": request.POST["alias"].strip()[:120]})
@@ -202,6 +230,11 @@ def society(request, pk):
                 a.delete()
                 messages.success(request, "Name removed.")
         return redirect("ops-society", pk=s.pk)
+    buildings = list(
+        s.buildings.filter(merged_into__isnull=True).annotate(n_units=Count("units")).prefetch_related("location_facts").order_by("name")
+    )
+    for b in buildings:
+        b.expected = expected_units(b)
     return render(
         request,
         "ops/society.html",
@@ -210,7 +243,8 @@ def society(request, pk):
             "aliases": s.aliases.order_by("-confirmations"),
             "counts": _counts(),
             "nav": "societies",
-            "buildings": s.buildings.filter(merged_into__isnull=True).annotate(n_units=Count("units")).prefetch_related("location_facts"),
+            "buildings": buildings,
+            "sources": LAYOUT_SOURCES,
             "gmaps": f"https://www.google.com/maps/search/?api=1&query={s.location.y},{s.location.x}",
         },
     )
@@ -232,6 +266,40 @@ def pin_map(request):
         for s in Society.objects.select_related("locality").filter(status__in=["active", "provisional"])
     ]
     return render(request, "ops/map.html", {"pins": pins, "counts": _counts(), "nav": "map"})
+
+
+LAYOUT_SOURCES = ["rera", "survey", "ops", "broker"]
+
+
+def _int_list(text: str) -> list[int]:
+    try:
+        return sorted({int(x) for x in text.replace(";", ",").split(",") if x.strip()})
+    except ValueError:
+        raise ValueError("floors with no flats must be numbers, e.g. 11, 22") from None
+
+
+def _opt_int(v: str, label: str, lo: int, hi: int):
+    if not (v or "").strip():
+        return None
+    if not v.strip().lstrip("-").isdigit() or not lo <= int(v) <= hi:
+        raise ValueError(f"{label} must be a number from {lo} to {hi}")
+    return int(v)
+
+
+def _save_layout(b: Building, post, *, user) -> None:
+    before = layout_dict(b)
+    b.floors_total = _opt_int(post.get("floors_total", ""), "Floors", 0, 120)
+    lowest = _opt_int(post.get("lowest_floor", ""), "First floor with flats", 0, 10)
+    b.lowest_floor = 1 if lowest is None else lowest
+    b.units_per_floor = _opt_int(post.get("units_per_floor", ""), "Flats per floor", 1, 40)
+    b.skip_floors = _int_list(post.get("skip_floors", ""))
+    b.extra_unit_nos = [x.strip()[:30] for x in post.get("extra_unit_nos", "").split(",") if x.strip()]
+    b.layout_source = post.get("layout_source", "") if post.get("layout_source") in LAYOUT_SOURCES else "ops"
+    b.layout_verified = post.get("layout_verified") == "1"
+    if b.layout_verified and not (b.floors_total and b.units_per_floor):
+        raise ValueError("fill in floors and flats per floor before marking the layout verified")
+    b.save()
+    audit(user, "building.layout_changed", b, {"from": before, "to": layout_dict(b)})
 
 
 # --- audit -------------------------------------------------------------------------------------------

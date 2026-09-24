@@ -8,8 +8,8 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.masterdata.layout import check_flat, issues_json
 from apps.masterdata.models import MicroMarket, ResolvedAttribute, Society, Unit
-from apps.masterdata.normalise import normalise_unit_no
 from apps.masterdata.services import get_or_create_building, get_or_create_unit
 from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
 from apps.status.models import UnitStatus
@@ -85,6 +85,7 @@ class ListingCreateSerializer(serializers.Serializer):
     building = serializers.CharField(required=False, allow_blank=True, max_length=80)
     unit_no = serializers.CharField(max_length=30)
     floor = serializers.IntegerField(required=False, allow_null=True)
+    confirm_layout = serializers.BooleanField(required=False, default=False, help_text="Save despite layout warnings")
     bhk = serializers.DecimalField(max_digits=3, decimal_places=1, min_value=Decimal("0.5"), max_value=Decimal("10"))
     property_type = serializers.ChoiceField(choices=Unit.PropertyType.choices, default="apartment")
     txn_type = serializers.ChoiceField(choices=TXN)
@@ -137,12 +138,14 @@ class ListingListCreate(APIView):
         if society.status == Society.Status.PROVISIONAL and society.proposed_by_org_id != org.pk:
             return Response({"detail": "That society is awaiting approval"}, status=400)
         society = society.resolved()
+        # MD-10: the wing must exist and the flat number must fit the wing's floors and flats per floor.
+        chk = check_flat(society, d.pop("building", "") or None, d["unit_no"], d.get("floor"))
+        confirmed = d.pop("confirm_layout", False)
+        if chk["blocking"] or (chk["issues"] and not confirmed):
+            first = next((i for i in chk["issues"] if i.blocking), chk["issues"][0])
+            return Response({"detail": first.message, "layout": issues_json(chk)}, status=422 if chk["blocking"] else 409)
         with transaction.atomic():
-            building_name = d.pop("building", "") or None
-            if not building_name:
-                # "B-1203" typed as the flat number means wing B (same rule as Excel uploads).
-                building_name = normalise_unit_no(d["unit_no"]).wing or None
-            building = get_or_create_building(society, building_name)
+            building = get_or_create_building(society, chk["wing"])
             unit, _ = get_or_create_unit(
                 building, d.pop("unit_no"), bhk=d["bhk"], property_type=d.pop("property_type"), floor=d.get("floor")
             )

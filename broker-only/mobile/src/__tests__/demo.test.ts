@@ -30,3 +30,16 @@ test('capturing the same number twice returns the same customer', async () => {
   const b = await run(api.captureCustomer({ phone: '+91 98111 22233', source: 'phone_call' }));
   expect(a.id).toBe(b.id);
 });
+
+test('demo refuses impossible flats like the server does', async () => {
+  const api = createDemoApi();
+  const base = { society_id: 'soc-0', bhk: '2', txn_type: 'RENT' as const, asking_rent: 20000 };
+  await expect(run(api.createListing({ ...base, building: 'A Wing', unit_no: '2504' }))).rejects.toMatchObject({ status: 422 });
+  await expect(run(api.createListing({ ...base, building: 'Z', unit_no: '1203' }))).rejects.toMatchObject({ status: 422 });
+  const ok = await run(api.createListing({ ...base, building: 'b', unit_no: '1203' }));
+  expect(ok.building).toBe('B Wing');
+  // partly-known society: a warning the broker can confirm
+  const other = { ...base, society_id: 'soc-2', building: 'A Wing', unit_no: '2601' };
+  await expect(run(api.createListing(other))).rejects.toMatchObject({ status: 409 });
+  expect((await run(api.createListing({ ...other, confirm_layout: true }))).unit_no).toBe('2601');
+});

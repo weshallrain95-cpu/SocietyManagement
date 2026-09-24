@@ -120,3 +120,17 @@ python manage.py apply_pin_review pins/
 and recalculates distances; a short `maps.app.goo.gl` link goes to the ops review queue
 (Pin corrections), where ops opens it and pastes the full link on the society page.
 Nicknames the broker typed are added as other names for that society.
+
+## 10. Loading building layouts (wings, floors, flats per floor)
+
+Fill `tools/building-layouts/building-layout-template.xlsx` (one row per wing; the first sheet
+explains each column), then:
+
+```bash
+python manage.py import_building_layouts layouts.xlsx --dry-run        # shows what would change
+python manage.py import_building_layouts layouts.xlsx --mark-complete  # "these are ALL the wings"
+```
+
+Societies must already exist; unknown names are listed back, never created. Ops can also edit a
+wing's layout on the society page of the ops console (`/ops/societies/...`). Only wings marked
+*Verified* refuse impossible flat numbers; the others only warn the broker.

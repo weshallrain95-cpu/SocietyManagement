@@ -166,10 +166,10 @@ export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => v
   );
 }
 
-export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warn' | 'ok'; children: React.ReactNode }) {
+export function Notice({ tone = 'info', children }: { tone?: 'info' | 'warn' | 'ok' | 'bad'; children: React.ReactNode }) {
   const c = usePalette();
-  const bg = { info: c.infoBg, warn: c.warnBg, ok: c.okBg }[tone];
-  const fg = { info: c.info, warn: c.warn, ok: c.ok }[tone];
+  const bg = { info: c.infoBg, warn: c.warnBg, ok: c.okBg, bad: c.badBg }[tone];
+  const fg = { info: c.info, warn: c.warn, ok: c.ok, bad: c.bad }[tone];
   return <View style={{ backgroundColor: bg, borderRadius: radius.md, padding: space.md }}><Text style={{ color: fg, fontSize: font.small, lineHeight: 18 }}>{children}</Text></View>;
 }
 

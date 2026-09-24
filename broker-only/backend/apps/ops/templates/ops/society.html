@@ -28,13 +28,37 @@
       <input type="text" name="alias" placeholder="e.g. Hiranandani Meadows" maxlength="120" required style="flex:1"><button>Add name</button></form>
   </div>
 </div>
-<div class="card scroll">
-  <h2>Buildings / wings</h2>
-  <table><tr><th>Building</th><th>Flats known</th><th>Nearest station / school / hospital</th></tr>
-  {% for b in buildings %}<tr><td>{{ b.name|default:"(main)" }}</td><td>{{ b.n_units }}</td>
-    <td class="muted">{% for f in b.location_facts.all %}{{ f.poi_name }} {{ f.distance_m }} m{% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}</td></tr>
-  {% empty %}<tr><td colspan="3" class="muted">No buildings yet.</td></tr>{% endfor %}
+<div class="card">
+  <h2>Wings and flat layout</h2>
+  <p class="muted">Floors and flats per floor let us refuse impossible flat numbers (e.g. 2504 in a 20-floor wing).
+    <b>Verified</b> layouts block them; unverified ones only warn the broker. Source: RERA, field survey, ops, or broker.</p>
+  <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="wings_complete">
+    {% if s.wings_complete %}<span class="chip ok">All wings on record — brokers cannot add wings</span><button name="value" value="0">Allow new wings</button>
+    {% else %}<span class="chip warn">Wing list may be incomplete — brokers can add a wing</span><button name="value" value="1">All wings are listed</button>{% endif %}
+  </form>
+  <div class="scroll">
+  <table>
+    <tr><th>Wing</th><th>Floors</th><th>First floor with flats</th><th>Flats per floor</th><th>Floors with no flats</th><th>Flats outside the pattern</th><th>Source</th><th>Verified</th><th>Flats known</th><th></th><th>Nearby</th></tr>
+    {% for b in buildings %}
+    <tr>
+      <form method="post" id="lay-{{ b.pk }}">{% csrf_token %}<input type="hidden" name="action" value="layout"><input type="hidden" name="building_id" value="{{ b.pk }}"></form>
+      <td><b>{{ b.name }}</b></td>
+      <td><input form="lay-{{ b.pk }}" type="text" inputmode="numeric" name="floors_total" value="{{ b.floors_total|default_if_none:'' }}" size="3"></td>
+      <td><input form="lay-{{ b.pk }}" type="text" inputmode="numeric" name="lowest_floor" value="{{ b.lowest_floor }}" size="2" title="0 = ground floor has flats"></td>
+      <td><input form="lay-{{ b.pk }}" type="text" inputmode="numeric" name="units_per_floor" value="{{ b.units_per_floor|default_if_none:'' }}" size="3"></td>
+      <td><input form="lay-{{ b.pk }}" type="text" name="skip_floors" value="{{ b.skip_floors|join:', ' }}" size="8" placeholder="11, 22"></td>
+      <td><input form="lay-{{ b.pk }}" type="text" name="extra_unit_nos" value="{{ b.extra_unit_nos|join:', ' }}" size="10" placeholder="PH1, 1203A"></td>
+      <td><select form="lay-{{ b.pk }}" name="layout_source">{% for src in sources %}<option value="{{ src }}" {% if b.layout_source == src %}selected{% endif %}>{{ src }}</option>{% endfor %}</select></td>
+      <td><input form="lay-{{ b.pk }}" type="checkbox" name="layout_verified" value="1" {% if b.layout_verified %}checked{% endif %}></td>
+      <td>{{ b.n_units }}{% if b.expected %} of {{ b.expected }}{% endif %}</td>
+      <td><button form="lay-{{ b.pk }}" class="primary">Save</button></td>
+      <td class="muted">{% for f in b.location_facts.all %}{{ f.poi_name }} {{ f.distance_m }} m{% if not forloop.last %} · {% endif %}{% empty %}—{% endfor %}</td>
+    </tr>
+    {% empty %}<tr><td colspan="11" class="muted">No wings yet.</td></tr>{% endfor %}
   </table>
+  </div>
+  <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="add_wing">
+    <input type="text" name="wing" placeholder="New wing, e.g. Rodas C" maxlength="80" required><button>Add wing</button></form>
 </div>
 {% endblock %}
 {% block scripts %}

@@ -14,6 +14,7 @@ from common.notify import queue_for_admin
 from common.rls import platform_context
 
 from . import dedupe, resolver, services
+from .layout import check_flat, issues_json, layout_dict
 from .location import facts_dict
 from .models import AttributeDef, Building, Locality, MicroMarket, ResolvedAttribute, Society, Unit
 
@@ -65,6 +66,7 @@ class SocietyDetailView(APIView):
                 "id": str(b.id),
                 "name": b.name,
                 "floors_total": b.floors_total,
+                "layout": layout_dict(b),
                 "location_facts": facts_dict(b),
                 "attributes": resolved_for("building", b.id),
             }
@@ -79,10 +81,44 @@ class SocietyDetailView(APIView):
                 "pincode": s.pincode,
                 "location": {"lat": s.location.y, "lng": s.location.x},
                 "rera_project_nos": s.rera_project_nos,
+                "wings_complete": s.wings_complete,
                 "attributes": resolved_for("society", s.id),
                 "buildings": buildings,
             }
         )
+
+
+class CheckFlatView(APIView):
+    """Live check while the broker types: does this wing and flat number exist?"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        s = get_object_or_404(Society, pk=pk).resolved()
+        q = request.query_params
+        floor = q.get("floor")
+        result = check_flat(s, q.get("wing") or None, q.get("unit_no", ""), int(floor) if floor and floor.lstrip("-").isdigit() else None)
+        return Response(issues_json(result))
+
+
+class LayoutReportView(APIView):
+    """'This flat really exists': the broker tells ops the building record is wrong."""
+
+    permission_classes = [IsBrokerMember]
+
+    def post(self, request, pk):
+        b = get_object_or_404(Building, pk=pk)
+        org = request.user.active_membership.org
+        unit_no = str(request.data.get("unit_no", ""))[:30]
+        note = str(request.data.get("note", ""))[:200]
+        with platform_context():
+            queue_for_admin(
+                "layout_report",
+                b.society,
+                f"{org.name}: flat {unit_no} in {b.name}, {b.society.canonical_name} was refused by the layout. {note}".strip(),
+                {"building_id": str(b.pk), "unit_no": unit_no, "org_id": str(org.pk)},
+            )
+        return Response({"detail": "Thanks — our team will check the building record, usually within a day."}, status=202)
 
 
 class BuildingUnitsView(APIView):

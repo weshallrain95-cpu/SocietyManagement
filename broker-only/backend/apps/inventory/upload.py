@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.masterdata import dedupe
+from apps.masterdata.layout import check_flat
 from apps.masterdata.models import Locality, Society, SocietyAlias
 from apps.masterdata.normalise import normalise_name, normalise_unit_no
 from apps.masterdata.services import get_or_create_building, get_or_create_unit, propose_society
@@ -334,7 +335,13 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
     ):
         with transaction.atomic():
             p = row.parsed
-            building = get_or_create_building(row.society, p.get("wing") or None)
+            chk = check_flat(row.society, p.get("wing") or None, p["unit_no"], p.get("floor"))
+            if chk["blocking"]:  # an impossible flat never enters the database; the broker fixes the sheet
+                row.errors = [i.message for i in chk["issues"] if i.blocking]
+                row.resolution = UploadRow.Resolution.ERROR
+                row.save(update_fields=["errors", "resolution"])
+                continue
+            building = get_or_create_building(row.society, chk["wing"])
             unit, _ = get_or_create_unit(
                 building, p["unit_no"], bhk=p["bhk"], floor=p.get("floor"), property_type=p.get("property_type") or "apartment"
             )
@@ -357,7 +364,7 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
             from apps.masterdata.models import AttributeDef
             from apps.masterdata.resolver import InvalidValue, validate_value
 
-            attributes, warnings = {}, []
+            attributes, warnings = {}, [f"Check: {i.message}" for i in chk["issues"]]
             defs = {a.key: a for a in AttributeDef.objects.filter(key__in=list(p.get("attributes", {})), active=True)}
             for k, v in p.get("attributes", {}).items():
                 try:

@@ -1,5 +1,5 @@
 // HTTP implementation of the Api contract against the Django backend.
-import type { Api, Tokens } from './types';
+import type { Api, Tokens, Wing } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -95,6 +95,12 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     setKeys: (id, b) => call('PUT', `/listings/${id}/keys`, b),
 
     searchSocieties: async (q) => (await get<{ results: never[] }>(`/societies/search${qs({ q })}`)).results,
+    wings: async (sid) => {
+      const s = await get<{ buildings: Wing[]; wings_complete: boolean }>(`/societies/${sid}`);
+      return { wings: s.buildings.map(({ id, name, layout }) => ({ id, name, layout })), wings_complete: s.wings_complete };
+    },
+    checkFlat: (sid, p) => get(`/societies/${sid}/check-flat${qs(p)}`),
+    reportLayout: (bid, b) => post(`/buildings/${bid}/layout-report`, b),
     localities: () => get('/localities'),
     dictionary: (p) => get(`/attributes/dictionary${qs({ tier: p?.tier, matchable: p?.matchable ? 1 : undefined, txn: p?.txn })}`),
 

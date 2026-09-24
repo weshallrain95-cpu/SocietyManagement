@@ -74,6 +74,9 @@ class Society(BaseModel):
     merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     proposed_by_org = models.ForeignKey("orgs.BrokerOrg", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     provenance = models.JSONField(default=dict, blank=True)
+    wings_complete = models.BooleanField(
+        default=False, help_text="Every wing is on record: an unknown wing name is a typo, never a new building"
+    )
 
     class Meta:
         verbose_name_plural = "societies"
@@ -123,7 +126,15 @@ class Building(BaseModel):
     name = models.CharField(max_length=80, help_text='"A Wing", "Tower 3"; "Main" when the society is one building')
     name_normalised = models.CharField(max_length=80)
     location = gis.PointField(geography=True)
-    floors_total = models.PositiveSmallIntegerField(null=True, blank=True)
+    floors_total = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Highest residential floor")
+    lowest_floor = models.SmallIntegerField(default=1, help_text="First floor with flats: 0 = ground, 1 = above stilt parking")
+    units_per_floor = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Flats per typical floor (01..N)")
+    skip_floors = ArrayField(models.SmallIntegerField(), default=list, blank=True, help_text="Refuge / podium floors with no flats")
+    extra_unit_nos = ArrayField(
+        models.CharField(max_length=30), default=list, blank=True, help_text="Real flats outside the pattern: penthouses, 1203A"
+    )
+    layout_source = models.CharField(max_length=12, blank=True, help_text="rera | survey | broker | ops | demo")
+    layout_verified = models.BooleanField(default=False, help_text="Verified layouts block impossible flat numbers")
     lifts = models.PositiveSmallIntegerField(null=True, blank=True)
     year_built = models.PositiveSmallIntegerField(null=True, blank=True)
     merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="+")

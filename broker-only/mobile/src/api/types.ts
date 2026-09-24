@@ -83,6 +83,39 @@ export interface NewListing {
   owner_phone?: string;
   attributes?: Record<string, unknown>;
   keys?: { holder_type: string; instructions?: string };
+  /** Save despite layout warnings (never overrides a verified layout). */
+  confirm_layout?: boolean;
+}
+
+export interface BuildingLayout {
+  floors_total: number | null;
+  lowest_floor: number;
+  units_per_floor: number | null;
+  skip_floors: number[];
+  extra_unit_nos: string[];
+  verified: boolean;
+  source: string;
+}
+
+export interface Wing {
+  id: string;
+  name: string;
+  layout: BuildingLayout;
+}
+
+export interface LayoutIssue {
+  code: string;
+  message: string;
+  blocking: boolean;
+}
+
+/** Server answer to "does this wing and flat exist?" (same shape inside a 409/422 from createListing). */
+export interface FlatCheck {
+  wing: string | null;
+  building: Wing | null;
+  issues: LayoutIssue[];
+  suggestions: string[];
+  blocking: boolean;
 }
 
 export interface AttributeDef {
@@ -243,6 +276,9 @@ export interface Api {
   setKeys(id: string, body: { holder_type: string; instructions?: string; holder_user_id?: string }): Promise<unknown>;
 
   searchSocieties(q: string): Promise<SocietyCandidate[]>;
+  wings(societyId: string): Promise<{ wings: Wing[]; wings_complete: boolean }>;
+  checkFlat(societyId: string, p: { wing?: string; unit_no: string; floor?: number }): Promise<FlatCheck>;
+  reportLayout(buildingId: string, body: { unit_no: string; note?: string }): Promise<{ detail: string }>;
   localities(): Promise<Locality[]>;
   dictionary(params?: { tier?: string; matchable?: boolean; txn?: TxnType }): Promise<AttributeDef[]>;
 

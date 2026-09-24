@@ -3,9 +3,11 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  TimelineItem, Tokens, UnitState, VisitPlan, VisitStop,
+  TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
+import { checkFlat } from '@/lib/layout';
+import { ApiError } from './http';
 
 const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 let seq = 1000;
@@ -29,6 +31,19 @@ const SOCIETIES: SocietyCandidate[] = [
   location: { lat: lat as number, lng: lng as number },
 }));
 
+// Wing layouts: Hiranandani Estate is fully surveyed (verified, every wing listed); the rest are partly known.
+const layout = (floors: number, perFloor: number, verified: boolean, skip: number[] = []): Wing['layout'] => ({
+  floors_total: floors, lowest_floor: 1, units_per_floor: perFloor, skip_floors: skip, extra_unit_nos: [], verified, source: verified ? 'survey' : 'broker',
+});
+const WINGS: Record<string, { wings: Wing[]; wings_complete: boolean }> = Object.fromEntries(
+  SOCIETIES.map((s, i) => [
+    s.society_id,
+    i === 0
+      ? { wings: ['A', 'B', 'C'].map((w) => ({ id: `bld-${i}-${w}`, name: `${w} Wing`, layout: layout(20, 4, true, [11]) })), wings_complete: true }
+      : { wings: [{ id: `bld-${i}-A`, name: 'A Wing', layout: layout(22, 6, false) }], wings_complete: false },
+  ]),
+);
+
 const LABEL: Record<UnitState, string> = {
   UNKNOWN: 'Status unknown', AVAILABLE: 'Available for rent', AVAILABLE_UNCONFIRMED: 'Available – not yet confirmed by owner',
   ON_HOLD: 'On hold (under negotiation)', LET: 'Rented out', SOLD: 'Sold', OFF_MARKET: 'Off market',
@@ -36,7 +51,7 @@ const LABEL: Record<UnitState, string> = {
 
 function mkListing(i: number, soc: SocietyCandidate, unit: string, bhk: number, rent: number, state: UnitState, attrs: Record<string, unknown>): Listing {
   return {
-    id: `lst-${i}`, txn_type: 'RENT', unit_id: `unit-${i}`, society: soc.name, society_id: soc.society_id, building: 'A',
+    id: `lst-${i}`, txn_type: 'RENT', unit_id: `unit-${i}`, society: soc.name, society_id: soc.society_id, building: 'A Wing',
     unit_no: unit, floor: Math.floor(Number(unit) / 100) || 0, bhk, asking_rent: rent, asking_price: null, deposit: rent * 3,
     available_from: today(), status: state, status_label: LABEL[state], last_confirmed_at: now(), origin: 'manual',
     visibility: 'private', stale: i % 5 === 0, maintenance: 3500, negotiable: true, brokerage_terms: '1 month rent',
@@ -198,6 +213,13 @@ export function createDemoApi(): Api {
     async createListing(b) {
       await wait();
       const soc = SOCIETIES.find((s) => s.society_id === b.society_id) ?? SOCIETIES[0];
+      const w = WINGS[soc.society_id];
+      const chk = checkFlat(soc.name, w.wings, w.wings_complete, b.building, b.unit_no, b.floor);
+      if (chk.blocking || (chk.issues.length && !b.confirm_layout)) {
+        const first = chk.issues.find((i) => i.blocking) ?? chk.issues[0];
+        throw new ApiError(chk.blocking ? 422 : 409, first.message, { detail: first.message, layout: chk });
+      }
+      b = { ...b, building: chk.wing ?? b.building };
       const l = mkListing(++seq, soc, b.unit_no, Number(b.bhk), b.asking_rent ?? 0, 'AVAILABLE_UNCONFIRMED', b.attributes ?? {});
       l.building = b.building || 'Main';
       l.deposit = b.deposit ?? null;
@@ -231,6 +253,19 @@ export function createDemoApi(): Api {
       await wait(120);
       const n = q.toLowerCase().replace(/[^a-z]/g, '');
       return SOCIETIES.filter((s) => s.name.toLowerCase().replace(/[^a-z]/g, '').includes(n.slice(0, 5)) || n.includes(s.name.toLowerCase().replace(/[^a-z]/g, '').slice(0, 6)));
+    },
+    async wings(sid) {
+      return clone(WINGS[sid] ?? { wings: [], wings_complete: false });
+    },
+    async checkFlat(sid, p) {
+      await wait(80);
+      const soc = SOCIETIES.find((s) => s.society_id === sid) ?? SOCIETIES[0];
+      const w = WINGS[soc.society_id];
+      return checkFlat(soc.name, w.wings, w.wings_complete, p.wing, p.unit_no, p.floor);
+    },
+    async reportLayout() {
+      await wait();
+      return { detail: 'Thanks — our team will check the building record, usually within a day.' };
     },
     async localities() {
       return ['Dhokali', 'Manpada', 'Kolshet', 'Majiwada', 'Hiranandani Estate', 'Vasant Vihar'].map((name, i) => ({ id: `loc-${i}`, name, micro_market: 'Thane West', centroid: { lat: 19.23, lng: 72.97 } }));
