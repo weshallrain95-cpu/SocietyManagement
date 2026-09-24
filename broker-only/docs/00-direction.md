@@ -62,6 +62,7 @@ flowchart LR
 
 - **Closed universe**: no broker or owner creates a building; typos become matches, not duplicates.
 - **Conduct-based house rules only**: no religion, caste, community or gender vocabulary anywhere.
+- **Meet brokers where they are**: staff can always pick flats their own way (society + flat number); the matching engine earns trust alongside, it is never forced.
 - **Offline customers are first-class**: everything a customer does in the app also works by link.
 - **Each broker's data is private** (enforced by the database) unless they choose to share it.
 - **Every change is audited**, and the audit trail is tamper-evident.

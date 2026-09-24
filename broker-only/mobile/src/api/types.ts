@@ -87,6 +87,14 @@ export interface NewListing {
   confirm_layout?: boolean;
 }
 
+/** "HE A-1203" → the broker's own flats that fit, plus the societies it could mean (to add a new flat). */
+export interface FlatSearchResult {
+  results: Listing[];
+  societies: { society_id: string; name: string; locality: string; status: string }[];
+  unit_no: string;
+  wing: string;
+}
+
 export interface BuildingLayout {
   floors_total: number | null;
   lowest_floor: number;
@@ -276,6 +284,7 @@ export interface Api {
   setKeys(id: string, body: { holder_type: string; instructions?: string; holder_user_id?: string }): Promise<unknown>;
 
   searchSocieties(q: string): Promise<SocietyCandidate[]>;
+  searchFlats(q: string): Promise<FlatSearchResult>;
   wings(societyId: string): Promise<{ wings: Wing[]; wings_complete: boolean }>;
   checkFlat(societyId: string, p: { wing?: string; unit_no: string; floor?: number }): Promise<FlatCheck>;
   reportLayout(buildingId: string, body: { unit_no: string; note?: string }): Promise<{ detail: string }>;

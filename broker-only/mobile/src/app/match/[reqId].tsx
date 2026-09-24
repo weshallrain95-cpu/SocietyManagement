@@ -2,10 +2,11 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 
-import type { MatchResult } from '@/api';
+import type { Listing, MatchResult } from '@/api';
 import { useSession } from '@/auth/session';
 import { bhk, chipIcon, indiaDate, inr } from '@/lib/format';
-import { Button, Card, Chip, ChipRow, Choice, Empty, ErrorBox, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { Button, Card, Chip, ChipRow, Choice, Empty, ErrorBox, H2, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { FlatSearch } from '@/ui/FlatSearch';
 
 function Result({ m, selected, onToggle }: { m: MatchResult; selected: boolean; onToggle?: () => void }) {
   const l = m.listing;
@@ -30,6 +31,7 @@ export default function MatchScreen() {
   const { api } = useSession();
   const [showExcluded, setShowExcluded] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
+  const [ownPicks, setOwnPicks] = useState<Listing[]>([]); // flats the broker chose by name, outside the engine's list
   const [day, setDay] = useState<'today' | 'tomorrow'>('tomorrow');
   const [start, setStart] = useState('11:00');
   const q = useQuery({ queryKey: ['match', reqId, showExcluded], queryFn: () => api.match(reqId, showExcluded) });
@@ -62,6 +64,21 @@ export default function MatchScreen() {
       {q.data?.results.filter((m) => m.excluded === showExcluded).map((m) => (
         <Result key={m.listing.id} m={m} selected={picked.includes(m.listing.id)} onToggle={m.excluded ? undefined : () => toggle(m.listing.id)} />
       ))}
+
+      <H2>Have a flat in mind?</H2>
+      {ownPicks.map((l) => (
+        <Card key={l.id} onPress={() => { toggle(l.id); setOwnPicks((x) => x.filter((y) => y.id !== l.id)); }} style={{ borderWidth: 2 }}>
+          <P style={{ fontWeight: '700' }}>☑ {l.society}</P>
+          <P muted small>{l.building} · {l.unit_no} · {bhk(l.bhk)} · {inr(l.asking_rent ?? l.asking_price, l.txn_type === 'RENT')} · your pick</P>
+        </Card>
+      ))}
+      <FlatSearch
+        pickedIds={picked}
+        onPick={(l) => {
+          setPicked((x) => (x.includes(l.id) ? x : [...x, l.id]));
+          if (!q.data?.results.some((m) => m.listing.id === l.id)) setOwnPicks((x) => [...x, l]);
+        }}
+      />
 
       {picked.length ? (
         <Card>

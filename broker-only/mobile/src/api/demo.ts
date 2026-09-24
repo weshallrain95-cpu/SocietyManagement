@@ -6,7 +6,7 @@ import type {
   TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
-import { checkFlat } from '@/lib/layout';
+import { checkFlat, parseUnitNo } from '@/lib/layout';
 import { ApiError } from './http';
 
 const wait = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -43,6 +43,16 @@ const WINGS: Record<string, { wings: Wing[]; wings_complete: boolean }> = Object
       : { wings: [{ id: `bld-${i}-A`, name: 'A Wing', layout: layout(22, 6, false) }], wings_complete: false },
   ]),
 );
+
+// Rough stand-in for the server's fuzzy society search (aliases, typos): a few nicknames plus prefix matching.
+const NICKNAMES: Record<string, string> = { he: 'Hiranandani Estate', hm: 'Hiranandani Meadows', kpc: 'Kalpataru Parkcity' };
+function findSocieties(q: string): SocietyCandidate[] {
+  const n = q.toLowerCase().replace(/[^a-z]/g, '');
+  const nick = NICKNAMES[n];
+  if (nick) return SOCIETIES.filter((s) => s.name === nick);
+  if (n.length < 2) return [];
+  return SOCIETIES.filter((s) => s.name.toLowerCase().replace(/[^a-z]/g, '').includes(n.slice(0, 5)) || n.includes(s.name.toLowerCase().replace(/[^a-z]/g, '').slice(0, 6)));
+}
 
 const LABEL: Record<UnitState, string> = {
   UNKNOWN: 'Status unknown', AVAILABLE: 'Available for rent', AVAILABLE_UNCONFIRMED: 'Available – not yet confirmed by owner',
@@ -251,8 +261,29 @@ export function createDemoApi(): Api {
     },
     async searchSocieties(q) {
       await wait(120);
-      const n = q.toLowerCase().replace(/[^a-z]/g, '');
-      return SOCIETIES.filter((s) => s.name.toLowerCase().replace(/[^a-z]/g, '').includes(n.slice(0, 5)) || n.includes(s.name.toLowerCase().replace(/[^a-z]/g, '').slice(0, 6)));
+      return findSocieties(q);
+    },
+    async searchFlats(q) {
+      await wait(120);
+      // Same idea as the server: the last token that looks like a flat number, the rest is the place.
+      const tokens = q.trim().split(/[\s,]+/).filter(Boolean);
+      let unitNo = '';
+      let wing = '';
+      if (tokens.length && /\d/.test(tokens[tokens.length - 1]) && /^([a-z]\s*[-/]?\s*)?\d{1,4}[a-z]?$|^(g|ph)-?\d{1,2}$/i.test(tokens[tokens.length - 1])) {
+        const u = parseUnitNo(tokens.pop()!);
+        unitNo = u.unitNo;
+        wing = u.wing;
+        if (!wing && tokens.length && /^[a-z]$/i.test(tokens[tokens.length - 1])) wing = tokens.pop()!.toUpperCase();
+      }
+      const text = tokens.join(' ');
+      if (!text && !unitNo) return { results: [], societies: [], unit_no: '', wing: '' };
+      const socs = text ? findSocieties(text) : [];
+      const hits = listings
+        .filter((l) => !text || socs.some((s) => s.society_id === l.society_id))
+        .filter((l) => !unitNo || l.unit_no.toUpperCase().startsWith(unitNo))
+        .sort((a, b) => Number(a.unit_no.toUpperCase() !== unitNo) - Number(b.unit_no.toUpperCase() !== unitNo)
+          || Number(!!wing && !a.building.toUpperCase().startsWith(wing)) - Number(!!wing && !b.building.toUpperCase().startsWith(wing)));
+      return clone({ results: hits.slice(0, 20), societies: socs.slice(0, 5).map(({ society_id, name, locality, status }) => ({ society_id, name, locality, status })), unit_no: unitNo, wing });
     },
     async wings(sid) {
       return clone(WINGS[sid] ?? { wings: [], wings_complete: false });
@@ -372,6 +403,14 @@ export function createDemoApi(): Api {
         return { notified: n };
       }
       if (action === 'cancel') p.state = 'cancelled';
+      if (action === 'add-stop') {
+        const l = listings.find((x) => x.id === b?.listing_id);
+        if (l && !p.stops.some((s) => s.listing_id === l.id)) {
+          const start = new Date(`${p.date}T${p.start_time}:00`);
+          p.stops.push({ ...stopFor(l, p.stops.length, start), assigned_staff_id: null, owner_notice: 'not_required' });
+          p.total_travel_min = (p.total_travel_min ?? 0) + 6;
+        }
+      }
       if (action === 'reorder' && Array.isArray(b?.stop_ids)) {
         const order = b!.stop_ids as string[];
         p.stops.sort((a, c) => order.indexOf(a.id) - order.indexOf(c.id)).forEach((s, i) => (s.seq = i + 1));

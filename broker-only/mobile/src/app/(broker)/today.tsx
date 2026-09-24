@@ -30,7 +30,7 @@ export default function Today() {
 
       <H2 right={<Button small kind="ghost" title="+ Customer" onPress={() => router.push('/customer/new')} />}>Today’s visits</H2>
       {plans.isLoading ? <Loading /> : plans.error ? <ErrorBox error={plans.error} onRetry={plans.refetch} /> : null}
-      {plans.data?.length === 0 ? <Empty title="No visits today" body="Match a customer's requirement to plan a tour." /> : null}
+      {plans.data?.length === 0 ? <Empty title="No visits today" body="Open a customer to plan a tour: match their requirement, or pick flats yourself by society and flat number." /> : null}
       {plans.data?.map((p) => (
         <Card key={p.id} onPress={() => router.push(`/visit/${p.id}`)}>
           <Row style={{ justifyContent: 'space-between' }}>

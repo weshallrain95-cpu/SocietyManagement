@@ -7,6 +7,7 @@ import type { VisitPlan } from '@/api';
 import { useSession } from '@/auth/session';
 import { dayLabel, time } from '@/lib/format';
 import { Button, Card, Chip, ErrorBox, H1, H2, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { FlatSearch } from '@/ui/FlatSearch';
 
 const ISSUE: Record<string, string> = {
   no_key_recorded: 'No key location recorded',
@@ -69,6 +70,14 @@ export default function VisitPlanScreen() {
           </Row>
         </Card>
       ))}
+
+      <H2>Add a flat</H2>
+      <FlatSearch
+        label="Society and flat number you have in mind"
+        pickedIds={p.stops.map((s) => s.listing_id)}
+        onPick={(l) => act.mutate({ action: 'add-stop', body: { listing_id: l.id } })}
+        addParams={{ plan: p.id }}
+      />
 
       <H2>Send & assign</H2>
       <Button title="Share plan with customer" onPress={() => act.mutate({ action: 'share' })} busy={act.isPending && act.variables?.action === 'share'} />

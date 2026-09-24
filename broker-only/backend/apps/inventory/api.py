@@ -163,6 +163,32 @@ class ListingListCreate(APIView):
         return Response(listing_json(listing, request, detail=True), status=201 if created else 200)
 
 
+def _society_brief(s) -> dict:
+    return {"society_id": str(s.pk), "name": s.canonical_name, "locality": s.locality.name, "status": s.status}
+
+
+class ListingSearch(APIView):
+    """GET /listings/search?q=HE A-1203 — jump straight to a flat the broker has in mind."""
+
+    permission_classes = [IsBrokerMember]
+
+    def get(self, request):
+        from .search import search_flats
+
+        qs = Listing.objects.all()
+        if is_field_staff(request):
+            qs = qs.filter(pk__in=staff_listing_ids(request))
+        r = search_flats(qs, request.query_params.get("q", "")[:100], org=request.user.active_membership.org)
+        return Response(
+            {
+                "results": [listing_json(l, request) for l in r["results"]],
+                "societies": [_society_brief(s) for s in r["societies"]],
+                "unit_no": r["unit_no"],
+                "wing": r["wing"],
+            }
+        )
+
+
 class ListingDetail(APIView):
     permission_classes = [IsBrokerMember]
 

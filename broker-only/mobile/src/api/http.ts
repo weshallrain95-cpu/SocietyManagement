@@ -95,6 +95,7 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     setKeys: (id, b) => call('PUT', `/listings/${id}/keys`, b),
 
     searchSocieties: async (q) => (await get<{ results: never[] }>(`/societies/search${qs({ q })}`)).results,
+    searchFlats: (q) => get(`/listings/search${qs({ q })}`),
     wings: async (sid) => {
       const s = await get<{ buildings: Wing[]; wings_complete: boolean }>(`/societies/${sid}`);
       return { wings: s.buildings.map(({ id, name, layout }) => ({ id, name, layout })), wings_complete: s.wings_complete };

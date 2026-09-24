@@ -68,6 +68,8 @@ export default function CustomerDetail() {
         {consent.error || verify.error ? <ErrorBox error={consent.error ?? verify.error} /> : null}
       </Card>
 
+      <Button kind="secondary" title="Plan a visit — pick flats yourself" onPress={() => router.push({ pathname: '/visit/new', params: { customerId: id, customerName: cu.name } })} testID="plan-own" />
+
       <H2 right={<Button small kind="ghost" title="+ Requirement" onPress={() => router.push({ pathname: '/customer/requirement', params: { customerId: id } })} />}>Requirements</H2>
       {cu.requirements?.length ? null : <Notice tone="warn">No requirement yet. Add one to see matching flats from your inventory.</Notice>}
       {cu.requirements?.map((r) => (

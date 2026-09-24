@@ -38,6 +38,7 @@ function Shell() {
         <Stack.Screen name="customer/requirement" options={{ title: 'Requirement' }} />
         <Stack.Screen name="match/[reqId]" options={{ title: 'Matching flats' }} />
         <Stack.Screen name="visit/[id]" options={{ title: 'Visit plan' }} />
+        <Stack.Screen name="visit/new" options={{ title: 'Plan a visit' }} />
         <Stack.Screen name="lead/[id]" options={{ title: 'Enquiry' }} />
       </Stack>
       <LiveBanner />

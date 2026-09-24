@@ -4,6 +4,7 @@ from . import api
 
 urlpatterns = [
     path("listings", api.ListingListCreate.as_view()),
+    path("listings/search", api.ListingSearch.as_view()),
     path("listings/<uuid:pk>", api.ListingDetail.as_view()),
     path("listings/<uuid:pk>/status", api.ListingStatusView.as_view()),
     path("listings/<uuid:pk>/reconfirm", api.ListingReconfirmView.as_view()),

@@ -1,12 +1,13 @@
 // "Add flat" — the docs/06 flow: ~10 taps for a known society. House rules default to "Ask owner".
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 
 import { ApiError, type FlatCheck, type SocietyCandidate, type TxnType } from '@/api';
 import { useSession } from '@/auth/session';
 import { indianMobile } from '@/lib/format';
+import { useDebounced } from '@/lib/useDebounced';
 import { Button, Card, Chip, ChipRow, Choice, ErrorBox, Field, H2, Notice, P, Row, Screen } from '@/ui/components';
 
 const BHK = ['0.5', '1', '1.5', '2', '2.5', '3', '4'];
@@ -15,10 +16,14 @@ const bhkLabel = (b: string) => (b === '0.5' ? '1 RK' : `${b} BHK`);
 export default function AddFlat() {
   const { api } = useSession();
   const qc = useQueryClient();
+  // Opened from a flat search ("Add it now"): society and flat number arrive filled in.
+  const pre = useLocalSearchParams<{ society_id?: string; society_name?: string; locality?: string; unit_no?: string; wing?: string; back?: string; plan?: string }>();
   const [q, setQ] = useState('');
-  const [society, setSociety] = useState<SocietyCandidate | null>(null);
+  const [society, setSociety] = useState<SocietyCandidate | null>(
+    pre.society_id ? { society_id: pre.society_id, name: pre.society_name ?? '', locality: pre.locality ?? '', status: 'active', score: 1, location: { lat: 0, lng: 0 } } : null,
+  );
   const [wing, setWing] = useState('');
-  const [unitNo, setUnitNo] = useState('');
+  const [unitNo, setUnitNo] = useState(pre.unit_no ? `${pre.wing ? `${pre.wing}-` : ''}${pre.unit_no}` : '');
   const [bhk, setBhk] = useState('2');
   const [txn, setTxn] = useState<TxnType>('RENT');
   const [price, setPrice] = useState('');
@@ -70,9 +75,15 @@ export default function AddFlat() {
           ...(!askOwner && bachelors ? { bachelors_allowed: bachelors } : {}),
         },
       }),
-    onSuccess: (l) => {
+    onSuccess: async (l) => {
       qc.invalidateQueries({ queryKey: ['listings'] });
-      router.replace(`/listing/${l.id}`);
+      qc.invalidateQueries({ queryKey: ['flat-search'] });
+      if (pre.plan) {
+        const plan = await api.planAction(pre.plan, 'add-stop', { listing_id: l.id });
+        qc.setQueryData(['plan', pre.plan], plan);
+      }
+      if (pre.back) router.back();
+      else router.replace(`/listing/${l.id}`);
     },
   });
 
@@ -184,15 +195,6 @@ export default function AddFlat() {
       <P small muted>New flats show as “not yet confirmed by owner” until the owner says YES.</P>
     </Screen>
   );
-}
-
-function useDebounced<T>(value: T, ms: number): T {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setV(value), ms);
-    return () => clearTimeout(t);
-  }, [value, ms]);
-  return v;
 }
 
 function Half({ children }: { children: React.ReactNode }) {

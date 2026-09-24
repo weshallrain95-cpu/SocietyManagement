@@ -43,3 +43,17 @@ test('demo refuses impossible flats like the server does', async () => {
   await expect(run(api.createListing(other))).rejects.toMatchObject({ status: 409 });
   expect((await run(api.createListing({ ...other, confirm_layout: true }))).unit_no).toBe('2601');
 });
+
+test('staff find a flat by society nickname and number, and add it to a plan', async () => {
+  const api = createDemoApi();
+  const r = await run(api.searchFlats('HE A-1203'));
+  expect(r.results[0]).toMatchObject({ society: 'Hiranandani Estate', unit_no: '1203' });
+  expect((await run(api.searchFlats('1203'))).results.every((l) => l.unit_no === '1203')).toBe(true);
+  const none = await run(api.searchFlats('hiranandani estate 1504'));
+  expect(none.results).toEqual([]);
+  expect(none.societies[0].name).toBe('Hiranandani Estate'); // offered for "Add it now"
+  const plans = await run(api.visitPlans());
+  const p = plans[0];
+  const after = (await run(api.planAction(p.id, 'add-stop', { listing_id: r.results[0].id }))) as { stops: { listing_id: string }[] };
+  expect(after.stops.some((s) => s.listing_id === r.results[0].id)).toBe(true);
+});

@@ -178,6 +178,7 @@ sequenceDiagram
 | ID | Requirement | Priority | Acceptance criteria |
 |----|-------------|----------|---------------------|
 | VISIT-01 | Create a **visit plan** from matched units: date, start point, per-unit time slot, dwell time (default 15 min), travel mode | P0 | Route order optimised (min travel time) with manual reorder |
+| VISIT-01a | **Pick flats yourself.** On the visit plan, the matching screen and a customer's page, staff type the society (any spelling or nickname) and flat number they have in mind ("HE A-1203", "Rodas B 502", "1203") and add it directly, without the matching engine. A flat not yet in their list can be added on the spot and joins the route | P0 | Only the broker's own flats are searched; exact flat number and the named wing rank first; the flat is on the route in ≤ 3 taps |
 | VISIT-02 | Share the plan with the customer (in-app, or a WhatsApp link to a web view): map, photos, society-level location, time windows. Customer proposes/accepts date and time | P0 | Customer sees exact addresses only after confirming |
 | VISIT-03 | **Assign** the whole plan or individual stops to one or more staff; staff get the itinerary with navigation links, key instructions and customer contact | P0 | Staff must accept; unaccepted assignments escalate after 30 min |
 | VISIT-04 | **Key logistics:** each stop shows key custody; conflicting key needs (same key needed by two plans at overlapping times) are flagged | P0 | Conflict warning at plan-save |

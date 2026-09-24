@@ -47,6 +47,7 @@ because it was built in one push:
 | **Ops (admin) console** at `/ops/`: broker verification, review queue (new societies: approve / merge / reject), society pins (paste a Google Maps link or drag the pin) and names, whole-area pin map, tamper check | ✅ Done |
 | **Pin-check page for the pilot broker** (online link; answers applied with `apply_pin_review`) | ✅ Done |
 | **Building layouts and flat-number checks** (MD-10): wing picker in the app, live check as the broker types, uploads refuse impossible flats, ops edits layouts, spreadsheet import + template for MahaRERA / field-survey data | ✅ Done |
+| **Pick flats yourself** (VISIT-01a): society + flat-number search on visit plans, matching and customer pages, so staff can plan tours their usual way while they learn to trust matching | ✅ Done |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 
