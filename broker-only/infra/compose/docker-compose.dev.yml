@@ -15,8 +15,10 @@ x-backend: &backend
 services:
   db:
     image: postgis/postgis:16-3.4
+    # The official PostGIS image is Intel-only; Apple-chip Macs run it through Rosetta (Docker Desktop does this).
+    platform: linux/amd64
     environment: {POSTGRES_PASSWORD: postgres}
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]  # the database is reachable from this laptop only, never from the Wi-Fi
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../db/01-init.sql:/docker-entrypoint-initdb.d/99-onlybroker.sql:ro
@@ -26,7 +28,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    ports: ["127.0.0.1:6379:6379"]
 
   api:
     <<: *backend

@@ -2,9 +2,9 @@ name: Only Broker
 
 on:
   push:
-    paths: ["broker-only/**", ".github/workflows/broker-only-backend.yml"]
+    paths: ["broker-only/**", ".github/workflows/broker-only.yml"]
   pull_request:
-    paths: ["broker-only/**", ".github/workflows/broker-only-backend.yml"]
+    paths: ["broker-only/**", ".github/workflows/broker-only.yml"]
 
 jobs:
   test:
@@ -55,3 +55,33 @@ jobs:
         run: TZ=UTC npx jest --ci
       - name: Web build (demo)
         run: EXPO_PUBLIC_DEMO=1 npx expo export --platform web
+
+  laptop-stack:
+    # Runs exactly what the founder types on the laptop (docs/07): make up, make seed, then a phone-style login.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: broker-only
+    steps:
+      - uses: actions/checkout@v4
+      - name: make up (builds the server image and starts db, redis, api, worker, beat)
+        run: make up
+      - name: Wait for the server
+        run: |
+          for i in $(seq 1 60); do curl -fs http://localhost:8000/health && exit 0; sleep 5; done
+          docker compose -f infra/compose/docker-compose.dev.yml logs api | tail -80; exit 1
+      - name: make seed (Thane West + demo brokers)
+        run: make seed
+      - name: Phone-style login with the OTP shown on screen, then list flats
+        run: |
+          CODE=$(curl -fs -X POST localhost:8000/v1/auth/otp/request -H 'Content-Type: application/json' -d '{"phone":"9820000001"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["dev_code"])')
+          TOKEN=$(curl -fs -X POST localhost:8000/v1/auth/otp/verify -H 'Content-Type: application/json' -d "{\"phone\":\"9820000001\",\"code\":\"$CODE\"}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["access"])')
+          N=$(curl -fs localhost:8000/v1/listings -H "Authorization: Bearer $TOKEN" | python3 -c 'import sys,json;print(len(json.load(sys.stdin)))')
+          echo "Demo broker sees $N flats"; test "$N" -gt 0
+      - name: The LAN address answers too (what the phone uses)
+        run: |
+          IP=$(hostname -I | awk '{print $1}'); curl -fs "http://$IP:8000/health"; make phone
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f infra/compose/docker-compose.dev.yml logs --tail 100

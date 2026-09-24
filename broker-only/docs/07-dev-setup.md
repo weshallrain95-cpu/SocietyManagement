@@ -167,3 +167,36 @@ Check the address in the phone's browser first (`…/health` should say `{"ok": 
 open: allow incoming connections for Docker in the laptop's firewall, and make sure both are on the
 same Wi-Fi (not a guest network). In this test mode the login code (OTP) is shown on screen, so no
 SMS account is needed. Keep the laptop awake while testing.
+
+## 13. Mac, step by step (first time and every day)
+
+First time only:
+1. Install **Docker Desktop for Mac** from docker.com (pick *Apple chip* or *Intel chip* to match
+   the Mac: Apple menu → About This Mac). Open it once and wait until it says *Engine running*.
+2. Open **Terminal** (⌘ + Space, type Terminal, Enter). Install Apple's command-line tools:
+   `xcode-select --install` (click Install in the pop-up; skip if it says already installed).
+3. Get the code (GitHub asks for your username and a **token** as the password — create one at
+   github.com → Settings → Developer settings → Personal access tokens → *Generate*, tick `repo`):
+   ```bash
+   mkdir -p ~/code
+   cd ~/code
+   git clone https://github.com/weshallrain95-cpu/SocietyManagement.git only-broker
+   cd ~/code/only-broker
+   git checkout claude/modest-ptolemy-57zw85
+   cd ~/code/only-broker/broker-only
+   make up
+   make seed
+   make phone
+   ```
+   `make up` takes 5–10 minutes the first time. If the Mac asks *allow incoming connections*, click Allow.
+
+Every day:
+```bash
+cd ~/code/only-broker/broker-only
+git pull
+make up
+make phone
+```
+Stop the server when done: `make down` (your test data is kept).
+
+The automated check *laptop-stack* on GitHub runs these same commands on every change.
