@@ -89,7 +89,7 @@ def review_via_link(token: str, *, stars, tags=(), text="") -> Review:
 
 @transaction.atomic
 def submit(interaction: Interaction, *, reviewer, direction: str, stars, tags=(), text="") -> Review:
-    """In-app reviews: customer->broker (C2B) and broker->customer (B2C) in MVP."""
+    """In-app reviews: customer->broker (C2B), broker->customer (B2C) and owner->broker (O2B)."""
     stars, tags, text = _clean(stars, tags, text)
     if direction == Review.Direction.C2B:
         if interaction.customer_user_id != reviewer.pk:
@@ -101,6 +101,10 @@ def submit(interaction: Interaction, *, reviewer, direction: str, stars, tags=()
         if interaction.customer_user_id is None:
             raise ReviewError("This customer is not on the platform")
         kw = {"reviewee_user_id": interaction.customer_user_id}
+    elif direction == Review.Direction.O2B:
+        if interaction.owner_user_id != reviewer.pk:
+            raise ReviewError("Only the owner of this flat can review its broker")
+        kw = {"org_id": interaction.org_id}
     else:
         raise ReviewError("Direction not available yet")
     try:
@@ -110,14 +114,16 @@ def submit(interaction: Interaction, *, reviewer, direction: str, stars, tags=()
             )
     except IntegrityError as e:
         raise ReviewError("Already reviewed") from e
-    if direction == Review.Direction.C2B:
+    if direction in (Review.Direction.C2B, Review.Direction.O2B):
         recompute_reputation(interaction.org_id)
     return r
 
 
 def recompute_reputation(org_id) -> None:
     """REV-03: Bayesian average so one 5-star review does not beat fifty 4.6s."""
-    agg = Review.objects.filter(org_id=org_id, direction="C2B", moderation_state="published").aggregate(n=Count("id"), avg=Avg("stars"))
+    agg = Review.objects.filter(org_id=org_id, direction__in=["C2B", "O2B"], moderation_state="published").aggregate(
+        n=Count("id"), avg=Avg("stars")
+    )
     n = agg["n"] or 0
     avg = Decimal(str(agg["avg"] or 0))
     bayes = (PRIOR_MEAN * PRIOR_WEIGHT + avg * n) / (PRIOR_WEIGHT + n)

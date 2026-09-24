@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "apps.reviews",
     "apps.linkpages",
     "apps.ops",
+    "apps.owners",
 ]
 
 MIDDLEWARE = [
@@ -176,3 +177,13 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
 }
+
+# Owner photos, videos and proof documents. Laptop: files on disk; production: S3 via STORAGES.
+MEDIA_ROOT = env("OB_MEDIA_ROOT", default=str(BASE_DIR / "media_store"))
+OB_MEDIA_URL_TTL_S = 3600
+OB_MAX_PHOTO_MB = 15
+OB_MAX_VIDEO_MB = env.int("OB_MAX_VIDEO_MB", default=150)
+OB_MAX_PHOTOS_PER_FLAT = 30
+OB_MAX_VIDEOS_PER_FLAT = 5
+# Founder: "make the feature available for now" — owner photos on customer shortlist links.
+OB_OWNER_MEDIA_ON_CUSTOMER_LINKS = env.bool("OB_OWNER_MEDIA_ON_CUSTOMER_LINKS", default=True)

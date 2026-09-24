@@ -56,7 +56,8 @@ class OtpVerifyView(APIView):
         _link_offline_customer_records(user)
         # Default to the user's first active broker membership if they have one.
         m = user.memberships.filter(active=True).order_by("created_at").first()
-        tokens = issue_tokens(user, org_id=m.org_id if m else None, role=m.role if m else "customer")
+        role = m.role if m else ("owner" if user.ownership_claims.exists() else "customer")
+        tokens = issue_tokens(user, org_id=m.org_id if m else None, role=role)
         return Response({**tokens, "new_user": created}, status=status.HTTP_200_OK)
 
 

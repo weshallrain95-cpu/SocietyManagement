@@ -5,6 +5,7 @@
 {% for it in items %}
 <div class="card" id="item-{{ it.item_id }}">
   <div class="row" style="align-items:baseline"><h2>{{ it.society }}</h2><p class="price" style="flex:0">₹{{ it.price|intcomma }}{% if it.txn_type == "RENT" %}/mo{% endif %}</p></div>
+  {% if it.photos %}<div class="photos">{% for p in it.photos %}<a href="{{ p.full }}" target="_blank" rel="noopener"><img src="{{ p.thumb }}" alt="{% translate 'Photo of the flat' %}" loading="lazy"></a>{% endfor %}</div>{% endif %}
   <p class="muted">{{ it.locality }} · {% if it.bhk == 0.5 %}1 RK{% else %}{{ it.bhk|floatformat:"-1" }} BHK{% endif %}{% if it.floor is not None %} · {% blocktranslate with f=it.floor %}Floor {{ f }}{% endblocktranslate %}{% endif %}</p>
   {% if it.highlights %}<div class="chips">{% for h in it.highlights %}<span class="chip">{{ h }}</span>{% endfor %}</div>{% endif %}
   {% if it.facts %}<ul class="facts">{% for f in it.facts %}<li>{{ f }}</li>{% endfor %}</ul>{% endif %}

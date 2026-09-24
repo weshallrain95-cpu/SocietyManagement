@@ -60,9 +60,10 @@ def verified_owner(unit):
     from apps.masterdata.models import OwnershipClaim
 
     claim = (
-        OwnershipClaim.objects.filter(unit=unit, status=OwnershipClaim.Status.VERIFIED)
+        # An owner who registered with proof (declared, D14) counts; a checked owner comes first.
+        OwnershipClaim.objects.filter(unit=unit, status__in=[OwnershipClaim.Status.VERIFIED, OwnershipClaim.Status.DECLARED])
         .select_related("user")
-        .order_by("created_at")
+        .order_by("-status", "created_at")
         .first()
     )
     return claim.user if claim else None

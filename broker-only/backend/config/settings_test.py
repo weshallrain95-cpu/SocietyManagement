@@ -13,3 +13,7 @@ for k, v in {
 from .settings import *  # noqa: E402,F403
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+import tempfile  # noqa: E402
+
+MEDIA_ROOT = tempfile.mkdtemp(prefix="ob-media-test-")

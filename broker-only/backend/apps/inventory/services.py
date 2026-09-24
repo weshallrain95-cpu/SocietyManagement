@@ -43,6 +43,11 @@ def create_listing(
     report_available: bool = True,
 ) -> tuple[Listing, bool]:
     """Create (or refresh) this org's claim on a unit. Returns (listing, created)."""
+    from apps.owners.models import OwnerWithdrawal
+
+    if OwnerWithdrawal.objects.filter(org=org, unit=unit, active=True).exists():
+        # D14: the owner's decision on who represents the flat is final until they allow the firm again.
+        raise InventoryError("The owner has removed your firm from this flat. You can ask the owner to add you back from the flat's page.")
     listing = Listing.objects.filter(org=org, unit=unit, txn_type=txn_type, archived_at__isnull=True).first()
     created = listing is None
     if created:

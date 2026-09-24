@@ -49,6 +49,8 @@ def create_plan(
         raise VisitError("Add at least one flat")
     if any(l.org_id != customer.org_id for l in listings):
         raise VisitError("A visit plan can only include your own listings")
+    if any(l.withdrawn_by_owner for l in listings):
+        raise VisitError("The owner has removed your firm from one of these flats")
     plan = VisitPlan.objects.create(
         org_id=customer.org_id,
         customer=customer,
@@ -265,6 +267,8 @@ def owner_acknowledges(token: str, ok: bool) -> VisitStop:
 def add_stop(plan: VisitPlan, listing, *, position=None) -> VisitStop:
     if listing.org_id != plan.org_id:
         raise VisitError("Only your own listings")
+    if listing.withdrawn_by_owner:
+        raise VisitError("The owner has removed your firm from this flat")
     stops = live_stops(plan)
     pos = len(stops) + 1 if position is None else max(1, min(position, len(stops) + 1))
     for s in reversed(stops):

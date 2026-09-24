@@ -75,6 +75,8 @@ def test_every_broker_private_table_has_forced_rls():
         "inventory_listing",
         "inventory_keycustody",
         "inventory_uploadbatch",
+        "owners_ownerinvite",
+        "owners_ownerwithdrawal",
         "inventory_uploadrow",
         "inventory_savedcolumnmapping",
         "crm_customer",

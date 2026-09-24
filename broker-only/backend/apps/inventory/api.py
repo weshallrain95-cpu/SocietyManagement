@@ -12,6 +12,8 @@ from apps.masterdata.layout import check_flat, issues_json
 from apps.masterdata.models import MicroMarket, ResolvedAttribute, Society, Unit
 from apps.masterdata.services import get_or_create_building, get_or_create_unit
 from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
+from apps.owners.media import media_json
+from apps.owners.services import flat_media
 from apps.status.models import UnitStatus
 from common.api import domain_call, is_field_staff
 from common.crypto import mask_phone
@@ -50,6 +52,8 @@ def listing_json(l: Listing, request, *, detail=False) -> dict:
         "status_label": st.label if st else "Status unknown",
         "last_confirmed_at": l.last_confirmed_at,
         "origin": l.origin,
+        "owner_appointed": l.origin == Listing.Origin.OWNER_INVITE,
+        "owner_withdrew": l.withdrawn_by_owner,
         "visibility": l.visibility,
         "stale": (timezone.now() - l.last_confirmed_at).days >= (21 if l.txn_type == "RENT" else 45),
     }
@@ -75,6 +79,8 @@ def listing_json(l: Listing, request, *, detail=False) -> dict:
                     ra.attr_id: {"value": ra.value, "source": ra.resolved_source_type, "disputed": ra.disputed}
                     for ra in ResolvedAttribute.objects.filter(subject_id__in=[u.pk, u.building_id, u.building.society_id])
                 },
+                # Owner photos/videos: every broker holding the flat sees them, unless the owner removed the firm.
+                "media": [] if l.withdrawn_by_owner else [media_json(x, request) for x in flat_media(u)],
             }
         )
     return data
@@ -182,6 +188,19 @@ class ListingSearch(APIView):
                 "wing": r["wing"],
             }
         )
+
+
+class AskOwnerBack(APIView):
+    """POST {note}: after the owner removed the firm, ask to be allowed again (the owner decides)."""
+
+    permission_classes = [IsBrokerManager]
+
+    def post(self, request, pk):
+        from apps.owners.services import ask_owner_back
+
+        l = get_object_or_404(Listing, pk=pk)
+        domain_call(ask_owner_back, l.org, l.unit, note=str(request.data.get("note", "")), user=request.user)
+        return Response({"detail": "Sent. The owner will decide."}, status=202)
 
 
 class ListingDetail(APIView):

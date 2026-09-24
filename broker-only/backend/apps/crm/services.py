@@ -204,11 +204,24 @@ def public_shortlist(token: str, *, log_open: bool = True) -> dict:
                     "location_facts": facts_dict(u.building),
                     "attributes": attrs,
                     "response": it.customer_response,
+                    "photos": _owner_photos(it.listing),
                 }
             )
         if log_open:
             log(sl.customer, CustomerInteraction.Kind.LINK_OPENED, "Customer opened the shortlist")
         return {"broker": customer_org_name(sl.customer), "title": sl.title, "items": items}
+
+
+def _owner_photos(listing) -> list[dict]:
+    """Owner photos on the customer's link (founder: feature available, behind a switch). Never videos or documents."""
+    from django.conf import settings
+
+    from apps.owners.media import signed_path
+    from apps.owners.services import flat_media
+
+    if not settings.OB_OWNER_MEDIA_ON_CUSTOMER_LINKS or listing.withdrawn_by_owner:
+        return []
+    return [{"thumb": signed_path(p, "thumb"), "full": signed_path(p)} for p in flat_media(listing.unit, kinds=("photo",))[:8]]
 
 
 def respond_to_shortlist_item(token: str, item_id, response: str) -> ShortlistItem:

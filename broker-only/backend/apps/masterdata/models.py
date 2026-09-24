@@ -335,6 +335,7 @@ class LocationFact(models.Model):
 class OwnershipClaim(BaseModel):
     class Status(models.TextChoices):
         PENDING = "pending"
+        DECLARED = "declared"  # proof uploaded by the owner, not checked by anyone (D14)
         VERIFIED = "verified"
         REJECTED = "rejected"
         REVOKED = "revoked"
@@ -345,3 +346,4 @@ class OwnershipClaim(BaseModel):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     attested_by_org = models.ForeignKey("orgs.BrokerOrg", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     verified_at = models.DateTimeField(null=True, blank=True)
+    terms = models.JSONField(default=dict, blank=True, help_text="Owner's preferred terms: rent/price, deposit, available from")
