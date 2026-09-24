@@ -3,7 +3,7 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  Broadcast, BroadcastInput, CustomerUpdate, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
+  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
 import { checkFlat, parseUnitNo } from '@/lib/layout';
@@ -39,7 +39,7 @@ const WINGS: Record<string, { wings: Wing[]; wings_complete: boolean }> = Object
   SOCIETIES.map((s, i) => [
     s.society_id,
     i === 0
-      ? { wings: ['A', 'B', 'C'].map((w) => ({ id: `bld-${i}-${w}`, name: `${w} Wing`, layout: layout(20, 4, true, [11]) })), wings_complete: true }
+      ? { wings: ['A', 'B', 'C'].map((w) => ({ id: `bld-${i}-${w}`, name: `${w} Wing`, layout: { ...layout(20, 4, true, [11]), source: 'tmc', extra_unit_nos: w === 'A' ? ['2001A'] : [] } })), wings_complete: true }
       : { wings: [{ id: `bld-${i}-A`, name: 'A Wing', layout: layout(22, 6, false) }], wings_complete: false },
   ]),
 );
@@ -234,8 +234,20 @@ export function createDemoApi(): Api {
     { id: 'upd-1', org_id: 'org-omsai', org: 'Om Sai Estate Agents', kind: 'price_drop', text: 'Good news: rents have come down in Manpada. Ask us for the latest flats. — Om Sai Estate Agents', flat: null, sent_at: new Date(Date.now() - 26 * 3600e3).toISOString(), read: true, muted: false },
   ];
   const sent: Broadcast[] = [];
+  const localityOf = (l: Listing) => SOCIETIES.find((x) => x.society_id === l.society_id)?.locality ?? '';
+  const where = (l: Listing) => (localityOf(l) && localityOf(l) !== l.society ? `${l.society}, ${localityOf(l)}` : l.society);
+  const summaryOf = (l: Listing): FlatSummary => ({
+    society: l.society, locality: localityOf(l), bhk: `${l.bhk} BHK`, txn_type: l.txn_type, price: l.asking_rent,
+    price_label: `₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month`, available_from: l.available_from,
+  });
+  const picked = (b: BroadcastInput) => (b.listing_ids?.length ? b.listing_ids : b.listing_id ? [b.listing_id] : [])
+    .map((x) => listings.find((l) => l.id === x)).filter((l): l is Listing => !!l);
   const bcText = (b: BroadcastInput) => {
-    const l = listings.find((x) => x.id === b.listing_id);
+    const many = picked(b);
+    if (b.kind === 'new_flat' && many.length > 1) {
+      return ['New flats with Demo Realty Dhokali:', ...many.map((l) => `• ${l.bhk} BHK for rent in ${where(l)} — ${summaryOf(l).price_label}`), 'Reply to see any of them. — Demo Realty Dhokali'].join('\n');
+    }
+    const l = many[0];
     if (b.kind === 'new_flat' && l) {
       const soc = SOCIETIES.find((x) => x.society_id === l.society_id)!;
       return `New ${l.bhk} BHK for rent in ${l.society}, ${soc.locality} — ₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month. Reply to see it. — Demo Realty Dhokali`;
@@ -261,6 +273,88 @@ export function createDemoApi(): Api {
     const f = ownerFlats.find((x) => x.id === fid);
     if (!f) throw new Error('Not found');
     return f;
+  };
+  // --- Co-broking demo (D17): Demo Realty's own list of fellow brokers, and trade offers from others. ---
+  type Fellow = FellowBroker & { lat?: number; lng?: number };
+  const fellows: Fellow[] = [
+    { id: 'fb-1', name: 'Shree Ganesh Properties', firm: 'Shree Ganesh Properties', phone: '+91 98200 00003', address: 'Near Hiranandani Estate gate', locality: 'Hiranandani Estate', has_location: true, on_platform: true, notes: '', distance_km: null, lat: 19.255, lng: 72.97 },
+    { id: 'fb-2', name: 'Om Sai', firm: 'Om Sai Estate Agents', phone: '+91 98200 00002', address: 'Manpada Road', locality: 'Manpada', has_location: true, on_platform: true, notes: '', distance_km: null, lat: 19.236, lng: 72.972 },
+    { id: 'fb-3', name: 'Ramesh Patil', firm: 'Patil Properties', phone: '+91 98203 00001', address: 'Patlipada', locality: 'Hiranandani Estate', has_location: true, on_platform: false, notes: 'Strong in Estate rentals', distance_km: null, lat: 19.262, lng: 72.975 },
+    { id: 'fb-4', name: 'Sunil', firm: 'Sunil Estate Agency', phone: '+91 98203 00004', address: 'Majiwada', locality: 'Majiwada', has_location: true, on_platform: false, notes: '', distance_km: null, lat: 19.213, lng: 72.983 },
+    { id: 'fb-5', name: 'Anil', firm: '', phone: '+91 98203 00003', address: '', locality: null, has_location: false, on_platform: false, notes: '', distance_km: null },
+  ];
+  const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+    const r = (x: number) => (x * Math.PI) / 180;
+    const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lng - a.lng) / 2) ** 2;
+    return 6371 * 2 * Math.asin(Math.sqrt(h));
+  };
+  const tradeBlasts: TradeBlast[] = [];
+  const tradeInbox: TradeDelivery[] = [
+    { id: 'td-1', kind: 'flats', from: 'Shree Ganesh Properties', from_phone: '+91 98200 00003', reply: null, read: false, created_at: new Date(Date.now() - 3600e3).toISOString(),
+      text: 'Ready flats available:\n• 2 BHK for rent, Lodha Amara, Kolshet — ₹27,000/month\n• 1 BHK for rent, Dosti Imperia, Manpada — ₹17,500/month\nHave a customer? Call Shree Ganesh Properties +91 98200 00003.',
+      items: [
+        { society: 'Lodha Amara', locality: 'Kolshet', bhk: '2 BHK', txn_type: 'RENT', price: 27000, price_label: '₹27,000/month', available_from: null },
+        { society: 'Dosti Imperia', locality: 'Manpada', bhk: '1 BHK', txn_type: 'RENT', price: 17500, price_label: '₹17,500/month', available_from: null },
+      ] },
+    { id: 'td-2', kind: 'requirement', from: 'Om Sai Estate Agents', from_phone: '+91 98200 00002', reply: null, read: false, created_at: new Date(Date.now() - 20 * 3600e3).toISOString(),
+      text: 'Wanted: 3 BHK for rent in Hiranandani Estate, up to ₹40,000/month, move in by 15 Oct. Have one? Call Om Sai Estate Agents +91 98200 00002.',
+      items: [{ txn_type: 'RENT', bhk: '3 BHK', localities: ['Hiranandani Estate'], budget_label: 'up to ₹40,000/month', move_in_by: indiaDate(20) }] },
+  ];
+  const tradeItems = (p: TradeInput) => {
+    if (p.kind === 'flats') {
+      const ls = (p.listing_ids ?? []).map((x) => listings.find((l) => l.id === x)).filter((l): l is Listing => !!l);
+      if (!ls.length) throw new ApiError(400, 'Pick at least one flat from your inventory');
+      const centres = ls.map((l) => SOCIETIES.find((x) => x.society_id === l.society_id)!.location);
+      const text = [ls.length > 1 ? 'Ready flats available:' : 'Ready flat available:', ...ls.map((l) => `• ${l.bhk} BHK for rent, ${where(l)} — ${summaryOf(l).price_label}`), 'Have a customer? Call Demo Broker (Demo Realty Dhokali) +91 98200 00001.'].join('\n');
+      return { items: ls.map(summaryOf), centres, text };
+    }
+    const r = reqs.find((x) => x.id === p.requirement_id);
+    if (!r) throw new ApiError(400, "Pick one of your customers' requirements");
+    const item = { txn_type: r.txn_type, bhk: `${r.bhk_min} BHK`, localities: ['Dhokali'], budget_label: `up to ₹${r.budget_max.toLocaleString('en-IN')}/month`, move_in_by: null };
+    return { items: [item], centres: [{ lat: 19.227, lng: 72.978 }], text: `Wanted: ${item.bhk} for rent in Dhokali, ${item.budget_label}. Have one? Call Demo Broker (Demo Realty Dhokali) +91 98200 00001.` };
+  };
+  const tradePreview = (p: TradeInput): TradePreview => {
+    const { items, centres, text } = tradeItems(p);
+    const radius = Math.max(0.5, Math.min(p.radius_km ?? 3, 50));
+    const chosen = new Set(p.contact_ids ?? []);
+    const contacts = fellows.map(({ lat, lng, ...c }) => {
+      const d = lat !== undefined && lng !== undefined ? Math.min(...centres.map((x) => km({ lat, lng }, x))) : null;
+      const inRadius = d !== null && d <= radius;
+      const selected = p.scope === 'all' ? true : p.scope === 'selected' ? chosen.has(c.id) : inRadius;
+      return { ...c, distance_km: d === null ? null : Math.round(d * 10) / 10, in_radius: inRadius, selected };
+    }).sort((a, b) => (a.distance_km ?? 999) - (b.distance_km ?? 999));
+    const sel = contacts.filter((c) => c.selected);
+    return {
+      text, items, radius_km: radius, contacts,
+      reach: { total: contacts.length, selected: sel.length, in_app: sel.filter((c) => c.on_platform).length, whatsapp: sel.filter((c) => !c.on_platform).length, no_location: contacts.filter((c) => c.distance_km === null).length },
+    };
+  };
+  const importPeople = (src: { text?: string; file?: unknown }): { name: string; phone: string }[] => {
+    if (!('text' in src) || !src.text) return [{ name: 'Imported contact (demo)', phone: '98765 33333' }, { name: 'Imported contact 2 (demo)', phone: '98765 44444' }];
+    return src.text.split('\n').map((line) => {
+      const m = line.match(/(\+?\d[\d\s-]{8,}\d)/);
+      return m ? { name: line.replace(m[1], '').replace(/[,]/g, ' ').trim(), phone: m[1] } : { name: line.trim(), phone: '' };
+    }).filter((r) => r.name || r.phone);
+  };
+  const structureOf = (sid: string): SocietyStructure => {
+    const soc = SOCIETIES.find((x) => x.society_id === sid) ?? SOCIETIES[0];
+    const w = WINGS[soc.society_id] ?? { wings: [], wings_complete: false };
+    const mine = new Set(listings.filter((l) => l.society_id === soc.society_id).map((l) => `${l.building}|${l.unit_no}`));
+    return {
+      society: { id: soc.society_id, name: soc.name, locality: soc.locality, wings_complete: w.wings_complete },
+      sources: [...new Set(w.wings.map((x) => x.layout.source).filter(Boolean))],
+      wings: w.wings.map((wing) => {
+        const L = wing.layout;
+        const floors: SocietyStructure['wings'][number]['floors'] = [];
+        for (let f = L.floors_total ?? 0; f >= L.lowest_floor; f--) {
+          const skip = L.skip_floors.includes(f);
+          const nos = skip ? [] : Array.from({ length: L.units_per_floor ?? 0 }, (_, i) => `${f}${String(i + 1).padStart(2, '0')}`);
+          nos.push(...L.extra_unit_nos.filter((x) => (parseUnitNo(x).floor ?? Math.floor(parseInt(x, 10) / 100)) === f));
+          floors.push({ floor: f, label: f === 0 ? 'Ground' : String(f), no_flats: skip, flats: nos.map((no) => ({ no, mine: mine.has(`${wing.name}|${no}`) })) });
+        }
+        return { id: wing.id, name: wing.name, layout: { ...L, register_complete: L.source === 'tmc' }, flats_total: floors.reduce((n, r) => n + r.flats.length, 0), known: floors.length > 0, floors };
+      }),
+    };
   };
   const summary = (f: OwnerFlat): OwnerFlat => ({ ...clone(f), photo_count: (f.media ?? []).filter((m) => m.kind === 'photo').length, video_count: (f.media ?? []).filter((m) => m.kind === 'video').length });
 
@@ -401,26 +495,134 @@ export function createDemoApi(): Api {
     },
     async broadcastPreview(b) {
       await wait(100);
-      const l = listings.find((x) => x.id === b.listing_id);
-      return { text: bcText(b), flat: l ? { society: l.society, locality: '', bhk: `${l.bhk} BHK`, txn_type: l.txn_type, price: l.asking_rent, price_label: `₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month`, available_from: null } : null, reach: reach(), free_in_pilot: true };
+      const many = picked(b);
+      return { text: bcText(b), flat: many[0] ? summaryOf(many[0]) : null, flats: many.map(summaryOf), reach: reach(), free_in_pilot: true };
     },
     async sendBroadcast(b) {
       await wait();
       const text = (b.text ?? '').trim() || bcText(b);
       if (!text) throw new ApiError(400, 'Write the message');
       const r = reach();
-      const l = listings.find((x) => x.id === b.listing_id);
-      const bc: Broadcast = { id: id('bc'), kind: b.kind, text, listing_id: b.listing_id ?? null, locality: null, recipients_total: r.total, delivered_in_app: r.in_app, not_on_app: r.not_on_app, muted: 0, created_at: now() };
+      const many = picked(b);
+      const l = many[0];
+      const bc: Broadcast = { id: id('bc'), kind: b.kind, text, listing_id: l?.id ?? null, listing_ids: many.map((x) => x.id), locality: null, recipients_total: r.total, delivered_in_app: r.in_app, not_on_app: r.not_on_app, muted: 0, created_at: now() };
       sent.unshift(bc);
       if (!updates.some((u) => u.org_id === 'org-demo' && u.muted)) {
         updates.unshift({ id: id('upd'), org_id: 'org-demo', org: 'Demo Realty Dhokali', kind: b.kind, text, sent_at: now(), read: false, muted: false,
-          flat: l ? { society: l.society, locality: '', bhk: `${l.bhk} BHK`, txn_type: l.txn_type, price: l.asking_rent, price_label: `₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month`, available_from: null } : null });
+          flat: l ? summaryOf(l) : null, flats: many.map(summaryOf) });
       }
       const invite = customers.filter((c) => !c.on_platform).map((c) => ({
         customer_id: c.id, name: c.name || 'Customer',
         whatsapp_url: `https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`${text}\n\nGet updates like this from Demo Realty Dhokali on the Only Broker app.`)}`,
       }));
       return clone({ ...bc, invite });
+    },
+    async importCustomers(src) {
+      await wait();
+      const rows = importPeople(src as { text?: string });
+      const out: ImportResult = { added: 0, already_in_book: 0, skipped: [], skipped_count: 0 };
+      rows.forEach((r, i) => {
+        const digits = r.phone.replace(/\D/g, '').slice(-10);
+        if (digits.length !== 10) {
+          out.skipped.push({ row: i + 1, reason: 'No valid mobile number', text: r.name.slice(0, 60) });
+          return;
+        }
+        if (customers.some((c) => c.phone.replace(/\D/g, '').endsWith(digits))) {
+          out.already_in_book! += 1;
+          return;
+        }
+        customers.push({ id: id('cus'), name: r.name, phone: `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`, source: 'import', stage: 'new', consent_state: 'none', can_message: false, on_platform: false, created_at: now(), requirements: [] });
+        out.added += 1;
+      });
+      out.skipped_count = out.skipped.length;
+      return out;
+    },
+    async fellowBrokers(q) {
+      await wait(100);
+      const n = (q ?? '').toLowerCase();
+      return clone(fellows.filter((c) => !n || `${c.name} ${c.firm} ${c.phone} ${c.locality ?? ''}`.toLowerCase().includes(n)).map(({ lat: _a, lng: _b, ...c }) => c));
+    },
+    async addFellowBroker(b) {
+      await wait();
+      const digits = b.phone.replace(/\D/g, '').slice(-10);
+      if (digits.length !== 10) throw new ApiError(400, 'Enter a valid mobile number');
+      const loc = LOCALITIES.find((l) => `${b.area ?? ''} ${b.address ?? ''}`.toLowerCase().includes(l.name.toLowerCase()));
+      const c: Fellow = { id: id('fb'), name: b.name, firm: b.firm ?? '', phone: `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`, address: b.address ?? b.area ?? '', locality: loc?.name ?? null,
+        has_location: !!loc, on_platform: false, notes: b.notes ?? '', distance_km: null, ...(loc ? { lat: 19.23, lng: 72.975 } : {}) };
+      fellows.push(c);
+      const { lat: _a, lng: _b, ...out } = c;
+      return clone(out);
+    },
+    async removeFellowBroker(fid) {
+      const i = fellows.findIndex((c) => c.id === fid);
+      if (i >= 0) fellows.splice(i, 1);
+    },
+    async importFellowBrokers(src) {
+      await wait();
+      const rows = importPeople(src as { text?: string });
+      const out: ImportResult = { added: 0, updated: 0, skipped: [], skipped_count: 0 };
+      rows.forEach((r, i) => {
+        const digits = r.phone.replace(/\D/g, '').slice(-10);
+        if (digits.length !== 10 || !r.name) {
+          out.skipped.push({ row: i + 1, reason: 'Enter a valid mobile number', text: r.name.slice(0, 60) });
+          return;
+        }
+        if (fellows.some((c) => c.phone.replace(/\D/g, '').endsWith(digits))) {
+          out.updated! += 1;
+          return;
+        }
+        fellows.push({ id: id('fb'), name: r.name, firm: '', phone: `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`, address: '', locality: null, has_location: false, on_platform: false, notes: '', distance_km: null });
+        out.added += 1;
+      });
+      out.skipped_count = out.skipped.length;
+      return out;
+    },
+    async tradePreview(p) {
+      await wait(120);
+      return clone(tradePreview(p));
+    },
+    async sendTradeBlast(p) {
+      await wait();
+      const pv = tradePreview(p);
+      const text = (p.text ?? '').trim() || pv.text;
+      const sel = pv.contacts.filter((c) => c.selected);
+      if (!sel.length) throw new ApiError(400, 'Nobody selected. Widen the distance, choose everyone, or tick names.');
+      const b: TradeBlast = { id: id('tb'), kind: p.kind, text, items: pv.items, recipients_total: sel.length, delivered_in_app: sel.filter((c) => c.on_platform).length,
+        via_whatsapp: sel.filter((c) => !c.on_platform).length, replies_count: 0, audience: { scope: p.scope, radius_km: pv.radius_km }, created_at: now(), replies: [] };
+      tradeBlasts.unshift(b);
+      // A fellow broker on the platform answers after a moment (demo).
+      const first = sel.find((c) => c.on_platform);
+      if (first) setTimeout(() => { b.replies!.push({ from: first.firm || first.name, phone: first.phone, message: p.kind === 'flats' ? 'I have a family of 3 looking, can visit Sunday' : 'I have one in Rodas Enclave', at: now() }); b.replies_count = b.replies!.length; }, 4000);
+      const whatsapp = sel.filter((c) => !c.on_platform).map((c) => ({ contact_id: c.id, name: c.name, firm: c.firm, whatsapp_url: `https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}` }));
+      return clone({ ...b, whatsapp });
+    },
+    async tradeBlasts() {
+      return clone(tradeBlasts);
+    },
+    async tradeBlast(bid) {
+      const b = tradeBlasts.find((x) => x.id === bid);
+      if (!b) throw new ApiError(404, 'Not found');
+      return clone(b);
+    },
+    async tradeInbox() {
+      await wait(100);
+      return clone(tradeInbox);
+    },
+    async markTradeRead() {
+      tradeInbox.forEach((d) => (d.read = true));
+      return {};
+    },
+    async replyTrade(did, answer) {
+      await wait();
+      const d = tradeInbox.find((x) => x.id === did);
+      if (!d) throw new ApiError(404, 'Not found');
+      d.reply = answer;
+      d.read = true;
+      return clone(d);
+    },
+    async societyStructure(sid) {
+      await wait(120);
+      return clone(structureOf(sid));
     },
     async broadcasts() {
       return clone(sent);

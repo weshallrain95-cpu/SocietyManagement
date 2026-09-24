@@ -28,12 +28,12 @@ export default function Updates() {
             <P style={{ fontWeight: '700', flexShrink: 1 }}>{u.org}</P>
             <P small muted>{ago(u.sent_at)}</P>
           </Row>
-          {u.flat ? (
-            <Row style={{ flexWrap: 'wrap' }}>
-              <Chip label={`${u.flat.bhk} · ${u.flat.society}`} tone="info" />
-              {u.flat.price_label ? <Chip label={u.flat.price_label} /> : null}
+          {(u.flats?.length ? u.flats : u.flat ? [u.flat] : []).map((f, i) => (
+            <Row key={i} style={{ flexWrap: 'wrap' }}>
+              <Chip label={`${f.bhk} · ${f.society}`} tone="info" />
+              {f.price_label ? <Chip label={f.price_label} /> : null}
             </Row>
-          ) : null}
+          ))}
           <P>{u.text}</P>
           <Button
             small

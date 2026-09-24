@@ -220,7 +220,8 @@ def _flat_line(f: dict) -> str:
     what = "for rent" if f["txn_type"] == "RENT" else "for sale"
     price = f" — {f['price_label']}" if f.get("price_label") else ""
     when = f" (from {f['available_from']})" if f.get("available_from") else ""
-    return f"• {f['bhk']} {what}, {f['society']}, {f['locality']}{price}{when}"
+    place = f["society"] if f["locality"] in ("", f["society"]) else f"{f['society']}, {f['locality']}"
+    return f"• {f['bhk']} {what}, {place}{price}{when}"
 
 
 def default_text(kind, *, org, user, items) -> str:

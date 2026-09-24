@@ -1,5 +1,5 @@
 // HTTP implementation of the Api contract against the Django backend.
-import type { Api, Tokens, UploadFile, Wing } from './types';
+import type { Api, ImportSource, Tokens, UploadFile, Wing } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -20,6 +20,13 @@ export interface TokenStore {
 function appendFile(f: FormData, field: string, u: UploadFile) {
   if (u.file) f.append(field, u.file, u.name);
   else f.append(field, { uri: u.uri, name: u.name, type: u.type } as unknown as Blob);
+}
+
+function importBody(src: ImportSource): FormData | { text: string } {
+  if ('text' in src) return { text: src.text };
+  const f = new FormData();
+  appendFile(f, 'file', src.file);
+  return f;
 }
 
 function detail(body: unknown, status: number): string {
@@ -113,6 +120,22 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     broadcastPreview: (p) => get(`/broadcasts/preview${qs({ ...p })}`),
     sendBroadcast: (b) => post('/broadcasts', b),
     broadcasts: () => get('/broadcasts'),
+    importCustomers: (src) => call('POST', '/customers/import', importBody(src)),
+    fellowBrokers: (q) => get(`/trade/contacts${qs({ q })}`),
+    addFellowBroker: (b) => post('/trade/contacts', b),
+    removeFellowBroker: async (cid) => {
+      await call('DELETE', `/trade/contacts/${cid}`);
+    },
+    importFellowBrokers: (src) => call('POST', '/trade/contacts/import', importBody(src)),
+    tradePreview: (p) =>
+      get(`/trade/blasts/preview${qs({ ...p, listing_ids: p.listing_ids?.join(','), contact_ids: p.contact_ids?.join(','), text: undefined })}`),
+    sendTradeBlast: (p) => post('/trade/blasts', p),
+    tradeBlasts: () => get('/trade/blasts'),
+    tradeBlast: (bid) => get(`/trade/blasts/${bid}`),
+    tradeInbox: () => get('/trade/inbox'),
+    markTradeRead: () => post('/trade/inbox'),
+    replyTrade: (did, answer, message) => post(`/trade/inbox/${did}/reply`, { answer, message }),
+    societyStructure: (sid) => get(`/societies/${sid}/structure`),
     myUpdates: () => get('/me/updates'),
     markUpdatesRead: () => post('/me/updates'),
     muteBroker: (org_id, muted) => post('/me/updates/mute', { org_id, muted }),

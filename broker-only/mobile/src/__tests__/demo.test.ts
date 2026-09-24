@@ -113,3 +113,32 @@ test('a broadcast reaches customers in the app and lists the rest for a WhatsApp
   await run(api.muteBroker('org-demo', true));
   expect((await run(api.myUpdates())).find((u) => u.org_id === 'org-demo')?.muted).toBe(true);
 });
+
+test('co-broking: in and around the flat, then wider, then everyone; never the flat number', async () => {
+  const api = createDemoApi();
+  const near = await run(api.tradePreview({ kind: 'flats', listing_ids: ['lst-1'], scope: 'radius', radius_km: 3 }));
+  const wide = await run(api.tradePreview({ kind: 'flats', listing_ids: ['lst-1'], scope: 'radius', radius_km: 10 }));
+  const all = await run(api.tradePreview({ kind: 'flats', listing_ids: ['lst-1'], scope: 'all' }));
+  expect(near.reach.selected).toBeLessThan(wide.reach.selected);
+  expect(all.reach.selected).toBe(all.reach.total);
+  expect(near.text).not.toContain('1203');
+  const sent = await run(api.sendTradeBlast({ kind: 'flats', listing_ids: ['lst-1'], scope: 'selected', contact_ids: ['fb-3'] }));
+  expect(sent.recipients_total).toBe(1);
+  expect(sent.whatsapp[0].whatsapp_url).toContain('wa.me/919820300001');
+});
+
+test('customer import skips numbers already in the book', async () => {
+  const api = createDemoApi();
+  const r = await run(api.importCustomers({ text: 'Riya 98765 43210\nNew person 98111 00000\nno number' }));
+  expect([r.added, r.already_in_book, r.skipped_count]).toEqual([1, 1, 1]);
+});
+
+test('building picture marks only my flats', async () => {
+  const api = createDemoApi();
+  const s = await run(api.societyStructure('soc-0'));
+  const a = s.wings.find((w) => w.name === 'A Wing')!;
+  const mine = a.floors.flatMap((f) => f.flats.filter((x) => x.mine).map((x) => x.no));
+  expect(mine).toEqual(['1203', '1204']);
+  expect(a.floors.find((f) => f.floor === 11)?.no_flats).toBe(true);
+  expect(a.floors[0].flats.map((x) => x.no)).toContain('2001A');
+});

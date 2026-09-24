@@ -42,6 +42,12 @@ function Shell() {
         <Stack.Screen name="visit/[id]" options={{ title: 'Visit plan' }} />
         <Stack.Screen name="visit/new" options={{ title: 'Plan a visit' }} />
         <Stack.Screen name="broadcast" options={{ title: 'Update my customers' }} />
+        <Stack.Screen name="customer/import" options={{ title: 'Import customers' }} />
+        <Stack.Screen name="trade/index" options={{ title: 'Co-broking' }} />
+        <Stack.Screen name="trade/blast" options={{ title: 'Send to fellow brokers' }} />
+        <Stack.Screen name="trade/contacts" options={{ title: 'My fellow brokers' }} />
+        <Stack.Screen name="trade/[id]" options={{ title: 'Sent to fellow brokers' }} />
+        <Stack.Screen name="society/[id]" options={{ title: 'Building' }} />
         <Stack.Screen name="owner/new" options={{ title: 'Add my flat' }} />
         <Stack.Screen name="owner/[id]" options={{ title: 'My flat' }} />
         <Stack.Screen name="owner/brokers" options={{ title: 'Brokers near my flat' }} />

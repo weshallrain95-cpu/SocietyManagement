@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
@@ -53,6 +53,7 @@ export default function ListingDetail() {
         {l.deposit ? <Chip label={`Deposit ${inr(l.deposit)}`} /> : null}
         {l.owner_appointed ? <Chip label="Owner-appointed" tone="ok" /> : null}
       </Row>
+      <Button small kind="ghost" title="🏢 See the building, floor by floor" onPress={() => router.push(`/society/${l.society_id}?wing=${encodeURIComponent(l.building)}`)} testID="open-structure" />
 
       {l.owner_withdrew ? (
         <Card style={{ borderWidth: 2 }}>

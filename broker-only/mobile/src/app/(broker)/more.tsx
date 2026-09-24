@@ -10,6 +10,7 @@ export default function More() {
   const { api, signOut, settings } = useSession();
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
   const staff = useQuery({ queryKey: ['staff'], queryFn: api.staff });
+  const inbox = useQuery({ queryKey: ['trade-inbox'], queryFn: api.tradeInbox });
   const [online, setOnline] = useState(false);
   const presence = useMutation({ mutationFn: (on: boolean) => api.presence(on), onSuccess: (r) => setOnline(r.online) });
   const [phone, setPhone] = useState('');
@@ -31,6 +32,15 @@ export default function More() {
         <P style={{ fontWeight: '700' }}>{org?.org_name ?? 'Your agency'}</P>
         <P muted small>{me.data?.display_name} · {me.data?.phone_masked} · {org?.role.replace('broker_', '')}</P>
         {settings.demo ? <Chip label="Demo mode" tone="warn" /> : null}
+      </Card>
+
+      <H2>Trade with fellow brokers</H2>
+      <Card onPress={() => router.push('/trade')} testID="open-trade">
+        <Row style={{ justifyContent: 'space-between' }}>
+          <P style={{ fontWeight: '700' }}>Co-broking</P>
+          {inbox.data?.filter((d) => !d.read).length ? <Chip label={`${inbox.data.filter((d) => !d.read).length} new`} tone="warn" /> : null}
+        </Row>
+        <P small muted>Share ready flats with brokers you know, ask them for a flat, and see their offers.</P>
       </Card>
 
       <H2>Receive enquiries</H2>

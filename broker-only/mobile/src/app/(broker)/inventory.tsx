@@ -20,6 +20,7 @@ export default function Inventory() {
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isFetching}>
       <Button title="+ Add flat" onPress={() => router.push('/listing/new')} testID="add-flat" />
+      <Button kind="secondary" title="📢 Share ready flats with fellow brokers" onPress={() => router.push('/trade/blast?kind=flats')} testID="open-trade-blast" />
       <ChipRow>
         {FILTERS.map((f) => <Chip key={f.key} label={f.label} selected={filter === f.key} onPress={() => setFilter(f.key)} />)}
       </ChipRow>

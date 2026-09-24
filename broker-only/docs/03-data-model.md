@@ -425,6 +425,25 @@ stateDiagram-v2
    another broker's "available" report does not release it. Only the holding broker or the owner
    can, and a hold expires to `AVAILABLE_UNCONFIRMED` after 7 days (configurable).
 
+## 4a. Official flat registers and co-broking (D17, D18)
+
+**`register_flat`** (master data, public): `building_id`, `unit_no`, `unit_no_normalised` (unique per building),
+`floor`, `carpet_sqft`, `source` (`tmc` | `rera` | `igr` | `ops`), `source_ref` (e.g. TMC property number), `ward`.
+A flat as an official record lists it. **No owner names or other personal data are ever stored.** `building.register_complete`
+= the list is the whole wing, so flat numbers outside it are refused. The layout fields on `building` are worked out from the list.
+
+Co-broking tables are all **RLS-private** to one firm (`broker_org_id`):
+
+| Table | Holds | Firm column means |
+|---|---|---|
+| `trade_fellowbroker` | The broker's own list of fellow brokers: name, firm, phone (hash + encrypted), address, locality, optional pin, `platform_org_id` when the number belongs to an Only Broker firm | the list's owner |
+| `trade_tradeblast` | What was sent: kind (`flats` / `requirement`), text, trade-level `items`, listing ids or requirement, audience (scope, radius, recipients), counts | the sender |
+| `trade_tradedelivery` | A copy of the blast in a receiving firm's trade inbox, and their reply (`have_customer` / `have_flat` / `not_now`) | the receiver |
+| `trade_tradereply` | A reply as the sender sees it: replying firm, name, number, message | the sender |
+
+Cross-firm writes (a delivery into another firm's inbox, a reply back to the sender) happen only in the service layer, under
+`platform_context`, and carry only trade-level data: society, area, BHK, price. Never a flat number, owner or customer.
+
 ## 5. Society and building de-duplication
 
 ### 5.1 The problem

@@ -63,6 +63,8 @@ export default function Today() {
         <Button small kind="secondary" title="Add flat" onPress={() => router.push('/listing/new')} />
         <Button small kind="secondary" title="Walk-in customer" onPress={() => router.push('/customer/new')} />
         <Button small kind="secondary" title="Open leads" onPress={() => router.push('/leads')} />
+        <Button small kind="secondary" title="Share flats with brokers" onPress={() => router.push('/trade/blast?kind=flats')} />
+        <Button small kind="secondary" title="Update my customers" onPress={() => router.push('/broadcast')} />
       </Row>
     </Screen>
   );

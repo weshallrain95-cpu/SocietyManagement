@@ -214,6 +214,8 @@ export interface BroadcastInput {
   kind: BroadcastKind;
   text?: string;
   listing_id?: string;
+  /** Several flats in one message (up to 10). */
+  listing_ids?: string[];
   locality_id?: string;
   scope?: 'all' | 'locality';
 }
@@ -223,6 +225,7 @@ export interface Broadcast {
   kind: BroadcastKind;
   text: string;
   listing_id: string | null;
+  listing_ids: string[];
   locality: string | null;
   recipients_total: number;
   delivered_in_app: number;
@@ -239,9 +242,116 @@ export interface CustomerUpdate {
   kind: BroadcastKind;
   text: string;
   flat: FlatSummary | null;
+  flats?: FlatSummary[];
   sent_at: string;
   read: boolean;
   muted: boolean;
+}
+
+/** Result of importing a list of people (customers or fellow brokers). */
+export interface ImportResult {
+  added: number;
+  /** customers: already in the book; fellow brokers: details refreshed */
+  already_in_book?: number;
+  updated?: number;
+  skipped: { row: number; reason: string; text: string }[];
+  skipped_count: number;
+}
+
+export type ImportSource = { file: UploadFile } | { text: string };
+
+// --- Co-broking (D17): the broker's trade network of fellow brokers -----------------------------
+
+export interface FellowBroker {
+  id: string;
+  name: string;
+  firm: string;
+  phone: string;
+  address: string;
+  locality: string | null;
+  has_location: boolean;
+  on_platform: boolean;
+  notes: string;
+  distance_km: number | null;
+  /** preview only */
+  in_radius?: boolean;
+  selected?: boolean;
+}
+
+export type TradeKind = 'flats' | 'requirement';
+export type TradeScope = 'radius' | 'all' | 'selected';
+
+export interface TradeInput {
+  kind: TradeKind;
+  listing_ids?: string[];
+  requirement_id?: string;
+  scope: TradeScope;
+  radius_km?: number;
+  contact_ids?: string[];
+  text?: string;
+}
+
+/** Trade-level: flats as society/area/BHK/price; requirements without the customer. */
+export interface RequirementSummary {
+  txn_type: TxnType;
+  bhk: string;
+  localities: string[];
+  budget_label: string;
+  move_in_by: string | null;
+}
+export type TradeItem = FlatSummary | RequirementSummary;
+
+export interface TradePreview {
+  text: string;
+  items: TradeItem[];
+  radius_km: number;
+  reach: { total: number; selected: number; in_app: number; whatsapp: number; no_location: number };
+  contacts: FellowBroker[];
+}
+
+export interface TradeBlast {
+  id: string;
+  kind: TradeKind;
+  text: string;
+  items: TradeItem[];
+  recipients_total: number;
+  delivered_in_app: number;
+  via_whatsapp: number;
+  replies_count: number;
+  audience: { scope?: TradeScope; radius_km?: number };
+  created_at: string;
+  replies?: { from: string; phone: string; message: string; at: string }[];
+}
+
+export type TradeAnswer = 'have_customer' | 'have_flat' | 'not_now';
+
+export interface TradeDelivery {
+  id: string;
+  kind: TradeKind;
+  from: string;
+  from_phone: string;
+  text: string;
+  items: TradeItem[];
+  reply: TradeAnswer | null;
+  read: boolean;
+  created_at: string;
+}
+
+// --- Building structure (D18): from official flat lists, floor by floor --------------------------
+
+export interface StructureWing {
+  id: string;
+  name: string;
+  layout: BuildingLayout & { register_complete?: boolean };
+  flats_total: number;
+  known: boolean;
+  floors: { floor: number | null; label: string; no_flats: boolean; flats: { no: string; mine: boolean }[] }[];
+}
+
+export interface SocietyStructure {
+  society: { id: string; name: string; locality: string; wings_complete: boolean };
+  sources: string[];
+  wings: StructureWing[];
 }
 
 /** "HE A-1203" → the broker's own flats only. A flat not in their list is simply not found. */
@@ -444,9 +554,22 @@ export interface Api {
   askOwnerBack(listingId: string, note: string): Promise<{ detail: string }>;
   uploadListingMedia(listingId: string, file: UploadFile): Promise<MediaItem>;
   reviewMedia(mediaId: string, approve: boolean): Promise<OwnerFlat>;
-  broadcastPreview(p: BroadcastInput): Promise<{ text: string; flat: FlatSummary | null; reach: Reach; free_in_pilot: boolean }>;
+  broadcastPreview(p: BroadcastInput): Promise<{ text: string; flat: FlatSummary | null; flats?: FlatSummary[]; reach: Reach; free_in_pilot: boolean }>;
   sendBroadcast(b: BroadcastInput): Promise<Broadcast & { invite: { customer_id: string; name: string; whatsapp_url: string }[] }>;
   broadcasts(): Promise<Broadcast[]>;
+  importCustomers(src: ImportSource): Promise<ImportResult>;
+  fellowBrokers(q?: string): Promise<FellowBroker[]>;
+  addFellowBroker(b: { name: string; phone: string; firm?: string; area?: string; address?: string; notes?: string }): Promise<FellowBroker>;
+  removeFellowBroker(id: string): Promise<void>;
+  importFellowBrokers(src: ImportSource): Promise<ImportResult>;
+  tradePreview(p: TradeInput): Promise<TradePreview>;
+  sendTradeBlast(p: TradeInput): Promise<TradeBlast & { whatsapp: { contact_id: string; name: string; firm: string; whatsapp_url: string }[] }>;
+  tradeBlasts(): Promise<TradeBlast[]>;
+  tradeBlast(id: string): Promise<TradeBlast>;
+  tradeInbox(): Promise<TradeDelivery[]>;
+  markTradeRead(): Promise<unknown>;
+  replyTrade(id: string, answer: TradeAnswer, message?: string): Promise<TradeDelivery>;
+  societyStructure(societyId: string): Promise<SocietyStructure>;
   myUpdates(): Promise<CustomerUpdate[]>;
   markUpdatesRead(): Promise<unknown>;
   muteBroker(orgId: string, muted: boolean): Promise<{ updated: number }>;

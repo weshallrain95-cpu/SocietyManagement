@@ -50,6 +50,9 @@ because it was built in one push:
 | **Pick flats yourself** (VISIT-01a): society + flat-number search on visit plans, matching and customer pages, so staff can plan tours their usual way while they learn to trust matching | ✅ Done |
 | **Owners module**: owner mode in the app — add my flat with proof, photos & walkthrough videos, preferred terms and house rules, brokers near my flat, invite with the "Allow this broker to handle my property" tick, read-only status "currently serviced by … · number · review", untick to remove a broker; broker side: invitation inbox, owner-appointed badge, owner photos, "owner removed you" with ask-to-be-added-back | ✅ Done |
 | **Shared flat media with owner approval** (D15) and **broadcasts to own customers** (D16): brokers add photos/video from the flat page, owners approve; "Update my customers" composer with reach and WhatsApp invites for customers not on the app; customer mode with an Updates inbox and per-broker "stop updates" | ✅ Done |
+| **Co-broking** (D17): each broker's private list of fellow brokers (import from Excel / phone contacts / paste), blast ready flats or a customer's requirement to fellow brokers in and around the flat (distance widened, everyone, or ticked names), trade inbox with "I have a customer / I have a flat" replies, WhatsApp for brokers not on the app | ✅ Done |
+| **Customer list import** (CRM-11) and **several flats in one customer update** | ✅ Done |
+| **Official flat registers** (D18): TMC property-tax / MahaRERA / IGR flat lists → wing layouts worked out automatically, flats outside a complete list refused, owner names never stored; ops upload page and template; **building picture** floor by floor in the app and ops console | ✅ Done — waiting on the data itself (docs/08) |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 
@@ -92,6 +95,9 @@ because it was built in one push:
 | D14 | Owner rules | ✅ **Decided 2026-09-24.** Owners upload a proof document when registering; nobody checks it (a deterrent, not a gate). Owner photos/videos go to every broker holding the flat and, as an available feature, on customer links. An owner can untick any broker (invited or self-added); that broker loses the flat and can ask to be added back — the owner's decision is final | Keeps owners in control without adding ops work |
 | D15 | Flat photos & videos | ✅ **Decided 2026-09-24.** Shared per flat: max 5 photos + 1 video live; owner and the flat's brokers upload, customers never; the owner approves every broker upload before it goes live | One good set of media per flat, owner in control |
 | D16 | Broadcasts | ✅ **Decided 2026-09-24.** Brokers message their own customers (new flat, price drop, news); in-app first; all of the broker's customers; free in the pilot, credits later | The customer list is the broker's second asset; broadcasts pull offline customers onto the platform |
+| D17 | Co-broking (selling ready inventory through fellow brokers) | ✅ **Decided 2026-09-24.** Each broker keeps their own list of fellow brokers (with office areas) and keeps adding to it. Blasts go to brokers in and around the selected flat's location; the broker can widen the distance, send to everyone, or tick names. No commission terms in the message. No owner permission needed (a trade agreement between brokers). "Ask fellow brokers for a flat" (requirement blast) included as a good-to-have. Trade-level details only; the platform never moves a flat into another broker's inventory | Covers the two ways of moving ready inventory the pilot lacked: fellow brokers (A) and a blast to the whole customer list (C) |
+| D18 | Where building structure comes from | ✅ **Decided 2026-09-24.** Only from our own sources — official records (TMC property-tax register, MahaRERA, IGR) — never from brokers (fragmentary). Online sources first; field surveys only to fill gaps. TMC has no public API: request the register formally (RTI / data-sharing letter), see docs/08 | One correct list of flats per wing; nothing to clean up later |
+| D19 | Paid building-data company if TMC is slow | Open — founder to decide after the RTI reply | Coverage vs cost |
 | D10 | Repository | Keep `broker-only/` in this repo on its own branch for now; move to a **dedicated repository** before Phase 1 code grows | Clean history and permissions; CI separation |
 
 ## 6. Immediate next steps
@@ -101,8 +107,7 @@ because it was built in one push:
    and add the broker's real society names and nicknames (they become aliases).
 3. Start the account registrations with long lead times: DLT sender ID + templates, WhatsApp Business,
    Google Cloud (Maps/Places/Routes), MahaRERA agent verification process.
-4. Data: fill the building-layout sheet (`tools/building-layouts/`) for Thane West — MahaRERA pages
-   for newer projects, the pilot broker and a field visit for older ones — and load it with
-   `import_building_layouts`.
+4. Data (D18): send the TMC RTI / data-sharing request for the pilot wards (drafts in docs/08); load
+   MahaRERA details for newer towers; load each official flat list at `/ops/registers`.
 5. Engineering next: put the backend on a staging server so the pilot broker can use the real app
    (not just the demo); then real SMS/WhatsApp once the accounts exist.

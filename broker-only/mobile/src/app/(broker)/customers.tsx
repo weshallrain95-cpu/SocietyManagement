@@ -18,6 +18,7 @@ export default function Customers() {
     <Screen onRefresh={query.refetch} refreshing={query.isFetching}>
       <Button title="+ Add customer (walk-in / call)" onPress={() => router.push('/customer/new')} testID="add-customer" />
       <Button kind="secondary" title="📣 Send an update to my customers" onPress={() => router.push('/broadcast')} testID="open-broadcast" />
+      <Button kind="ghost" title="⤓ Import my customer list (Excel / contacts)" onPress={() => router.push('/customer/import')} testID="open-import" />
       <Field label="Search" placeholder="Name or mobile number" value={q} onChangeText={setQ} autoCorrect={false} />
       {query.isLoading ? <Loading /> : query.error ? <ErrorBox error={query.error} onRetry={query.refetch} /> : null}
       {query.data?.length === 0 ? <Empty title="No customers yet" body="Add walk-in and phone customers here — they don't need the app." /> : null}

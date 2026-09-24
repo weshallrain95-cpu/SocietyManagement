@@ -103,6 +103,8 @@ sequenceDiagram
 | MD-06 | Every unit has **its own map location**, inherited from building and adjustable within 150 m by admin/owner | P0 | Distance-based attributes are recomputed on location change |
 | MD-07 | **Computed location facts** per building: distance and walk time to nearest railway/metro station, auto-rickshaw stand, bus stop, schools, hospitals, markets (from POI data) | P0 | Distances shown as facts ("650 m / 8 min walk to Thane stn"). Brokers can't overwrite them |
 | MD-08 | Unit attributes as defined in the **approved Unit Attribute Dictionary** (founder-approved; loaded from `backend/apps/masterdata/dictionary/attribute_dictionary.yaml`). Draft v0.1 covers: BHK/type, carpet area (RERA carpet), floor/total floors, facing, furnishing (+ item checklist: gas stove, kitchen cabinet, wardrobes, ACs…), parking, amenities (lift, power backup, gym, pool…), **house rules** (pets, smoking, non-veg, bachelors/family, max occupants), age of building, OC status | P0 | Attribute dictionary is data-driven (admin can add attributes without code changes) |
+| MD-14 | **Official flat registers** (*D18*): each wing's list of flats comes from official records — TMC property-tax register, MahaRERA, IGR — never from brokers. From a complete list the layout is worked out (top floor, first floor with flats, flats per floor, refuge floors, odd flats); a flat number outside a complete list cannot be added. Owner names and other personal columns in a source file are never stored. Uploaded by ops (check first, then save) or from the command line; template in `tools/building-layouts/` | P0 | Re-import is harmless; every import audited; sources in docs/08 |
+| MD-15 | **Building picture**: every wing floor by floor (refuge floors shown), from the official list or the layout, in the app and ops console. The asking broker's own flats are marked; other brokers' inventory is never shown | P1 | Opened from any flat page |
 | MD-13 | **Closed universe of buildings.** Each wing records floors, first floor with flats, flats per floor, floors with no flats (refuge/podium) and known exceptions (penthouses). Brokers pick a wing from the list; a flat number that cannot exist is refused. Seeded from MahaRERA, field survey and ops; imported from a spreadsheet | P0 | Verified layout: "2504" in a 20-floor wing is refused at entry and in uploads, with the reason; the broker can report "this flat really exists" to ops. Unverified layout: warning the broker confirms. Society marked "all wings listed": unknown wing names are refused with the closest real wing suggested |
 | MD-09 | **One unit, one truth:** conflicting attribute values from different sources are resolved by the trust hierarchy; conflicts are flagged "disputed" (Data Model §6) | P0 | UI shows the resolved value + source badge (Computed / Owner / Verified / Broker consensus / Single broker) |
 | MD-10 | Any party (customer after a visit, broker, owner) can **suggest a correction** to a unit variable | P1 | Suggestion enters the resolver; the suggester's trust weight applies |
@@ -162,7 +164,8 @@ sequenceDiagram
 | CRM-03 | Full timeline per customer across all interactions with that broker | P0 | Chronological; filter by type |
 | CRM-04 | Follow-up reminders and pipeline stages (New → Contacted → Visits planned → Shortlisted → Negotiation → Closed won / lost + reason) | P1 | Kanban board on desktop |
 | CRM-05 | Duplicate customer detection within a broker's book (same number) | P0 | Merge prompt |
-| CRM-10 | **Broadcasts to the broker's own customers** (*D16*): one message — new flat (society-level, never the flat number), price drop in an area, or news — to all of the broker's customers or those looking in one area. Pilot: delivered **in the app**, to all customers, **free**; customers not on the app are listed with a ready WhatsApp invite so bringing offline customers onto the platform pays off. A customer can turn a broker's updates off | P0 (pilot) | Only the firm's own customers (RLS); field staff cannot broadcast; each broadcast records its reach for paid credits after the pilot |
+| CRM-11 | **Import the existing customer list** at once: Excel/CSV, a phone contacts export (.vcf) or pasted lines. One record per number per broker (existing numbers are not duplicated); invalid rows are listed | P0 | Private to the firm (RLS); imported customers get updates in the app once they log in |
+| CRM-10 | **Broadcasts to the broker's own customers** (*D16*): one message — one or several new flats (up to 10; society-level, never the flat number), price drop in an area, or news — to all of the broker's customers or those looking in one area. Pilot: delivered **in the app**, to all customers, **free**; customers not on the app are listed with a ready WhatsApp invite so bringing offline customers onto the platform pays off. A customer can turn a broker's updates off | P0 (pilot) | Only the firm's own customers (RLS); field staff cannot broadcast; each broadcast records its reach for paid credits after the pilot |
 
 ### 3.7 Matching (MATCH)
 
@@ -202,6 +205,21 @@ sequenceDiagram
 | OWN-05 | Owner uploads **photos and walkthrough videos** and edits owner-authoritative attributes (house rules) and preferred terms. Photos are cleaned (upright, resized, location and camera details removed). Media is shown to every broker holding the flat and — behind a switch that is on — on customer shortlist pages (photos only, never the flat number) | P1 | Owner edits take precedence (Data Model §6). Files are private and reached only through short-lived signed links |
 | OWN-06 | Owner **unticks "Allowed to handle my property"** for any broker, invited or self-added (*D14*): the listing is marked "Owner removed you", hidden from matching, search and visit plans, and the firm **cannot re-add the flat** until the owner ticks again. The broker can ask to be added back with a message; the owner's decision is final | P1 | Broker notified; the owner sees the request on the flat page |
 | OWN-07 | Builder: publish project + tower + unit types/units + price list; invite/approve channel-partner brokers; track leads per broker | P2 | RERA project number mandatory |
+
+### 3.9a Co-broking with fellow brokers (TRADE) — *D17*
+
+Moving ready inventory has three routes: (A) a blast to fellow brokers (channel partners), (B) walk-in and
+platform customers, (C) a blast to the whole customer list (CRM-10/11). This section covers A.
+
+| ID | Requirement | Priority | Acceptance |
+|----|-------------|----------|------------|
+| TRADE-01 | Each broker keeps **their own list of fellow brokers** (name, agency, mobile, office address/area, notes), adds to it any time, and imports it from Excel/CSV, phone contacts (.vcf) or pasted lines. Office area is matched to our localities; a pin can be set | P0 | Private to the firm (RLS); one entry per number; fellow brokers who use Only Broker are recognised by their number |
+| TRADE-02 | **Share ready flats** from the broker's own inventory (one or several, up to 10) with fellow brokers **in and around the flat's location** (default 3 km), **widened** by the broker, to **everyone** on the list, or to **ticked names** | P0 | Preview lists every fellow broker with distance, pre-ticked by the chosen rule; brokers with no known area are reached only via "everyone" or a tick |
+| TRADE-03 | **Trade-level details only**: society, area, BHK, rent/price, availability, and the sending broker's name and number. Never the flat number, wing, owner or owner's number; **no commission terms**. No owner permission needed (a trade agreement between brokers) | P0 | Tests assert the flat number, wing, owner name and brokerage terms never appear |
+| TRADE-04 | Fellow brokers on Only Broker get the blast in their **trade inbox** in the app; the rest get a ready WhatsApp message (one tap each, until WhatsApp Business is connected) | P0 | Delivered once per firm |
+| TRADE-05 | The receiver answers **"I have a customer"** (or "I have a flat" / "not now"); the sender sees replies with the replier's name and number | P0 | The listing broker stays in charge of the flat and the visit; nothing is ever added to the other broker's inventory |
+| TRADE-06 | **Ask fellow brokers for a flat** (requirement blast, good-to-have): from one of the broker's customer requirements; what is wanted, never who wants it | P1 | Customer name and number never appear |
+| TRADE-07 | Only principals and managers can blast; field staff cannot | P0 | 403 for staff |
 
 ### 3.10 Broker organisation and permissions (ORG)
 
@@ -381,7 +399,9 @@ PII is never sent to analytics; user IDs are pseudonymous.
 | 360° reviews | REV-01…05 |
 | Brokers serve walk-in / phone customers who never install the app (founder review, 2026-09-23) | OFF-01…14 |
 | Surprises at the site that change which flats are suitable | MD-08 (conduct-based house rules), MATCH-02, BRD §10.2 |
-| Universe of societies (MMR) | MD-01, MD-02, MD-13 |
+| Universe of societies (MMR) | MD-01, MD-02, MD-13, MD-14, MD-15 |
+| Ready inventory: blast to fellow brokers / walk-ins / whole customer list (founder meeting, 2026-09-24) | TRADE-01…07, MKT-*, CRM-10, CRM-11 |
+| Building / wing / floor / flat data from official sources (TMC property tax, MahaRERA, IGR) | MD-14, MD-15, docs/08 |
 | Same unit, many brokers | INV-02 |
 | Misspelled / short building names don't corrupt the DB | MD-03, MD-04, MD-05, Data Model §5 |
 | One unit, one master data (e.g. "near station" vs "far") | MD-07, MD-09, Data Model §6 |

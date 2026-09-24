@@ -4,14 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { Linking } from 'react-native';
 
-import type { BroadcastKind, Listing } from '@/api';
+import type { BroadcastKind } from '@/api';
 import { useSession } from '@/auth/session';
 import { ago } from '@/lib/format';
 import { Button, Card, Chip, ChipRow, Choice, ErrorBox, Field, H2, Notice, P, Row, Screen } from '@/ui/components';
-import { FlatSearch } from '@/ui/FlatSearch';
+import { FlatPicker } from '@/ui/FlatPicker';
 
 const KINDS: { value: BroadcastKind; label: string }[] = [
-  { value: 'new_flat', label: 'New flat' },
+  { value: 'new_flat', label: 'New flats' },
   { value: 'price_drop', label: 'Price drop in an area' },
   { value: 'news', label: 'News' },
 ];
@@ -20,14 +20,14 @@ export default function BroadcastScreen() {
   const { api } = useSession();
   const qc = useQueryClient();
   const [kind, setKind] = useState<BroadcastKind>('new_flat');
-  const [flat, setFlat] = useState<Listing | null>(null);
+  const [flatIds, setFlatIds] = useState<string[]>([]);
   const [localityId, setLocalityId] = useState<string | undefined>();
   const [scope, setScope] = useState<'all' | 'locality'>('all');
   const [text, setText] = useState<string | null>(null); // null = use the suggested text
   const localities = useQuery({ queryKey: ['localities'], queryFn: api.localities });
   const input = {
     kind,
-    listing_id: kind === 'new_flat' ? flat?.id : undefined,
+    listing_ids: kind === 'new_flat' ? flatIds : undefined,
     locality_id: localityId,
     scope: localityId ? scope : 'all',
   } as const;
@@ -39,7 +39,7 @@ export default function BroadcastScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['broadcasts'] }),
   });
   const reach = preview.data?.reach;
-  const ready = message.trim().length > 0 && (kind !== 'new_flat' || flat);
+  const ready = message.trim().length > 0 && (kind !== 'new_flat' || flatIds.length > 0);
 
   if (send.data) {
     const r = send.data;
@@ -60,7 +60,7 @@ export default function BroadcastScreen() {
             ))}
           </>
         ) : null}
-        <Button kind="ghost" title="Send another update" onPress={() => { send.reset(); setText(null); setFlat(null); }} />
+        <Button kind="ghost" title="Send another update" onPress={() => { send.reset(); setText(null); setFlatIds([]); }} />
       </Screen>
     );
   }
@@ -71,15 +71,10 @@ export default function BroadcastScreen() {
       <Choice label="What’s the news?" value={kind} onChange={(k) => { setKind(k); setText(null); }} options={KINDS} />
 
       {kind === 'new_flat' ? (
-        flat ? (
-          <Card>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <P style={{ fontWeight: '700', flexShrink: 1 }}>{flat.society}</P>
-              <Button small kind="ghost" title="Change" onPress={() => { setFlat(null); setText(null); }} />
-            </Row>
-            <P small muted>{flat.building} · Flat {flat.unit_no} — customers see the society, not the flat number.</P>
-          </Card>
-        ) : <FlatSearch label="Which of your flats?" pickedIds={[]} onPick={(l) => { setFlat(l); setText(null); }} />
+        <>
+          <FlatPicker picked={flatIds} onChange={(ids) => { setFlatIds(ids); setText(null); }} label="Which of your flats? Pick one or several" />
+          <P small muted>Customers see the society, area, BHK and rent — never the flat number.</P>
+        </>
       ) : null}
 
       <P small style={{ fontWeight: '600' }}>{kind === 'price_drop' ? 'Area' : 'Area (optional)'}</P>
