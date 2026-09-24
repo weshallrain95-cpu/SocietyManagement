@@ -51,6 +51,7 @@ class Customer(BaseModel):
     notes = models.TextField(blank=True)
     next_follow_up = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    updates_muted = models.BooleanField(default=False, help_text="The customer turned off this broker's broadcast updates")
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["org", "phone_hash"], name="one_customer_per_phone_per_org")]
@@ -143,3 +144,29 @@ class ShortlistItem(BaseModel):
 
     class Meta:
         ordering = ["position"]
+
+
+class Broadcast(BaseModel):
+    """One message from a broker to many of their own customers (D16): new flat, price drop, area news.
+
+    The customer list is the broker's asset: only this firm's customers are ever reached, and the
+    platform never shares or moves customers between brokers. Delivered in the app (pilot); customers
+    not yet on the app are listed so the broker can invite them.
+    """
+
+    class Kind(models.TextChoices):
+        NEW_FLAT = "new_flat"
+        PRICE_DROP = "price_drop"
+        NEWS = "news"
+
+    org = models.ForeignKey("orgs.BrokerOrg", on_delete=models.CASCADE, related_name="+", db_column="broker_org_id")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    text = models.CharField(max_length=500)
+    listing = models.ForeignKey("inventory.Listing", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    locality = models.ForeignKey("masterdata.Locality", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    audience = models.JSONField(default=dict, blank=True)
+    recipients_total = models.PositiveIntegerField(default=0)
+    delivered_in_app = models.PositiveIntegerField(default=0)
+    not_on_app = models.PositiveIntegerField(default=0)
+    muted = models.PositiveIntegerField(default=0)

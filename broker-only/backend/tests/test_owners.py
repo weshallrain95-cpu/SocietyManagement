@@ -261,3 +261,76 @@ def test_declared_owner_gets_availability_checks(owner):
     assert verified_owner(unit).display_name == "Mrs Kulkarni"
     assert OwnershipClaim.objects.get(unit=unit).status == "declared"
     assert not Listing.objects.exists() and not OwnerInvite.objects.exists()  # registering never hands the flat to anyone
+
+
+# --- D15: shared flat media — owner approves, 5 photos + 1 video, brokers and owners upload, customers never ---
+
+
+@pytest.fixture
+def held(owner, suresh):
+    """Suresh Realty holds the owner's flat."""
+    c, flat = owner
+    org, user, bc = suresh
+    unit = Unit.objects.get(pk=flat["unit_id"])
+    with rls.org_context(org.pk):
+        listing, _ = create_listing(org=org, user=user, unit=unit, txn_type="RENT", data={"asking_rent": 25000})
+    return c, flat, bc, listing
+
+
+def test_broker_upload_waits_for_owner_approval(held):
+    c, flat, bc, listing = held
+    r = bc.post(f"/v1/listings/{listing.pk}/media", {"file": upload("hall.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    assert r.status_code == 201 and r.json()["state"] == "pending"
+    detail = bc.get(f"/v1/listings/{listing.pk}").json()
+    assert detail["media"] == [] and len(detail["my_pending_media"]) == 1  # not live until the owner says so
+    view = c.get(f"/v1/owner/flats/{flat['id']}").json()
+    assert view["pending_media"][0]["uploaded_by"] == "Suresh Realty" and view["media"] == []
+    r = c.post(f"/v1/owner/media/{view['pending_media'][0]['id']}/approve")
+    assert r.status_code == 200 and len(r.json()["media"]) == 1 and r.json()["pending_media"] == []
+    assert len(bc.get(f"/v1/listings/{listing.pk}").json()["media"]) == 1
+
+    r = bc.post(f"/v1/listings/{listing.pk}/media", {"file": upload("k.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    c.post(f"/v1/owner/media/{r.json()['id']}/reject")
+    assert UnitMedia.objects.get(pk=r.json()["id"]).state == "rejected"
+    assert len(bc.get(f"/v1/listings/{listing.pk}").json()["media"]) == 1
+
+
+def test_five_photos_and_one_video_per_flat(held):
+    c, flat, bc, listing = held
+    for i in range(5):
+        assert (
+            c.post(
+                f"/v1/owner/flats/{flat['id']}/media", {"file": upload(f"{i}.jpg", jpeg(), "image/jpeg")}, format="multipart"
+            ).status_code
+            == 201
+        )
+    r = c.post(f"/v1/owner/flats/{flat['id']}/media", {"file": upload("6.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    assert r.status_code == 400 and "already shows 5 photos" in r.json()["detail"]
+    pending = bc.post(f"/v1/listings/{listing.pk}/media", {"file": upload("b.jpg", jpeg(), "image/jpeg")}, format="multipart").json()
+    r = c.post(f"/v1/owner/media/{pending['id']}/approve")
+    assert r.status_code == 400 and "remove one first" in r.json()["detail"]
+    assert c.post(f"/v1/owner/flats/{flat['id']}/media", {"file": upload("w.mp4", MP4, "video/mp4")}, format="multipart").status_code == 201
+    r = c.post(f"/v1/owner/flats/{flat['id']}/media", {"file": upload("w2.mp4", MP4, "video/mp4")}, format="multipart")
+    assert r.status_code == 400 and "1 video" in r.json()["detail"]
+
+
+def test_customers_and_removed_brokers_cannot_upload(held):
+    c, flat, bc, listing = held
+    customer, _ = login("9876500000")  # a plain customer account
+    r = customer.post(f"/v1/listings/{listing.pk}/media", {"file": upload("a.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    assert r.status_code == 403
+    r = customer.post(f"/v1/owner/flats/{flat['id']}/media", {"file": upload("a.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    assert r.status_code == 404
+    c.post(f"/v1/owner/flats/{flat['id']}/brokers/{listing.org_id}/allowed", {"allowed": False}, format="json")
+    r = bc.post(f"/v1/listings/{listing.pk}/media", {"file": upload("a.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    assert r.status_code == 400 and "currently handling" in r.json()["detail"]
+
+
+def test_broker_upload_without_owner_on_platform_stays_pending(society, suresh, rodas):
+    org, user, bc = suresh
+    unit = Unit.objects.create(building=rodas, unit_no="1504", bhk=2)
+    with rls.org_context(org.pk):
+        listing, _ = create_listing(org=org, user=user, unit=unit, txn_type="RENT", data={"asking_rent": 25000})
+    r = bc.post(f"/v1/listings/{listing.pk}/media", {"file": upload("a.jpg", jpeg(), "image/jpeg")}, format="multipart")
+    assert r.status_code == 201 and r.json()["state"] == "pending"
+    assert bc.get(f"/v1/listings/{listing.pk}").json()["media"] == []

@@ -109,6 +109,8 @@ def media_json(media, request) -> dict:
     return {
         "id": str(media.pk),
         "kind": media.kind,
+        "state": media.state,
+        "uploaded_by": media.uploaded_by_org.name if media.uploaded_by_org_id else "Owner",
         "url": url,
         "thumb_url": request.build_absolute_uri(signed_path(media, "thumb")) if media.thumb else url,
         "content_type": media.content_type,

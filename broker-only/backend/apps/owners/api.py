@@ -50,6 +50,7 @@ def flat_json(c: OwnershipClaim, request, *, detail=False) -> dict:
     if detail:
         data["invites"] = view["invites"]
         data["media"] = [media_json(x, request) for x in svc.flat_media(u)]
+        data["pending_media"] = [media_json(x, request) for x in svc.pending_media(u)]
         data["proof_on_file"] = UnitMedia.objects.filter(claim=c, kind="document", deleted_at__isnull=True).exists()
         data["layout"] = layout_dict(b)
     return data
@@ -134,6 +135,22 @@ class OwnerMediaDelete(APIView):
             return Response(status=404)
         svc.delete_media(item, user=request.user)
         return Response(status=204)
+
+
+class OwnerMediaReview(APIView):
+    """POST /owner/media/<id>/approve|reject — nothing a broker uploads goes live without the owner (D15)."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, media_id, action):
+        if action not in ("approve", "reject"):
+            return Response({"detail": "Unknown action"}, status=404)
+        item = get_object_or_404(UnitMedia, pk=media_id)
+        claim = svc.my_claims(request.user).filter(unit=item.unit).first()
+        if claim is None:
+            return Response(status=404)
+        domain_call(svc.review_media, claim, item, action == "approve", user=request.user)
+        return Response(flat_json(claim, request, detail=True))
 
 
 class OwnerBrokersNearby(APIView):

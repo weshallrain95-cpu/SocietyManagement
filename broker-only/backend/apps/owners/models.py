@@ -2,8 +2,10 @@
 
 - An owner registers their flat with a proof document. Nobody checks it: it deters false claims,
   it doesn't block (D14).
-- Owner photos/videos belong to the flat and are shown to every broker holding it (and on
-  customer links while the switch is on).
+- Photos/videos belong to the flat (shared, D15): at most 5 photos and 1 video live. The owner and the
+  brokers holding the flat may upload; customers never. Nothing goes live until the owner approves it
+  (the owner's own uploads are live at once). Live media is shown to every broker holding the flat and,
+  while the switch is on, on customer links.
 - An owner hands a flat to a broker only after ticking "Allow this broker to handle my property".
 - An owner can untick any broker (invited or self-added): that broker loses the flat and cannot
   re-add it until the owner allows them again. The owner's decision is final.
@@ -23,7 +25,16 @@ class UnitMedia(BaseModel):
 
     unit = models.ForeignKey("masterdata.Unit", on_delete=models.CASCADE, related_name="media")
     claim = models.ForeignKey("masterdata.OwnershipClaim", null=True, blank=True, on_delete=models.SET_NULL, related_name="media")
+
+    class State(models.TextChoices):
+        PENDING = "pending"  # uploaded by a broker, waiting for the owner
+        LIVE = "live"
+        REJECTED = "rejected"
+
     kind = models.CharField(max_length=10, choices=Kind.choices)
+    state = models.CharField(max_length=10, choices=State.choices, default=State.LIVE)
+    uploaded_by_org = models.ForeignKey("orgs.BrokerOrg", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     file = models.FileField(upload_to="units/%Y/%m/")
     thumb = models.FileField(upload_to="units/%Y/%m/", blank=True)
     content_type = models.CharField(max_length=60)

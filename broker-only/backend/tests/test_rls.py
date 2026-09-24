@@ -80,6 +80,7 @@ def test_every_broker_private_table_has_forced_rls():
         "inventory_uploadrow",
         "inventory_savedcolumnmapping",
         "crm_customer",
+        "crm_broadcast",
         "crm_requirement",
         "crm_customerinteraction",
         "crm_shortlist",

@@ -10,6 +10,7 @@ urlpatterns = [
     path("listings/<uuid:pk>/reconfirm", api.ListingReconfirmView.as_view()),
     path("listings/<uuid:pk>/keys", api.KeysView.as_view()),
     path("listings/<uuid:pk>/ask-owner-back", api.AskOwnerBack.as_view()),
+    path("listings/<uuid:pk>/media", api.ListingMediaUpload.as_view()),
     path("listings/<uuid:pk>/copy-attributes", api.CopyAttributesView.as_view()),
     path("uploads", api.UploadCreateView.as_view()),
     path("uploads/template", api.UploadTemplateView.as_view()),

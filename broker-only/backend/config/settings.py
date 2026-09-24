@@ -183,7 +183,11 @@ MEDIA_ROOT = env("OB_MEDIA_ROOT", default=str(BASE_DIR / "media_store"))
 OB_MEDIA_URL_TTL_S = 3600
 OB_MAX_PHOTO_MB = 15
 OB_MAX_VIDEO_MB = env.int("OB_MAX_VIDEO_MB", default=150)
-OB_MAX_PHOTOS_PER_FLAT = 30
-OB_MAX_VIDEOS_PER_FLAT = 5
+# Founder (D15): a flat shows at most 5 photos and 1 video; the owner approves what goes live.
+OB_MAX_PHOTOS_PER_FLAT = 5
+OB_MAX_VIDEOS_PER_FLAT = 1
+OB_MAX_PENDING_PER_FIRM = 6
 # Founder: "make the feature available for now" — owner photos on customer shortlist links.
 OB_OWNER_MEDIA_ON_CUSTOMER_LINKS = env.bool("OB_OWNER_MEDIA_ON_CUSTOMER_LINKS", default=True)
+# Where customers get the app (used in broadcast invites until the store listing exists).
+OB_APP_URL = env("OB_APP_URL", default=f"{OB_PUBLIC_BASE_URL}/app")

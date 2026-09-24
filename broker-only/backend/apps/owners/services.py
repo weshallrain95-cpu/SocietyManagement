@@ -84,21 +84,86 @@ def set_terms(claim: OwnershipClaim, *, terms: dict, house_rules: dict, user) ->
 # --- photos and videos ------------------------------------------------------------------------------
 
 
-def add_media(claim: OwnershipClaim, upload, *, user, caption: str = "") -> UnitMedia:
-    kind = m.kind_for(upload)
-    live = UnitMedia.objects.filter(unit=claim.unit, kind=kind, deleted_at__isnull=True).count()
+def _check_cap(unit, kind: str) -> None:
+    """D15: at most 5 photos and 1 video live per flat."""
+    live = UnitMedia.objects.filter(unit=unit, kind=kind, state=UnitMedia.State.LIVE, deleted_at__isnull=True).count()
     cap = settings.OB_MAX_VIDEOS_PER_FLAT if kind == "video" else settings.OB_MAX_PHOTOS_PER_FLAT
     if live >= cap:
-        raise OwnerError(f"A flat can have up to {cap} {kind}s — delete one first")
+        what = "1 video" if cap == 1 and kind == "video" else f"{cap} {kind}s"
+        raise OwnerError(f"This flat already shows {what} — remove one first")
+
+
+def _process(upload):
+    kind = m.kind_for(upload)
     try:
-        data = m.process_video(upload) if kind == "video" else m.process_photo(upload)
+        return kind, (m.process_video(upload) if kind == "video" else m.process_photo(upload))
     except m.MediaError as e:
         raise OwnerError(str(e)) from e
-    item = UnitMedia.objects.create(unit=claim.unit, claim=claim, kind=kind, uploaded_by=user, caption=caption[:120], **data)
+
+
+def add_media(claim: OwnershipClaim, upload, *, user, caption: str = "") -> UnitMedia:
+    """The owner's own photos/videos go live at once (they are the one who approves)."""
+    kind = m.kind_for(upload)
+    _check_cap(claim.unit, kind)
+    kind, data = _process(upload)
+    item = UnitMedia.objects.create(
+        unit=claim.unit, claim=claim, kind=kind, uploaded_by=user, caption=caption[:120], state=UnitMedia.State.LIVE, **data
+    )
     with rls.platform_context():
         for org_id in _serving_org_ids(claim.unit):
             notify_org(org_id, "owner_media_added", {"unit_id": str(claim.unit_id), "kind": kind})
     return item
+
+
+def broker_add_media(listing: Listing, upload, *, user, caption: str = "") -> UnitMedia:
+    """A broker holding the flat uploads; it waits for the owner's approval (D15). Customers have no such route."""
+    if listing.archived_at or listing.withdrawn_by_owner:
+        raise OwnerError("Only a firm currently handling this flat can add photos")
+    pending = UnitMedia.objects.filter(
+        unit=listing.unit, uploaded_by_org=listing.org, state=UnitMedia.State.PENDING, deleted_at__isnull=True
+    ).count()
+    if pending >= settings.OB_MAX_PENDING_PER_FIRM:
+        raise OwnerError("You already have photos waiting for the owner's approval")
+    kind, data = _process(upload)
+    item = UnitMedia.objects.create(
+        unit=listing.unit,
+        kind=kind,
+        uploaded_by=user,
+        uploaded_by_org=listing.org,
+        caption=caption[:120],
+        state=UnitMedia.State.PENDING,
+        **data,
+    )
+    owners = OwnershipClaim.objects.filter(unit=listing.unit, status__in=ACTIVE_CLAIM).select_related("user")
+    for c in owners:
+        payload = {"unit_id": str(listing.unit_id), "claim_id": str(c.pk), "kind": kind, "org": listing.org.name}
+        notify_user(c.user, "media_pending", payload)  # "Photos uploaded for your flat — please approve"
+    detail = {"media": str(item.pk), "org": str(listing.org_id), "owner_on_platform": owners.exists()}
+    audit(user, "broker.media_uploaded", listing.unit, detail)
+    return item
+
+
+def review_media(claim: OwnershipClaim, item: UnitMedia, approve: bool, *, user) -> UnitMedia:
+    """The owner decides whether a broker's photo/video goes live."""
+    if item.unit_id != claim.unit_id or item.state != UnitMedia.State.PENDING or item.deleted_at:
+        raise OwnerError("This photo is not waiting for your approval")
+    if approve:
+        _check_cap(item.unit, item.kind)
+    item.state = UnitMedia.State.LIVE if approve else UnitMedia.State.REJECTED
+    item.reviewed_at = timezone.now()
+    item.save(update_fields=["state", "reviewed_at"])
+    if item.uploaded_by_org_id:
+        template = "media_approved" if approve else "media_rejected"
+        notify_org(item.uploaded_by_org_id, template, {"unit_id": str(item.unit_id), "kind": item.kind})
+    audit(user, "owner.media_approved" if approve else "owner.media_rejected", item.unit, {"media": str(item.pk)})
+    return item
+
+
+def pending_media(unit, *, org=None):
+    qs = UnitMedia.objects.filter(unit=unit, state=UnitMedia.State.PENDING, deleted_at__isnull=True, kind__in=["photo", "video"])
+    if org is not None:
+        qs = qs.filter(uploaded_by_org=org)
+    return qs.select_related("uploaded_by_org").order_by("created_at")
 
 
 def delete_media(item: UnitMedia, *, user) -> None:
@@ -108,7 +173,9 @@ def delete_media(item: UnitMedia, *, user) -> None:
 
 
 def flat_media(unit, *, kinds=("photo", "video")):
-    return UnitMedia.objects.filter(unit=unit, kind__in=kinds, deleted_at__isnull=True).order_by("kind", "created_at")
+    return UnitMedia.objects.filter(unit=unit, kind__in=kinds, state=UnitMedia.State.LIVE, deleted_at__isnull=True).order_by(
+        "kind", "created_at"
+    )
 
 
 def can_view_media(item: UnitMedia, user) -> bool:

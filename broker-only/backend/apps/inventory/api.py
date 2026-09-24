@@ -13,7 +13,7 @@ from apps.masterdata.models import MicroMarket, ResolvedAttribute, Society, Unit
 from apps.masterdata.services import get_or_create_building, get_or_create_unit
 from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
 from apps.owners.media import media_json
-from apps.owners.services import flat_media
+from apps.owners.services import flat_media, pending_media
 from apps.status.models import UnitStatus
 from common.api import domain_call, is_field_staff
 from common.crypto import mask_phone
@@ -81,6 +81,7 @@ def listing_json(l: Listing, request, *, detail=False) -> dict:
                 },
                 # Owner photos/videos: every broker holding the flat sees them, unless the owner removed the firm.
                 "media": [] if l.withdrawn_by_owner else [media_json(x, request) for x in flat_media(u)],
+                "my_pending_media": [media_json(x, request) for x in pending_media(u, org=l.org)],
             }
         )
     return data
@@ -188,6 +189,26 @@ class ListingSearch(APIView):
                 "wing": r["wing"],
             }
         )
+
+
+class ListingMediaUpload(APIView):
+    """POST a photo/video for a flat this firm holds; it goes live only when the owner approves (D15)."""
+
+    permission_classes = [IsBrokerMember]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        from apps.owners.services import broker_add_media
+
+        qs = Listing.objects.all()
+        if is_field_staff(request):
+            qs = qs.filter(pk__in=staff_listing_ids(request))  # staff can add photos for flats on their route
+        l = get_object_or_404(qs, pk=pk)
+        f = request.FILES.get("file")
+        if f is None:
+            return Response({"detail": "Choose a photo or video"}, status=400)
+        item = domain_call(broker_add_media, l, f, user=request.user, caption=request.data.get("caption", ""))
+        return Response(media_json(item, request), status=201)
 
 
 class AskOwnerBack(APIView):

@@ -1,9 +1,13 @@
 from django.urls import path
 
-from . import api
+from . import api, broadcast_api
 
 urlpatterns = [
     path("customers", api.CustomerListCreate.as_view()),
+    path("broadcasts", broadcast_api.BroadcastListCreate.as_view()),
+    path("broadcasts/preview", broadcast_api.BroadcastPreview.as_view()),
+    path("me/updates", broadcast_api.MyUpdates.as_view()),
+    path("me/updates/mute", broadcast_api.MuteBroker.as_view()),
     path("customers/<uuid:pk>", api.CustomerDetail.as_view()),
     path("customers/<uuid:pk>/timeline", api.TimelineView.as_view()),
     path("customers/<uuid:pk>/interactions", api.InteractionCreate.as_view()),
