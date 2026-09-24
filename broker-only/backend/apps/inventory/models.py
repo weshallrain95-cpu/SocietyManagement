@@ -32,6 +32,7 @@ class Listing(BaseModel):
     brokerage_terms = models.CharField(max_length=200, blank=True)
     owner_name = models.CharField(max_length=120, blank=True)
     owner_phone_enc = models.BinaryField(null=True, blank=True)
+    owner_phone_hash = models.CharField(max_length=64, blank=True, db_index=True, help_text="Find a flat by the owner's number")
     origin = models.CharField(max_length=14, choices=Origin.choices, default=Origin.MANUAL)
     visibility = models.CharField(max_length=14, choices=Visibility.choices, default=Visibility.PRIVATE)
     withdrawn_by_owner = models.BooleanField(default=False)

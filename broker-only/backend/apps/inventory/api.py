@@ -18,7 +18,7 @@ from apps.status.models import UnitStatus
 from common.api import domain_call, is_field_staff
 from common.crypto import mask_phone
 
-from . import services, upload
+from . import browse, flatpage, services, upload
 from .models import KeyCustody, Listing, UploadBatch, UploadRow
 
 TXN = ["RENT", "SALE_NEW", "SALE_RESALE"]
@@ -30,7 +30,7 @@ def staff_listing_ids(request):
     return VisitStop.objects.filter(assigned_staff=request.user, removed=False).values_list("listing_id", flat=True)
 
 
-def listing_json(l: Listing, request, *, detail=False) -> dict:
+def listing_json(l: Listing, request, *, detail=False, summary=False) -> dict:
     u = l.unit
     st = UnitStatus.objects.filter(unit=u, txn_type=l.txn_type).first()
     manager = request.user.active_membership.can_manage
@@ -56,7 +56,22 @@ def listing_json(l: Listing, request, *, detail=False) -> dict:
         "owner_withdrew": l.withdrawn_by_owner,
         "visibility": l.visibility,
         "stale": (timezone.now() - l.last_confirmed_at).days >= (21 if l.txn_type == "RENT" else 45),
+        "carpet_sqft": float(u.carpet_sqft) if u.carpet_sqft else None,
+        "locality": u.building.society.locality.name if u.building.society.locality_id else "",
     }
+    if summary:
+        live = [] if l.withdrawn_by_owner else list(flat_media(u))
+        photos = [m for m in live if m.kind == "photo"]
+        key = services.current_keys(l)
+        data.update(
+            {
+                "photo_count": len(photos),
+                "has_video": any(m.kind == "video" for m in live),
+                "thumb_url": media_json(photos[0], request)["thumb_url"] if photos else None,
+                "keys_holder": key.holder_type if key else None,
+                "owner_name": l.owner_name if manager else "",
+            }
+        )
     if detail:
         key = services.current_keys(l)
         data.update(
@@ -82,6 +97,13 @@ def listing_json(l: Listing, request, *, detail=False) -> dict:
                 # Owner photos/videos: every broker holding the flat sees them, unless the owner removed the firm.
                 "media": [] if l.withdrawn_by_owner else [media_json(x, request) for x in flat_media(u)],
                 "my_pending_media": [media_json(x, request) for x in pending_media(u, org=l.org)],
+                "page": {
+                    **flatpage.sections(l),
+                    "fitting_customers": flatpage.fitting_customers(l) if manager else {"count": 0, "customers": []},
+                    "activity": flatpage.activity(l) if manager else [],
+                    "other_brokers": flatpage.other_brokers(l) if manager else None,
+                    "owner_on_platform": flatpage.owner_on_platform(l),
+                },
             }
         )
     return data
@@ -122,7 +144,7 @@ class ListingListCreate(APIView):
     permission_classes = [IsBrokerMember]
 
     def get(self, request):
-        qs = Listing.objects.filter(archived_at__isnull=True).select_related("unit__building__society").order_by("-updated_at")
+        qs = Listing.objects.filter(archived_at__isnull=True).select_related("unit__building__society__locality").order_by("-updated_at")
         if is_field_staff(request):
             qs = qs.filter(pk__in=staff_listing_ids(request))
         for f in ("txn_type",):
@@ -168,6 +190,33 @@ class ListingListCreate(APIView):
                 keys=d.pop("keys", None),
             )
         return Response(listing_json(listing, request, detail=True), status=201 if created else 200)
+
+
+class ListingBrowse(APIView):
+    """GET /listings/browse?q=&txn_type=&status=&bhk=1,2&price_min=&price_max=&locality_id=&society_id=&building_id=
+    &quick=reconfirm|new|keys_office|no_photos&sort=confirmed|newest|price_low|price_high&offset=&limit=
+
+    The flat list for a broker with 1,000+ flats: one search box (society, flat number, owner name or phone),
+    filters, quick views with counts, and paging."""
+
+    permission_classes = [IsBrokerMember]
+
+    def _base(self, request):
+        qs = Listing.objects.all()
+        if is_field_staff(request):
+            qs = qs.filter(pk__in=staff_listing_ids(request))
+        return qs
+
+    def get(self, request):
+        rows, total, counts = browse.browse(self._base(request), request.query_params, org=request.user.active_membership.org)
+        return Response({"count": total, "counts": counts, "results": [listing_json(l, request, summary=True) for l in rows]})
+
+
+class ListingsBySociety(ListingBrowse):
+    """GET /listings/by-society — society → wing → how many of the broker's flats."""
+
+    def get(self, request):
+        return Response(browse.by_society(self._base(request)))
 
 
 class ListingSearch(APIView):
@@ -228,7 +277,7 @@ class ListingDetail(APIView):
     permission_classes = [IsBrokerMember]
 
     def _get(self, request, pk):
-        qs = Listing.objects.select_related("unit__building__society")
+        qs = Listing.objects.select_related("unit__building__society__locality")
         if is_field_staff(request):
             qs = qs.filter(pk__in=staff_listing_ids(request))
         return get_object_or_404(qs, pk=pk)

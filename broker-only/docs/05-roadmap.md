@@ -53,6 +53,7 @@ because it was built in one push:
 | **Co-broking** (D17): each broker's private list of fellow brokers (import from Excel / phone contacts / paste), blast ready flats or a customer's requirement to fellow brokers in and around the flat (distance widened, everyone, or ticked names), trade inbox with "I have a customer / I have a flat" replies, WhatsApp for brokers not on the app | ✅ Done |
 | **Customer list import** (CRM-11) and **several flats in one customer update** | ✅ Done |
 | **Official flat registers** (D18): TMC property-tax / MahaRERA / IGR flat lists → wing layouts worked out automatically, flats outside a complete list refused, owner names never stored; ops upload page and template; **building picture** floor by floor in the app and ops console | ✅ Done — waiting on the data itself (docs/08) |
+| **Flats at scale + new flat page** (INV-10/11, approved design): one search box (society, flat no., owner name or phone), filters, quick views, browse by society; the full flat page with a customer view | ✅ Done |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 

@@ -125,6 +125,8 @@ sequenceDiagram
 | INV-07 | Staleness nudges: listings not reconfirmed in 21 days (rent) / 45 days (sale) get a reminder; at 30/60 days they become "Status unverified" | P0 | Nudges batched daily; reconfirm is one tap |
 | INV-08 | Owner invite → broker acceptance creates the listing pre-filled from master. The invite exists only after the owner ticks **"Allow this broker to handle my property"** for that broker (OWN-02) | P1 | Owner-invited listings carry an "Owner-appointed" badge; no invite, no pre-filled listing |
 | INV-09 | Export own inventory to Excel | P1 | Only own listings |
+| INV-10 | **Find any flat among 1,000+** (approved design, 2026-09-24): one search box for society/wing/flat number (nicknames and typos), owner name or owner phone; filter chips (available, rent/sale, BHK, budget, area), sort, quick views with counts (reconfirm due, new this week, keys at office, no photos yet), browse by society → wing, paged results with photo thumbnails | P0 | Only the broker's own flats (RLS); field staff see only flats on their visits |
+| INV-11 | **Flat page** (approved design): photos and walkthrough first; price, deposit, status with last confirmation; quick actions (call owner, share with a customer, add to a visit, status); "N of your customers fit"; key facts, house rules, what's in the flat and the society, distances, the building floor by floor; a private block (owner, keys, brokerage, notes, how many other brokers hold it — never who); activity. A "what customers see" switch hides everything private, including the flat number and wing | P0 | Private sections only for principals/managers |
 
 ### 3.4 Unit status: the key field (STAT)
 

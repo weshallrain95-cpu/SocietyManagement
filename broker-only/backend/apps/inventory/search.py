@@ -34,7 +34,7 @@ def parse_query(q: str) -> tuple[str, str, str]:
 
 def search_flats(listings, q: str, *, org, limit: int = 20) -> dict:
     text, unit_no, wing = parse_query(q)
-    listings = listings.filter(archived_at__isnull=True, withdrawn_by_owner=False).select_related("unit__building__society")
+    listings = listings.filter(archived_at__isnull=True, withdrawn_by_owner=False).select_related("unit__building__society__locality")
     societies: list = []
     if text:
         cands = [c for c in dedupe.find_candidates(text, include_provisional_for_org=org, limit=5) if c.score >= 0.5]

@@ -142,3 +142,20 @@ test('building picture marks only my flats', async () => {
   expect(a.floors.find((f) => f.floor === 11)?.no_flats).toBe(true);
   expect(a.floors[0].flats.map((x) => x.no)).toContain('2001A');
 });
+
+test('one search box finds a flat by society + flat number, owner name or owner phone', async () => {
+  const api = createDemoApi();
+  const he = (await run(api.browseListings({ q: 'HE 1203' }))).results;
+  expect(he.length).toBeGreaterThan(0);
+  expect(he.every((l) => l.unit_no === '1203' && l.society === 'Hiranandani Estate')).toBe(true);
+  expect((await run(api.browseListings({ q: 'kulkarni' }))).results[0].unit_no).toBe('1203');
+  expect((await run(api.browseListings({ q: '98190 12345' }))).results[0].unit_no).toBe('1203');
+  const all = await run(api.browseListings({ status: 'AVAILABLE,AVAILABLE_UNCONFIRMED', sort: 'price_low', limit: 3 }));
+  expect(all.results.length).toBe(3);
+  expect(all.count).toBeGreaterThan(3);
+  const tree = await run(api.listingsBySociety());
+  expect(tree[0].name).toBe('Hiranandani Estate');
+  const page = (await run(api.listing('lst-1'))).page!;
+  expect(page.facts.find((f) => f.label === 'Floor')?.value).toBe('12 of 20');
+  expect(page.fitting_customers.count).toBeGreaterThan(0);
+});

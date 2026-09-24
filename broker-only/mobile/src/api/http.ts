@@ -110,6 +110,8 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
 
     searchSocieties: async (q) => (await get<{ results: never[] }>(`/societies/search${qs({ q })}`)).results,
     searchFlats: (q) => get(`/listings/search${qs({ q })}`),
+    browseListings: (p) => get(`/listings/browse${qs({ ...p })}`),
+    listingsBySociety: () => get('/listings/by-society'),
     askOwnerBack: (lid, note) => post(`/listings/${lid}/ask-owner-back`, { note }),
     uploadListingMedia: (lid, file) => {
       const f = new FormData();

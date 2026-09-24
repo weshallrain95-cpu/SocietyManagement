@@ -56,7 +56,15 @@ export interface Listing {
   origin: string;
   visibility: string;
   stale: boolean;
+  carpet_sqft?: number | null;
+  locality?: string;
+  // list (browse) only
+  photo_count?: number;
+  has_video?: boolean;
+  thumb_url?: string | null;
+  keys_holder?: string | null;
   // detail only
+  page?: FlatPage;
   maintenance?: number | null;
   negotiable?: boolean;
   brokerage_terms?: string;
@@ -69,6 +77,53 @@ export interface Listing {
   owner_withdrew?: boolean;
   media?: MediaItem[];
   my_pending_media?: MediaItem[];
+}
+
+/** Everything the flat page shows beyond the listing itself (approved design). */
+export interface FlatPage {
+  facts: { label: string; value: string; disputed?: boolean }[];
+  house_rules: { label: string; value: string; tone: 'ok' | 'warn' | 'bad' }[];
+  in_flat: string[];
+  society_amenities: string[];
+  places: { label: string; value: string }[];
+  location: { lat: number; lng: number } | null;
+  locality: string;
+  building: { id: string; name: string; floors_total: number | null; units_per_floor: number | null; source: string; official_list: boolean };
+  fitting_customers: { count: number; customers: { customer_id: string; requirement_id: string; name: string }[] };
+  activity: { at: string; text: string }[];
+  other_brokers: number | null;
+  owner_on_platform: boolean;
+}
+
+export type QuickView = 'reconfirm' | 'new' | 'keys_office' | 'no_photos';
+
+export interface BrowseParams {
+  q?: string;
+  txn_type?: string;
+  status?: string;
+  bhk?: string;
+  price_min?: number;
+  price_max?: number;
+  locality_id?: string;
+  society_id?: string;
+  building_id?: string;
+  quick?: QuickView;
+  sort?: 'confirmed' | 'newest' | 'price_low' | 'price_high';
+  offset?: number;
+  limit?: number;
+}
+
+export interface BrowseResult {
+  count: number;
+  counts: { total: number } & Record<QuickView, number>;
+  results: Listing[];
+}
+
+export interface SocietyGroup {
+  society_id: string;
+  name: string;
+  count: number;
+  wings: { building_id: string; name: string; count: number }[];
 }
 
 export interface NewListing {
@@ -551,6 +606,8 @@ export interface Api {
 
   searchSocieties(q: string): Promise<SocietyCandidate[]>;
   searchFlats(q: string): Promise<FlatSearchResult>;
+  browseListings(p: BrowseParams): Promise<BrowseResult>;
+  listingsBySociety(): Promise<SocietyGroup[]>;
   askOwnerBack(listingId: string, note: string): Promise<{ detail: string }>;
   uploadListingMedia(listingId: string, file: UploadFile): Promise<MediaItem>;
   reviewMedia(mediaId: string, approve: boolean): Promise<OwnerFlat>;

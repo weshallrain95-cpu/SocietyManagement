@@ -1,5 +1,5 @@
 // Plan a site visit by picking flats yourself (society + flat number), without the matching engine.
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 
@@ -10,9 +10,18 @@ import { Button, Card, Choice, ErrorBox, H2, Notice, P, Row, Screen } from '@/ui
 import { FlatSearch } from '@/ui/FlatSearch';
 
 export default function NewVisitPlan() {
-  const { customerId, customerName } = useLocalSearchParams<{ customerId: string; customerName?: string }>();
+  const { customerId, customerName, listingId } = useLocalSearchParams<{ customerId: string; customerName?: string; listingId?: string }>();
   const { api } = useSession();
-  const [picked, setPicked] = useState<Listing[]>([]);
+  // Opened from a flat's page: that flat is already on the list.
+  const pre = useQuery({ queryKey: ['listing', listingId], queryFn: () => api.listing(listingId!), enabled: !!listingId });
+  const [dropPre, setDropPre] = useState(false);
+  const [added, setAdded] = useState<Listing[]>([]);
+  const picked = [...(pre.data && !dropPre ? [pre.data] : []), ...added.filter((l) => l.id !== pre.data?.id)];
+  const setPicked = (f: (x: Listing[]) => Listing[]) => {
+    const next = f(picked);
+    if (pre.data && !next.some((l) => l.id === pre.data!.id)) setDropPre(true);
+    setAdded(next.filter((l) => l.id !== pre.data?.id));
+  };
   const [day, setDay] = useState<'today' | 'tomorrow'>('tomorrow');
   const [start, setStart] = useState('11:00');
   const plan = useMutation({

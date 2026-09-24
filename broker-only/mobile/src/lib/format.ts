@@ -85,3 +85,8 @@ export function phone(e164: string | null | undefined): string {
   const m = /^\+91(\d{5})(\d{5})$/.exec(e164.replace(/\s/g, ''));
   return m ? `+91 ${m[1]} ${m[2]}` : e164;
 }
+
+/** Whole days since an ISO time (0 for today). */
+export function daysSince(iso: string): number {
+  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 864e5));
+}

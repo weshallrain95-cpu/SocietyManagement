@@ -56,7 +56,9 @@ def create_listing(
         if f in data and data[f] is not None:
             setattr(listing, f, data[f])
     if owner_phone:
-        listing.owner_phone_enc = crypto.encrypt(crypto.normalise_phone(owner_phone))
+        e164 = crypto.normalise_phone(owner_phone)
+        listing.owner_phone_enc = crypto.encrypt(e164)
+        listing.owner_phone_hash = crypto.phone_hash(e164)
     listing.last_confirmed_at = timezone.now()
     listing.save()
 

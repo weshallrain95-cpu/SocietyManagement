@@ -3,7 +3,7 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
+  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatPage, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
 import { checkFlat, parseUnitNo } from '@/lib/layout';
@@ -85,6 +85,14 @@ const listings: Listing[] = [
   mkListing(9, SOCIETIES[7], '1802', 3, 42000, 'AVAILABLE', { pets_allowed: 'no', furnishing: 'fully furnished' }),
   mkListing(10, SOCIETIES[8], '601', 2, 19500, 'AVAILABLE', { pets_allowed: 'case-by-case', furnishing: 'unfurnished' }),
 ];
+
+const OWNERS = ['Mrs Kulkarni', 'Mr Shah', 'Mr Desai', 'Mrs Iyer', 'Mr Rao', 'Mrs Patil', 'Mr Joshi', 'Mrs Menon', 'Mr Bhatia', 'Mrs Gokhale'];
+listings.forEach((l, i) => {
+  l.owner_name = OWNERS[i % OWNERS.length];
+  l.owner_phone = `+91 98190 1${String(2345 + i).padStart(4, '0')}`;
+  l.carpet_sqft = [650, 610, 1050, 690, 420, 600, 380, 640, 1120, 600][i % 10];
+  l.locality = SOCIETIES.find((x) => x.society_id === l.society_id)?.locality ?? '';
+});
 
 const customers: Customer[] = [
   { id: 'cus-1', name: 'Riya (demo)', phone: '+91 98765 43210', source: 'phone_call', stage: 'contacted', consent_state: 'otp_confirmed', can_message: true, on_platform: true, created_at: now(), requirements: [] },
@@ -356,9 +364,77 @@ export function createDemoApi(): Api {
       }),
     };
   };
+  // The flat page's extra sections (approved design), from the demo listing's attributes.
+  const demoPage = (l: Listing): FlatPage => {
+    const soc = SOCIETIES.find((x) => x.society_id === l.society_id)!;
+    const wing = WINGS[l.society_id]?.wings.find((w) => w.name === l.building) ?? WINGS[l.society_id]?.wings[0];
+    const a = l.attributes ?? {};
+    const val = (k: string) => a[k]?.value;
+    const cap = (v: unknown) => (typeof v === 'string' ? v[0].toUpperCase() + v.slice(1) : v === true ? 'Yes' : String(v));
+    const facts = [
+      { label: 'Configuration', value: `${l.bhk} BHK` },
+      ...(l.carpet_sqft ? [{ label: 'Carpet area', value: `${l.carpet_sqft} sq ft` }] : []),
+      { label: 'Floor', value: `${l.floor}${wing?.layout.floors_total ? ` of ${wing.layout.floors_total}` : ''}` },
+      ...(val('furnishing') ? [{ label: 'Furnishing', value: cap(val('furnishing')) }] : []),
+      { label: 'Facing', value: 'East' }, { label: 'Bathrooms', value: String(Math.max(1, l.bhk)) },
+      { label: 'Covered parking', value: '1' },
+      ...(l.available_from ? [{ label: 'Available from', value: new Date(l.available_from).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) }] : []),
+    ];
+    const rules: FlatPage['house_rules'] = [];
+    if (val('pets_allowed')) {
+      const v = String(val('pets_allowed'));
+      rules.push({ label: 'Pets allowed', value: cap(v), tone: v === 'no' ? 'bad' : v.includes('case') || v.includes('only') ? 'warn' : 'ok' });
+    }
+    rules.push({ label: 'Non-veg cooking', value: 'Allowed', tone: 'ok' });
+    const fits = reqs.filter((r) => r.txn_type === l.txn_type && l.bhk >= r.bhk_min && l.bhk <= r.bhk_max && (l.asking_rent ?? 0) <= r.budget_max * 1.1);
+    const custs = fits.map((r) => customers.find((c) => (c.requirements ?? []).some((x) => x.id === r.id))).filter(Boolean) as Customer[];
+    return {
+      facts,
+      house_rules: rules,
+      in_flat: ['furn_gas_stove', 'furn_kitchen_cabinet'].filter((k) => val(k) === true).map((k): string => (k === 'furn_gas_stove' ? 'Gas stove' : 'Kitchen cabinets')).concat(['Geyser', 'Fans']),
+      society_amenities: val('lift') ? ['Lift', 'Gym', '24-hour water', 'Power backup', 'Security'] : ['24-hour water', 'Security'],
+      places: [
+        { label: 'Railway station: Thane', value: '4.8 km · 18 min drive' }, { label: 'Auto stand', value: '150 m · 1 min drive' },
+        { label: 'School', value: '600 m · 3 min drive' }, { label: 'Hospital', value: '2.1 km · 8 min drive' }, { label: 'Mall: Viviana', value: '5.2 km · 16 min drive' },
+      ],
+      location: soc.location,
+      locality: soc.locality,
+      building: { id: wing?.id ?? '', name: l.building, floors_total: wing?.layout.floors_total ?? null, units_per_floor: wing?.layout.units_per_floor ?? null, source: wing?.layout.source ?? '', official_list: wing?.layout.source === 'tmc' },
+      fitting_customers: { count: custs.length, customers: custs.slice(0, 3).map((c) => ({ customer_id: c.id, requirement_id: c.requirements?.[0]?.id ?? '', name: c.name })) },
+      activity: [
+        ...(l.id === 'lst-1' ? [{ at: new Date(Date.now() - 4 * 864e5).toISOString(), text: 'Visit with Riya (demo) (field staff: Imran) · liked' }, { at: new Date(Date.now() - 6 * 864e5).toISOString(), text: 'Shared with Riya (demo) · interested' }] : []),
+        { at: l.last_confirmed_at, text: `You: ${l.status_label.toLowerCase()}` },
+        { at: new Date(Date.now() - 40 * 864e5).toISOString(), text: 'Added to your flats (manual)' },
+      ],
+      other_brokers: l.id === 'lst-1' ? 1 : 0,
+      owner_on_platform: l.id === 'lst-1',
+    };
+  };
   const summary = (f: OwnerFlat): OwnerFlat => ({ ...clone(f), photo_count: (f.media ?? []).filter((m) => m.kind === 'photo').length, video_count: (f.media ?? []).filter((m) => m.kind === 'video').length });
 
-  return {
+  // Same idea as the server's flat search, synchronous so other demo calls can reuse it.
+  const findFlats = (q: string) => {
+    // Same idea as the server: the last token that looks like a flat number, the rest is the place.
+    const tokens = q.trim().split(/[\s,]+/).filter(Boolean);
+    let unitNo = '';
+    let wing = '';
+    if (tokens.length && /\d/.test(tokens[tokens.length - 1]) && /^([a-z]\s*[-/]?\s*)?\d{1,4}[a-z]?$|^(g|ph)-?\d{1,2}$/i.test(tokens[tokens.length - 1])) {
+      const u = parseUnitNo(tokens.pop()!);
+      unitNo = u.unitNo;
+      wing = u.wing;
+      if (!wing && tokens.length && /^[a-z]$/i.test(tokens[tokens.length - 1])) wing = tokens.pop()!.toUpperCase();
+    }
+    const text = tokens.join(' ');
+    if (!text && !unitNo) return { results: [], unit_no: '', wing: '' };
+    const socs = text ? findSocieties(text) : [];
+    const hits = listings
+      .filter((l) => !text || socs.some((s) => s.society_id === l.society_id))
+      .filter((l) => !unitNo || l.unit_no.toUpperCase().startsWith(unitNo))
+      .sort((a, b) => Number(a.unit_no.toUpperCase() !== unitNo) - Number(b.unit_no.toUpperCase() !== unitNo)
+        || Number(!!wing && !a.building.toUpperCase().startsWith(wing)) - Number(!!wing && !b.building.toUpperCase().startsWith(wing)));
+    return { results: hits.slice(0, 20), unit_no: unitNo, wing };
+  };
+  const api: Api = {
     mode: 'demo',
     async requestOtp() {
       await wait();
@@ -389,7 +465,7 @@ export function createDemoApi(): Api {
       await wait(100);
       const l = listings.find((x) => x.id === lid);
       if (!l) throw new Error('Not found');
-      return clone(l);
+      return clone({ ...l, page: demoPage(l) });
     },
     async createListing(b) {
       await wait();
@@ -434,27 +510,62 @@ export function createDemoApi(): Api {
       await wait(120);
       return findSocieties(q);
     },
+    async browseListings(p) {
+      await wait(120);
+      const q = (p.q ?? '').trim();
+      const digits = q.replace(/\D/g, '');
+      let pool = listings.slice();
+      if (q) {
+        if (digits.length >= 10 && !/[a-z]/i.test(q)) pool = pool.filter((l) => (l.owner_phone ?? '').replace(/\D/g, '').endsWith(digits.slice(-10)));
+        else {
+          const flatHits = new Set(findFlats(q).results.map((l) => l.id));
+          pool = pool.filter((l) => flatHits.has(l.id) || (q.length >= 3 && (l.owner_name ?? '').toLowerCase().includes(q.toLowerCase())));
+        }
+      }
+      const stale = (l: Listing) => l.stale;
+      const officeKeys = (l: Listing) => l.keys?.holder_type === 'office';
+      const photos = (l: Listing) => (l.media ?? []).filter((m) => m.kind === 'photo').length;
+      const all = listings;
+      const counts = { total: all.length, reconfirm: all.filter(stale).length, new: 3, keys_office: all.filter(officeKeys).length, no_photos: all.filter((l) => !photos(l)).length };
+      if (p.txn_type) pool = pool.filter((l) => p.txn_type!.split(',').includes(l.txn_type));
+      if (p.status) pool = pool.filter((l) => p.status!.split(',').includes(l.status));
+      if (p.bhk) {
+        const want = p.bhk.split(',').map(Number);
+        pool = pool.filter((l) => want.some((b) => (b >= 4 ? l.bhk >= 4 : l.bhk === b)));
+      }
+      if (p.price_min) pool = pool.filter((l) => (l.asking_rent ?? l.asking_price ?? 0) >= p.price_min!);
+      if (p.price_max) pool = pool.filter((l) => (l.asking_rent ?? l.asking_price ?? 0) <= p.price_max!);
+      if (p.society_id) pool = pool.filter((l) => l.society_id === p.society_id);
+      if (p.building_id) pool = pool.filter((l) => `${l.society_id}|${l.building}` === p.building_id);
+      if (p.quick === 'reconfirm') pool = pool.filter(stale);
+      if (p.quick === 'keys_office') pool = pool.filter(officeKeys);
+      if (p.quick === 'no_photos') pool = pool.filter((l) => !photos(l));
+      if (p.quick === 'new') pool = pool.slice(0, 3);
+      const price = (l: Listing) => l.asking_rent ?? l.asking_price ?? 0;
+      if (p.sort === 'price_low') pool.sort((a, b) => price(a) - price(b));
+      if (p.sort === 'price_high') pool.sort((a, b) => price(b) - price(a));
+      const offset = p.offset ?? 0;
+      const page = pool.slice(offset, offset + (p.limit ?? 50)).map((l) => {
+        const ph = (l.media ?? []).filter((m) => m.kind === 'photo');
+        return { ...clone(l), photo_count: ph.length, has_video: (l.media ?? []).some((m) => m.kind === 'video'), thumb_url: ph[0]?.thumb_url ?? null, keys_holder: l.keys?.holder_type ?? null };
+      });
+      return { count: pool.length, counts, results: page };
+    },
+    async listingsBySociety() {
+      await wait(100);
+      const out: Record<string, { society_id: string; name: string; count: number; wings: Record<string, number> }> = {};
+      for (const l of listings) {
+        const g = (out[l.society_id] ??= { society_id: l.society_id, name: l.society, count: 0, wings: {} });
+        g.count += 1;
+        g.wings[l.building] = (g.wings[l.building] ?? 0) + 1;
+      }
+      return Object.values(out)
+        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+        .map((g) => ({ ...g, wings: Object.entries(g.wings).map(([name, count]) => ({ building_id: `${g.society_id}|${name}`, name, count })) }));
+    },
     async searchFlats(q) {
       await wait(120);
-      // Same idea as the server: the last token that looks like a flat number, the rest is the place.
-      const tokens = q.trim().split(/[\s,]+/).filter(Boolean);
-      let unitNo = '';
-      let wing = '';
-      if (tokens.length && /\d/.test(tokens[tokens.length - 1]) && /^([a-z]\s*[-/]?\s*)?\d{1,4}[a-z]?$|^(g|ph)-?\d{1,2}$/i.test(tokens[tokens.length - 1])) {
-        const u = parseUnitNo(tokens.pop()!);
-        unitNo = u.unitNo;
-        wing = u.wing;
-        if (!wing && tokens.length && /^[a-z]$/i.test(tokens[tokens.length - 1])) wing = tokens.pop()!.toUpperCase();
-      }
-      const text = tokens.join(' ');
-      if (!text && !unitNo) return { results: [], unit_no: '', wing: '' };
-      const socs = text ? findSocieties(text) : [];
-      const hits = listings
-        .filter((l) => !text || socs.some((s) => s.society_id === l.society_id))
-        .filter((l) => !unitNo || l.unit_no.toUpperCase().startsWith(unitNo))
-        .sort((a, b) => Number(a.unit_no.toUpperCase() !== unitNo) - Number(b.unit_no.toUpperCase() !== unitNo)
-          || Number(!!wing && !a.building.toUpperCase().startsWith(wing)) - Number(!!wing && !b.building.toUpperCase().startsWith(wing)));
-      return clone({ results: hits.slice(0, 20), unit_no: unitNo, wing });
+      return clone(findFlats(q));
     },
     async askOwnerBack(lid, note) {
       await wait();
@@ -911,4 +1022,5 @@ export function createDemoApi(): Api {
       return clone(m);
     },
   };
+  return api;
 }
