@@ -1,0 +1,60 @@
+name: Only Broker — Android test app
+
+# Builds an installable APK of the broker/owner/customer app for testing on real phones.
+# Download: the "only-broker-android" pre-release on this repository (Releases), or the run's artifact.
+# The app opens with "Try the demo"; point it at a laptop server under Settings (same Wi-Fi).
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/modest-ptolemy-57zw85]
+    paths: ["broker-only/mobile/**", ".github/workflows/broker-only-android.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: only-broker-android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: broker-only/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "22", cache: npm, cache-dependency-path: broker-only/mobile/package-lock.json}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: "17"}
+      - run: npm ci
+      - name: Version code = run number (each build installs over the previous one)
+        run: |
+          jq '.expo.android.versionCode = ${{ github.run_number }}' app.json > app.tmp.json && mv app.tmp.json app.json
+      - name: Generate the Android project (Expo prebuild)
+        run: npx expo prebuild --platform android --no-install
+      - uses: gradle/actions/setup-gradle@v4
+      - name: "Build release APK (real phones: 64- and 32-bit ARM)"
+        working-directory: broker-only/mobile/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+      - name: Name the file
+        run: |
+          SHORT=$(git rev-parse --short HEAD)
+          cp android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/only-broker-${{ github.run_number }}-$SHORT.apk"
+          echo "APK=$RUNNER_TEMP/only-broker-${{ github.run_number }}-$SHORT.apk" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: only-broker-android
+          path: ${{ env.APK }}
+          retention-days: 30
+      - name: Publish as the only-broker-android pre-release (download straight to a phone)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete only-broker-android --yes --cleanup-tag || true
+          gh release create only-broker-android "$APK" \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "Only Broker — Android test app (build ${{ github.run_number }})" \
+            --notes "Test build from $(git rev-parse --short HEAD). Install: open this page on the phone, tap the .apk, allow 'Install unknown apps' for your browser. Opens with 'Try the demo'; to use a laptop server, Settings → server address http://<laptop-ip>:8000 (same Wi-Fi)."

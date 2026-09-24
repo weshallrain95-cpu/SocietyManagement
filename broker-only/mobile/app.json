@@ -23,7 +23,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png",
         "backgroundColor": "#0E3B43"
-      }
+      },
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
@@ -39,6 +40,14 @@
         {
           "photosPermission": "Only Broker uses your photos so you can add pictures and videos of your flat.",
           "cameraPermission": "Only Broker uses the camera so you can photograph your flat."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],

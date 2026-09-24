@@ -145,3 +145,25 @@ On the production server the same code stores files in S3 (docs/04); video conve
 streaming comes with it.
 
 Demo logins now include an owner (`9820020000`) and a customer (`9876543210`); OTP 123456 in demo mode.
+
+## 12. The app on real phones (test builds)
+
+**Android.** Every change to the app builds an installable file automatically (GitHub Actions,
+workflow *Only Broker — Android test app*). On the phone, open the repository's **Releases** page
+(logged in to GitHub), open **only-broker-android**, tap the `.apk`, and allow "Install unknown apps"
+for the browser when asked. Each new build installs over the previous one. The app opens with
+"Try the demo"; no server is needed for that.
+
+**iPhone.** Apple does not allow installing an app file directly. The options are:
+1. **TestFlight** (recommended for the pilot): needs an Apple Developer account (₹8,700 / USD 99 a
+   year) in the company's name. Testers install Apple's TestFlight app and get an invite link.
+2. **Web app on the Home Screen**: host the web build on a domain (e.g. a sub-domain of a site
+   we already run), open it in Safari → Share → *Add to Home Screen*. Looks like an app; camera and
+   photo upload work; no Apple account needed.
+
+**Laptop as the test server (same Wi-Fi).** Start the server (`make up`, then `make seed` the first
+time), run `make phone` and type the address it prints into the app: **Settings → Live server**.
+Check the address in the phone's browser first (`…/health` should say `{"ok": true}`). If it doesn't
+open: allow incoming connections for Docker in the laptop's firewall, and make sure both are on the
+same Wi-Fi (not a guest network). In this test mode the login code (OTP) is shown on screen, so no
+SMS account is needed. Keep the laptop awake while testing.

@@ -3,7 +3,7 @@ COMPOSE = docker compose -f infra/compose/docker-compose.dev.yml
 PY = backend/.venv/bin/python
 MANAGE = cd backend && DJANGO_DEBUG=true .venv/bin/python manage.py
 
-.PHONY: help env up down logs seed test lint fmt shell local-setup local-run local-worker local-seed local-test
+.PHONY: help env up down logs seed test lint fmt shell phone local-setup local-run local-worker local-seed local-test
 
 help:  ## Show commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-14s %s\n", $$1, $$2}'
@@ -17,6 +17,11 @@ env:  ## Create backend/.env with fresh random keys (once)
 up: env  ## Start db, redis, api (:8000, HTTP+WebSocket), worker, beat
 	$(COMPOSE) up -d --build
 	@echo "API: http://localhost:8000/v1/docs   Admin: http://localhost:8000/django-admin/"
+
+phone:  ## Print the address to type into the phone app (Settings → server), same Wi-Fi
+	@IP=$$( (ipconfig getifaddr en0 || ipconfig getifaddr en1 || hostname -I | awk '{print $$1}') 2>/dev/null | head -1 ); \
+	  echo "In the app: Settings → Live server → http://$$IP:8000"; \
+	  echo "Check from the phone's browser first: http://$$IP:8000/health should say {\"ok\": true}"
 
 down:  ## Stop everything (data is kept)
 	$(COMPOSE) down

@@ -11,7 +11,8 @@ environ.Env.read_env(BASE_DIR / ".env", overwrite=False)
 
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="dev-insecure-only-for-the-laptop-change-me-0123456789" if DEBUG else environ.Env.NOTSET)
-ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
+# A laptop test server (DEBUG) answers phones on the same Wi-Fi at its LAN address; real servers list their hosts.
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["*"] if DEBUG else ["localhost", "127.0.0.1"])
 CSRF_TRUSTED_ORIGINS = env.list("DJANGO_CSRF_TRUSTED_ORIGINS", default=[])
 # Browser clients (Expo web, Next.js consoles, owner/customer link pages) on other origins.
 # The API uses bearer tokens, not cookies, so credentials are not allowed cross-origin.
