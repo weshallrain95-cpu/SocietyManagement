@@ -200,3 +200,75 @@ make phone
 Stop the server when done: `make down` (your test data is kept).
 
 The automated check *laptop-stack* on GitHub runs these same commands on every change.
+
+## 14. Test everything on the laptop (step by step)
+
+Everything runs on the Mac: the server in Docker, the app in the Mac's browser, and optionally on
+an iPhone (Expo Go) or Android phone (test app) on the same Wi-Fi. Nothing here uses real data or
+sends real SMS: the login code is shown on screen.
+
+**One-time installs**
+1. Docker Desktop (section 13, step 1). Open it; wait for *Engine running*.
+2. Node.js **LTS** from nodejs.org (the green button). Check in Terminal: `node -v` (v20 or newer).
+3. The code (section 13, step 3) if not already there.
+
+**Start (every time)**, terminal window 1:
+```bash
+cd ~/code/only-broker/broker-only
+git pull
+make up
+make seed        # first time only (safe to repeat)
+make phone       # prints the address for phones, e.g. http://192.168.1.23:8000
+```
+Check `http://localhost:8000/health` in the browser: it should say `{"ok": true}`.
+
+Terminal window 2 (the app):
+```bash
+cd ~/code/only-broker/broker-only/mobile
+npm ci           # first time, and after each git pull that changes the app
+npx expo start --web
+```
+The app opens at `http://localhost:8081`. Go to **Settings** (on the login screen) → choose
+**Only Broker server** → address `http://localhost:8000` → Save.
+
+**iPhone (Expo Go, no Apple account):** install *Expo Go* from the App Store. In terminal 2 press
+`Ctrl+C`, then run `npx expo start` (without `--web`) and scan the QR code with the iPhone camera.
+In the app: Settings → Only Broker server → the address from `make phone`. Phone and Mac on the same
+Wi-Fi. (If Expo Go says the project needs a different SDK version, the App Store version has moved
+on — tell engineering.)
+
+**Android:** install the test app (section 12) → Settings → Only Broker server → the `make phone` address.
+
+**Logins** (the code appears on screen):
+
+| Who | Number |
+|---|---|
+| Broker principals | 9820000001, 9820000002, 9820000003 |
+| Field staff | 9820010000, 9820010010, 9820010020 |
+| Owner | any new number, then "I own a flat" |
+| Customer | any new number, then "I'm looking for a flat" |
+| Ops console | http://localhost:8000/ops/ — phone 9000000000, password `onlybroker-dev-admin` |
+
+**What to try**
+
+1. *Broker (9820000001):* Flats → Add flat (pick a society and wing; try an impossible flat number
+   such as 2504 and see it refused) → open a flat → *See the building, floor by floor* → add photos.
+2. *Customers:* add a walk-in; *Import my customer list* (paste two lines like `Riya 98765 43210`);
+   add a requirement → *Find matching flats* → shortlist → plan a visit (or pick flats yourself by
+   society + flat number) → assign field staff.
+3. *Field staff (9820010000):* today's visits, check-in, outcome.
+4. *Update my customers:* pick several flats → send. Log in as one of those customers to see it.
+5. *Co-broking:* as 9820000001, More → Co-broking → My fellow brokers → add `9820000002` with area
+   *Manpada*, and one outside number. Share flats with fellow brokers → note who is in and around
+   the flat, widen the distance, tick names → send. Log in as **9820000002** → More → Co-broking →
+   the offer is there → *I have a customer*. Back as 9820000001: the reply shows with a Call button.
+   Also try *Ask fellow brokers for a flat* with a customer's requirement.
+6. *Owner (new number):* add my flat (any photo as proof) → photos → brokers near my flat → invite
+   with the *Allow this broker* tick → untick later; as the broker, approve/see what happens.
+7. *Ops console:* verify brokers, the review queue, pins, wing layouts, **Flat registers** (upload
+   the template in `tools/building-layouts/flat-register-template.xlsx` with a few Hiranandani
+   Estate rows, *Check only* first, then save) → the society page shows the building floor by floor.
+
+**Stop:** `Ctrl+C` in terminal 2; `make down` in terminal 1 (test data is kept for next time).
+**Start clean** (wipe test data): `docker compose -f infra/compose/docker-compose.dev.yml down -v`,
+then `make up` and `make seed` again.
