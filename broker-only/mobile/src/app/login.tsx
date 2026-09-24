@@ -42,7 +42,7 @@ export default function Login() {
     try {
       const t = await api.verifyOtp(mobile!, code.trim());
       await signIn(t);
-      if (t.org || t.role === 'owner') router.replace('/');
+      if (t.org || t.role === 'owner' || (t.role === 'customer' && !t.new_user)) router.replace('/');
       else setStep('register'); // signed in, but not yet part of a broker agency
     } catch (e) {
       setError(e);
@@ -113,6 +113,11 @@ export default function Login() {
               <P small muted>Add your flat, upload photos and choose which brokers may handle it.</P>
               <Button kind="secondary" title="I’m a property owner" onPress={becomeOwner} busy={busy} testID="i-am-owner" />
             </Card>
+            <Card>
+              <P style={{ fontWeight: '700' }}>Looking for a flat?</P>
+              <P small muted>See updates from the brokers you deal with.</P>
+              <Button kind="secondary" title="I’m looking for a flat" onPress={() => router.replace('/updates')} testID="i-am-customer" />
+            </Card>
             <P>Broker? Register your agency to start. (Field staff: ask your principal to add your number instead.)</P>
             <Field label="Agency / your name" value={agency} onChangeText={setAgency} placeholder="Suresh Realty" />
             <Field label="MahaRERA agent number (optional for rentals)" value={rera} onChangeText={setRera} autoCapitalize="characters" placeholder="A51700000001" />
@@ -145,7 +150,7 @@ export default function Login() {
         <View style={{ marginTop: space.xl, gap: space.sm }}>
           {settings.demo ? (
             <Notice tone="warn">
-              Demo mode: sample Thane West data, nothing leaves this device. Broker: 9820000001 · Field staff: 9820010000 · Owner: 9820020000 · OTP 123456
+              Demo mode: sample Thane West data, nothing leaves this device. Broker: 9820000001 · Field staff: 9820010000 · Owner: 9820020000 · Customer: 9876543210 · OTP 123456
             </Notice>
           ) : (
             <Button kind="secondary" title="Try the demo" onPress={tryDemo} testID="try-demo" />

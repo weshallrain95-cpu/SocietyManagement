@@ -128,11 +128,37 @@ function Media({ flat, onChange }: { flat: OwnerFlat; onChange: () => void }) {
     }
   };
   const remove = useMutation({ mutationFn: (mid: string) => api.deleteMedia(mid), onSuccess: onChange });
+  const review = useMutation({ mutationFn: ({ mid, ok }: { mid: string; ok: boolean }) => api.reviewMedia(mid, ok), onSuccess: onChange });
   const media = flat.media ?? [];
+  const pending = flat.pending_media ?? [];
+  const photos = media.filter((m) => m.kind === 'photo').length;
+  const videos = media.filter((m) => m.kind === 'video').length;
   return (
     <>
       <H2>Photos & videos</H2>
-      <P small muted>Shown to brokers handling your flat and on the flat pages they send to customers. Flat numbers are never shown to customers.</P>
+      <P small muted>Up to 5 photos and 1 video ({photos}/5 photos · {videos}/1 video). Shown to brokers handling your flat and on the pages they send customers — never the flat number.</P>
+      {pending.length ? (
+        <Card style={{ borderWidth: 2 }}>
+          <P style={{ fontWeight: '700' }}>Waiting for your approval</P>
+          <P small muted>Your brokers added these. Nothing goes live unless you approve it.</P>
+          {pending.map((m) => (
+            <Row key={m.id} style={{ alignItems: 'center' }}>
+              <Pressable onPress={() => Linking.openURL(m.url)}>
+                {m.kind === 'photo' ? <Image source={{ uri: m.thumb_url }} style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: c.border }} /> : (
+                  <View style={{ width: 72, height: 72, borderRadius: 8, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: c.brandText, fontSize: 22 }}>▶</Text></View>
+                )}
+              </Pressable>
+              <View style={{ flex: 1, gap: 4 }}>
+                <P small>{m.kind === 'video' ? 'Video' : 'Photo'} from {m.uploaded_by}</P>
+                <Row>
+                  <Button small title="Approve" onPress={() => review.mutate({ mid: m.id, ok: true })} testID={`approve-${m.id}`} />
+                  <Button small kind="ghost" title="Reject" onPress={() => review.mutate({ mid: m.id, ok: false })} />
+                </Row>
+              </View>
+            </Row>
+          ))}
+        </Card>
+      ) : null}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {media.map((m) => (
           <View key={m.id} style={{ width: 104, gap: 4 }}>
@@ -153,12 +179,12 @@ function Media({ flat, onChange }: { flat: OwnerFlat; onChange: () => void }) {
       {media.length === 0 ? <Notice>Good photos get more serious enquiries: living room, kitchen, bedrooms, bathrooms and the view.</Notice> : null}
       {busy ? <Notice>{busy}</Notice> : (
         <Row style={{ flexWrap: 'wrap' }}>
-          <Button small kind="secondary" title="Add photos" onPress={() => upload(() => pickFromGallery('photo', true))} testID="add-photos" />
-          {canUseCamera ? <Button small kind="secondary" title="Take photo" onPress={() => upload(takePhoto)} /> : null}
-          <Button small kind="secondary" title="Add video walkthrough" onPress={() => upload(() => pickFromGallery('video'))} />
+          <Button small kind="secondary" title="Add photos" disabled={photos >= 5} onPress={() => upload(() => pickFromGallery('photo', true))} testID="add-photos" />
+          {canUseCamera ? <Button small kind="secondary" title="Take photo" disabled={photos >= 5} onPress={() => upload(takePhoto)} /> : null}
+          <Button small kind="secondary" title="Add video walkthrough" disabled={videos >= 1} onPress={() => upload(() => pickFromGallery('video'))} />
         </Row>
       )}
-      {error || remove.error ? <ErrorBox error={error ?? remove.error} /> : null}
+      {error || remove.error || review.error ? <ErrorBox error={error ?? remove.error ?? review.error} /> : null}
     </>
   );
 }

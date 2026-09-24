@@ -43,7 +43,7 @@ flowchart LR
 
 | Stage | What it means | Status |
 |---|---|---|
-| 1. Build the core | Backend, broker app, owner app, link pages, ops console, data checks | ✅ Done: 170+ automated tests, all green on GitHub |
+| 1. Build the core | Backend, broker app, owner app, link pages, ops console, data checks | ✅ Done: 190+ automated tests, all green on GitHub |
 | 2. Clean Thane West data | Pins checked by the pilot broker; wings, floors and flats per floor loaded | ⏳ **Now.** Pin-check link is live; layout sheet ready to fill |
 | 3. Pilot broker uses the real app | Backend on a staging server (not the laptop), real phone numbers, real SMS/WhatsApp | ⏳ Next: needs the accounts below |
 | 4. Pilot metrics | Time to add a flat, stale-listing rate, visits per customer, broker's willingness to pay | Later |
@@ -64,6 +64,7 @@ flowchart LR
 - **Conduct-based house rules only**: no religion, caste, community or gender vocabulary anywhere.
 - **Meet brokers where they are**: staff can always pick flats their own way (society + flat number); the matching engine earns trust alongside, it is never forced.
 - **Offline customers are first-class**: everything a customer does in the app also works by link.
+- **A broker has two assets — their flats and their customers.** Both are theirs alone: the platform never shows, offers, moves or swaps either between brokers. Broadcasts let brokers reach all their own customers, which gives them a reason to bring offline customers onto the platform.
 - **A broker's inventory is theirs alone**: flats enter only when that broker adds them, manually, on their own account. Matching and search look only at the broker's own flats (several brokers may each hold the same flat). The platform never offers a flat to a broker and never moves or swaps flats between brokers. An owner who picks a broker first ticks "Allow this broker to handle my property".
 - **Each broker's data is private** (enforced by the database) unless they choose to share it.
 - **Every change is audited**, and the audit trail is tamper-evident.

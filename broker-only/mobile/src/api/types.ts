@@ -68,6 +68,7 @@ export interface Listing {
   owner_appointed?: boolean;
   owner_withdrew?: boolean;
   media?: MediaItem[];
+  my_pending_media?: MediaItem[];
 }
 
 export interface NewListing {
@@ -103,6 +104,9 @@ export interface UploadFile {
 export interface MediaItem {
   id: string;
   kind: 'photo' | 'video';
+  /** D15: a broker's upload is 'pending' until the owner approves it. */
+  state: 'pending' | 'live' | 'rejected';
+  uploaded_by: string;
   url: string;
   thumb_url: string;
   content_type: string;
@@ -153,6 +157,7 @@ export interface OwnerFlat {
   brokers: OwnerBroker[];
   invites?: { id: string; org_id: string; name: string; state: string; sent_at: string }[];
   media?: MediaItem[];
+  pending_media?: MediaItem[];
   proof_on_file?: boolean;
 }
 
@@ -182,6 +187,61 @@ export interface OwnerInvite {
   owner_name: string;
   allowed_at: string;
   listing_id: string | null;
+}
+
+// --- Broadcasts (D16): a broker's news to their own customers, delivered in the app -------------
+
+export type BroadcastKind = 'new_flat' | 'price_drop' | 'news';
+
+export interface FlatSummary {
+  society: string;
+  locality: string;
+  bhk: string;
+  txn_type: TxnType;
+  price: number | null;
+  price_label: string;
+  available_from: string | null;
+}
+
+export interface Reach {
+  total: number;
+  in_app: number;
+  muted: number;
+  not_on_app: number;
+}
+
+export interface BroadcastInput {
+  kind: BroadcastKind;
+  text?: string;
+  listing_id?: string;
+  locality_id?: string;
+  scope?: 'all' | 'locality';
+}
+
+export interface Broadcast {
+  id: string;
+  kind: BroadcastKind;
+  text: string;
+  listing_id: string | null;
+  locality: string | null;
+  recipients_total: number;
+  delivered_in_app: number;
+  not_on_app: number;
+  muted: number;
+  created_at: string;
+}
+
+/** A customer update as the customer sees it. */
+export interface CustomerUpdate {
+  id: string;
+  org_id: string;
+  org: string;
+  kind: BroadcastKind;
+  text: string;
+  flat: FlatSummary | null;
+  sent_at: string;
+  read: boolean;
+  muted: boolean;
 }
 
 /** "HE A-1203" → the broker's own flats only. A flat not in their list is simply not found. */
@@ -382,6 +442,14 @@ export interface Api {
   searchSocieties(q: string): Promise<SocietyCandidate[]>;
   searchFlats(q: string): Promise<FlatSearchResult>;
   askOwnerBack(listingId: string, note: string): Promise<{ detail: string }>;
+  uploadListingMedia(listingId: string, file: UploadFile): Promise<MediaItem>;
+  reviewMedia(mediaId: string, approve: boolean): Promise<OwnerFlat>;
+  broadcastPreview(p: BroadcastInput): Promise<{ text: string; flat: FlatSummary | null; reach: Reach; free_in_pilot: boolean }>;
+  sendBroadcast(b: BroadcastInput): Promise<Broadcast & { invite: { customer_id: string; name: string; whatsapp_url: string }[] }>;
+  broadcasts(): Promise<Broadcast[]>;
+  myUpdates(): Promise<CustomerUpdate[]>;
+  markUpdatesRead(): Promise<unknown>;
+  muteBroker(orgId: string, muted: boolean): Promise<{ updated: number }>;
   ownerInvites(): Promise<OwnerInvite[]>;
   respondInvite(id: string, action: 'accept' | 'decline'): Promise<OwnerInvite>;
 

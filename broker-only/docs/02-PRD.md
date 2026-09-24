@@ -106,7 +106,7 @@ sequenceDiagram
 | MD-13 | **Closed universe of buildings.** Each wing records floors, first floor with flats, flats per floor, floors with no flats (refuge/podium) and known exceptions (penthouses). Brokers pick a wing from the list; a flat number that cannot exist is refused. Seeded from MahaRERA, field survey and ops; imported from a spreadsheet | P0 | Verified layout: "2504" in a 20-floor wing is refused at entry and in uploads, with the reason; the broker can report "this flat really exists" to ops. Unverified layout: warning the broker confirms. Society marked "all wings listed": unknown wing names are refused with the closest real wing suggested |
 | MD-09 | **One unit, one truth:** conflicting attribute values from different sources are resolved by the trust hierarchy; conflicts are flagged "disputed" (Data Model §6) | P0 | UI shows the resolved value + source badge (Computed / Owner / Verified / Broker consensus / Single broker) |
 | MD-10 | Any party (customer after a visit, broker, owner) can **suggest a correction** to a unit variable | P1 | Suggestion enters the resolver; the suggester's trust weight applies |
-| MD-11 | Media: photos and **owner-uploaded video walkthroughs** per unit; the broker's own media stays on their listing unless shared to master | P1 | Video ≤ 2 min, transcoded to HLS; photos auto-resized; EXIF location stripped from public copies |
+| MD-11 | **Shared flat media** (*D15, decided 2026-09-24*): photos and a video walkthrough belong to the flat, shared by everyone handling it — at most **5 photos and 1 video** live. The owner and the brokers holding the flat may upload; **customers never**. Nothing a broker uploads goes live until the **owner approves** it (the owner is notified); the owner's own uploads are live at once | P1 | Approve refuses past the caps ("remove one first"). A flat whose owner isn't on the platform keeps broker uploads waiting until the owner joins. Photos cleaned (EXIF removed); files private, reached by short-lived signed links |
 | MD-12 | Upcoming/under-construction projects tracked with possession dates and RERA numbers | P1 | New-sale inventory attaches to project → tower → unit type/unit |
 
 ### 3.3 Broker inventory (INV)
@@ -162,6 +162,7 @@ sequenceDiagram
 | CRM-03 | Full timeline per customer across all interactions with that broker | P0 | Chronological; filter by type |
 | CRM-04 | Follow-up reminders and pipeline stages (New → Contacted → Visits planned → Shortlisted → Negotiation → Closed won / lost + reason) | P1 | Kanban board on desktop |
 | CRM-05 | Duplicate customer detection within a broker's book (same number) | P0 | Merge prompt |
+| CRM-10 | **Broadcasts to the broker's own customers** (*D16*): one message — new flat (society-level, never the flat number), price drop in an area, or news — to all of the broker's customers or those looking in one area. Pilot: delivered **in the app**, to all customers, **free**; customers not on the app are listed with a ready WhatsApp invite so bringing offline customers onto the platform pays off. A customer can turn a broker's updates off | P0 (pilot) | Only the firm's own customers (RLS); field staff cannot broadcast; each broadcast records its reach for paid credits after the pilot |
 
 ### 3.7 Matching (MATCH)
 

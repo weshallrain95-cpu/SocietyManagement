@@ -30,6 +30,8 @@ function Shell() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="(broker)" options={{ headerShown: false }} />
         <Stack.Screen name="(staff)" options={{ headerShown: false }} />
+        <Stack.Screen name="(owner)" options={{ headerShown: false }} />
+        <Stack.Screen name="(customer)" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         <Stack.Screen name="listing/new" options={{ title: 'Add flat' }} />
         <Stack.Screen name="listing/[id]" options={{ title: 'Flat' }} />
@@ -39,6 +41,7 @@ function Shell() {
         <Stack.Screen name="match/[reqId]" options={{ title: 'Matching flats' }} />
         <Stack.Screen name="visit/[id]" options={{ title: 'Visit plan' }} />
         <Stack.Screen name="visit/new" options={{ title: 'Plan a visit' }} />
+        <Stack.Screen name="broadcast" options={{ title: 'Update my customers' }} />
         <Stack.Screen name="owner/new" options={{ title: 'Add my flat' }} />
         <Stack.Screen name="owner/[id]" options={{ title: 'My flat' }} />
         <Stack.Screen name="owner/brokers" options={{ title: 'Brokers near my flat' }} />

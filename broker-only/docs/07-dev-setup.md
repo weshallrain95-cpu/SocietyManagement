@@ -144,4 +144,4 @@ shortlist pages can be switched off with `OB_OWNER_MEDIA_ON_CUSTOMER_LINKS=false
 On the production server the same code stores files in S3 (docs/04); video conversion for smooth
 streaming comes with it.
 
-Demo logins now include an owner: `9820020000` (OTP 123456 in demo mode).
+Demo logins now include an owner (`9820020000`) and a customer (`9876543210`); OTP 123456 in demo mode.

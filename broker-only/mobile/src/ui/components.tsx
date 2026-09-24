@@ -91,7 +91,8 @@ export function Field({ label, hint, error, ...props }: TextInputProps & { label
         {...props}
         style={{
           backgroundColor: c.surface, borderRadius: radius.sm, borderWidth: 1, borderColor: error ? c.bad : c.border,
-          paddingHorizontal: space.md, minHeight: 48, fontSize: font.body, color: c.text,
+          paddingHorizontal: space.md, minHeight: props.multiline ? 104 : 48, fontSize: font.body, color: c.text,
+          ...(props.multiline ? { paddingVertical: space.sm, textAlignVertical: 'top' as const } : {}),
         }}
       />
       {error ? <P small style={{ color: c.bad }}>{error}</P> : hint ? <P small muted>{hint}</P> : null}

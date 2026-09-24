@@ -5,6 +5,8 @@ import { Alert, Image, Linking, Platform, Pressable, ScrollView, Text, View } fr
 
 import { useSession } from '@/auth/session';
 import { bhk, inr, statusTone } from '@/lib/format';
+import type { MediaItem, UploadFile } from '@/api';
+import { canUseCamera, pickFromGallery, takePhoto } from '@/lib/pickMedia';
 import { Button, Card, Chip, ChipRow, ErrorBox, Field, H1, H2, Loading, Notice, P, Row, Screen } from '@/ui/components';
 import { usePalette } from '@/ui/theme';
 
@@ -33,7 +35,6 @@ export default function ListingDetail() {
   const reconfirm = useMutation({ mutationFn: () => api.reconfirm(id), onSuccess: () => q.refetch() });
   const [note, setNote] = useState('');
   const askBack = useMutation({ mutationFn: () => api.askOwnerBack(id, note) });
-  const c = usePalette();
 
   if (q.isLoading) return <Screen><Loading /></Screen>;
   if (q.error || !q.data) return <Screen><ErrorBox error={q.error} onRetry={q.refetch} /></Screen>;
@@ -67,26 +68,7 @@ export default function ListingDetail() {
         </Card>
       ) : null}
 
-      {l.media?.length ? (
-        <>
-          <H2>Owner’s photos & videos</H2>
-          <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
-            {l.media.map((m) => (
-              <Pressable key={m.id} onPress={() => Linking.openURL(m.url)} accessibilityLabel={m.kind === 'video' ? 'Play video' : 'Open photo'}>
-                {m.kind === 'photo' ? (
-                  <Image source={{ uri: m.thumb_url }} style={{ width: 150, height: 112, borderRadius: 8, backgroundColor: c.border }} />
-                ) : (
-                  <View style={{ width: 150, height: 112, borderRadius: 8, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: c.brandText, fontSize: 28 }}>▶</Text>
-                    <Text style={{ color: c.brandText, fontSize: 12 }}>Walkthrough video</Text>
-                  </View>
-                )}
-              </Pressable>
-            ))}
-          </ScrollView>
-          <P small muted>Uploaded by the owner. Shown on the shortlist pages you send customers (never the flat number).</P>
-        </>
-      ) : null}
+      {!l.owner_withdrew ? <FlatMedia id={id} media={l.media ?? []} pending={l.my_pending_media ?? []} onChange={() => q.refetch()} /> : null}
 
       <H2>Status</H2>
       {l.status === 'AVAILABLE_UNCONFIRMED' ? <Notice tone="warn">Waiting for the owner’s YES. Owners confirm from a WhatsApp link — no app needed.</Notice> : null}
@@ -124,5 +106,61 @@ export default function ListingDetail() {
       </ChipRow>
       <P small muted>Green = confirmed by the owner. Distances to station, schools and auto stands are calculated from the map.</P>
     </Screen>
+  );
+}
+
+/** D15: shared flat photos/videos. Brokers holding the flat add them; the owner approves what goes live. */
+function FlatMedia({ id, media, pending, onChange }: { id: string; media: MediaItem[]; pending: MediaItem[]; onChange: () => void }) {
+  const { api } = useSession();
+  const c = usePalette();
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState<unknown>(null);
+  const upload = async (get: () => Promise<UploadFile[]>) => {
+    setError(null);
+    try {
+      const files = await get();
+      for (let i = 0; i < files.length; i++) {
+        setBusy(`Uploading ${i + 1} of ${files.length}…`);
+        await api.uploadListingMedia(id, files[i]);
+      }
+      if (files.length) onChange();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy('');
+    }
+  };
+  const tile = (m: MediaItem) => (
+    <Pressable key={m.id} onPress={() => Linking.openURL(m.url)} accessibilityLabel={m.kind === 'video' ? 'Play video' : 'Open photo'}>
+      {m.kind === 'photo' ? (
+        <Image source={{ uri: m.thumb_url }} style={{ width: 150, height: 112, borderRadius: 8, backgroundColor: c.border, opacity: m.state === 'pending' ? 0.6 : 1 }} />
+      ) : (
+        <View style={{ width: 150, height: 112, borderRadius: 8, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center', opacity: m.state === 'pending' ? 0.6 : 1 }}>
+          <Text style={{ color: c.brandText, fontSize: 28 }}>▶</Text>
+          <Text style={{ color: c.brandText, fontSize: 12 }}>Walkthrough video</Text>
+        </View>
+      )}
+      <Text style={{ color: c.textMuted, fontSize: 11, marginTop: 2 }}>{m.state === 'pending' ? 'Waiting for owner' : `By ${m.uploaded_by}`}</Text>
+    </Pressable>
+  );
+  return (
+    <>
+      <H2>Photos & videos</H2>
+      {media.length || pending.length ? (
+        <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
+          {media.map(tile)}
+          {pending.map(tile)}
+        </ScrollView>
+      ) : <P small muted>No photos yet.</P>}
+      <P small muted>A flat shows up to 5 photos and 1 video. What you add goes live only when the owner approves it. Customers see live photos on your shortlist pages, never the flat number.</P>
+      {busy ? <Notice>{busy}</Notice> : (
+        <Row style={{ flexWrap: 'wrap' }}>
+          <Button small kind="secondary" title="Add photos" onPress={() => upload(() => pickFromGallery('photo', true))} testID="broker-add-photos" />
+          {canUseCamera ? <Button small kind="secondary" title="Take photo" onPress={() => upload(takePhoto)} /> : null}
+          <Button small kind="secondary" title="Add video" onPress={() => upload(() => pickFromGallery('video'))} />
+        </Row>
+      )}
+      {error ? <ErrorBox error={error} /> : null}
+    </>
   );
 }

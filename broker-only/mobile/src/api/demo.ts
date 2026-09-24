@@ -3,7 +3,7 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
+  Broadcast, BroadcastInput, CustomerUpdate, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
 import { checkFlat, parseUnitNo } from '@/lib/layout';
@@ -43,6 +43,8 @@ const WINGS: Record<string, { wings: Wing[]; wings_complete: boolean }> = Object
       : { wings: [{ id: `bld-${i}-A`, name: 'A Wing', layout: layout(22, 6, false) }], wings_complete: false },
   ]),
 );
+
+const LOCALITIES = ['Dhokali', 'Manpada', 'Kolshet', 'Majiwada', 'Hiranandani Estate', 'Vasant Vihar'].map((name, i) => ({ id: `loc-${i}`, name, micro_market: 'Thane West', centroid: { lat: 19.23, lng: 72.97 } }));
 
 // Rough stand-in for the server's fuzzy society search (aliases, typos): a few nicknames plus prefix matching.
 const NICKNAMES: Record<string, string> = { he: 'Hiranandani Estate', hm: 'Hiranandani Meadows', kpc: 'Kalpataru Parkcity' };
@@ -85,7 +87,7 @@ const listings: Listing[] = [
 ];
 
 const customers: Customer[] = [
-  { id: 'cus-1', name: 'Riya (demo)', phone: '+91 98765 43210', source: 'phone_call', stage: 'contacted', consent_state: 'otp_confirmed', can_message: true, on_platform: false, created_at: now(), requirements: [] },
+  { id: 'cus-1', name: 'Riya (demo)', phone: '+91 98765 43210', source: 'phone_call', stage: 'contacted', consent_state: 'otp_confirmed', can_message: true, on_platform: true, created_at: now(), requirements: [] },
   { id: 'cus-2', name: 'Walk-in customer (demo)', phone: '+91 98765 11111', source: 'walk_in', stage: 'new', consent_state: 'none', can_message: false, on_platform: false, created_at: now(), requirements: [] },
   { id: 'cus-3', name: 'Marketplace lead (demo)', phone: '+91 98765 22222', source: 'marketplace', stage: 'visits_planned', consent_state: 'app', can_message: true, on_platform: true, created_at: now(), requirements: [] },
 ];
@@ -197,7 +199,7 @@ function samplePhoto(label: string, hue: number): string {
 }
 const photo = (id: string, label: string, hue: number): MediaItem => {
   const url = samplePhoto(label, hue);
-  return { id, kind: 'photo', url, thumb_url: url, content_type: 'image/svg+xml', width: 640, height: 480, caption: label, created_at: new Date().toISOString() };
+  return { id, kind: 'photo', state: 'live', uploaded_by: 'Owner', url, thumb_url: url, content_type: 'image/svg+xml', width: 640, height: 480, caption: label, created_at: new Date().toISOString() };
 };
 
 export function createDemoApi(): Api {
@@ -225,6 +227,26 @@ export function createDemoApi(): Api {
     txn_type: 'RENT', terms: { txn_type: 'RENT', expected_rent: 32000, deposit: 96000, available_from: indiaDate(10) }, owner_name: 'Mr Deshpande',
     allowed_at: new Date().toISOString(), listing_id: null,
   }];
+  // Customer Riya (9876543210) sees updates from her brokers; the demo broker's broadcasts land here too.
+  const updates: CustomerUpdate[] = [
+    { id: 'upd-0', org_id: 'org-demo', org: 'Demo Realty Dhokali', kind: 'new_flat', text: 'New 3 BHK for rent in Rodas Enclave, Hiranandani Estate — ₹38,000/month. Reply to see it. — Demo Realty Dhokali',
+      flat: { society: 'Rodas Enclave', locality: 'Hiranandani Estate', bhk: '3 BHK', txn_type: 'RENT', price: 38000, price_label: '₹38,000/month', available_from: null }, sent_at: new Date(Date.now() - 2 * 3600e3).toISOString(), read: false, muted: false },
+    { id: 'upd-1', org_id: 'org-omsai', org: 'Om Sai Estate Agents', kind: 'price_drop', text: 'Good news: rents have come down in Manpada. Ask us for the latest flats. — Om Sai Estate Agents', flat: null, sent_at: new Date(Date.now() - 26 * 3600e3).toISOString(), read: true, muted: false },
+  ];
+  const sent: Broadcast[] = [];
+  const bcText = (b: BroadcastInput) => {
+    const l = listings.find((x) => x.id === b.listing_id);
+    if (b.kind === 'new_flat' && l) {
+      const soc = SOCIETIES.find((x) => x.society_id === l.society_id)!;
+      return `New ${l.bhk} BHK for rent in ${l.society}, ${soc.locality} — ₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month. Reply to see it. — Demo Realty Dhokali`;
+    }
+    if (b.kind === 'price_drop') return `Good news: rents have come down in ${LOCALITIES.find((x) => x.id === b.locality_id)?.name ?? 'your preferred area'}. Ask us for the latest flats. — Demo Realty Dhokali`;
+    return '';
+  };
+  const reach = () => {
+    const onApp = customers.filter((c) => c.on_platform).length;
+    return { total: customers.length, in_app: onApp, muted: 0, not_on_app: customers.length - onApp };
+  };
   // Owner decisions reach the broker's own listing of the same flat (lst-1 is unit-1).
   const syncListingFromOwner = (f: OwnerFlat) => {
     const l = listings.find((x) => x.unit_id === f.unit_id);
@@ -232,6 +254,7 @@ export function createDemoApi(): Api {
     const me = f.brokers.find((b) => b.org_id === 'org-demo');
     l.owner_withdrew = me ? !me.allowed : false;
     l.media = l.owner_withdrew ? [] : clone(f.media ?? []);
+    l.my_pending_media = clone((f.pending_media ?? []).filter((m) => m.uploaded_by === 'Demo Realty Dhokali'));
   };
   syncListingFromOwner(ownerFlats[0]);
   const flat = (fid: string) => {
@@ -251,6 +274,7 @@ export function createDemoApi(): Api {
       await wait();
       if (code !== '123456') throw new Error('Incorrect OTP. In the demo the code is 123456.');
       if (phone.endsWith('0020000')) return { ...tokens, role: 'owner', org: null };
+      if (phone.endsWith('6543210')) return { ...tokens, role: 'customer', org: null, new_user: false };
       return { ...tokens, role: phone.endsWith('0010000') ? 'broker_staff' : 'broker_principal' };
     },
     async me() {
@@ -347,6 +371,72 @@ export function createDemoApi(): Api {
       b.asked_back = note;
       return { detail: 'Sent. The owner will decide.' };
     },
+    async uploadListingMedia(lid, file) {
+      await wait(400);
+      const l = listings.find((x) => x.id === lid)!;
+      if (l.owner_withdrew) throw new ApiError(400, 'Only a firm currently handling this flat can add photos');
+      const kind = file.type.startsWith('video/') ? 'video' : 'photo';
+      const m: MediaItem = { id: id('med'), kind, state: 'pending', uploaded_by: 'Demo Realty Dhokali', url: file.uri, thumb_url: file.uri, content_type: file.type, width: null, height: null, caption: '', created_at: now() };
+      const f = ownerFlats.find((x) => x.unit_id === l.unit_id);
+      if (f) {
+        f.pending_media = [...(f.pending_media ?? []), m];
+        syncListingFromOwner(f);
+      } else {
+        l.my_pending_media = [...(l.my_pending_media ?? []), m]; // no owner on the platform: waits until one joins
+      }
+      return clone(m);
+    },
+    async reviewMedia(mid, approve) {
+      await wait();
+      const f = ownerFlats.find((x) => (x.pending_media ?? []).some((m) => m.id === mid))!;
+      const m = f.pending_media!.find((x) => x.id === mid)!;
+      if (approve) {
+        const live = (f.media ?? []).filter((x) => x.kind === m.kind).length;
+        if (live >= (m.kind === 'video' ? 1 : 5)) throw new ApiError(400, `This flat already shows ${m.kind === 'video' ? '1 video' : '5 photos'} — remove one first`);
+        f.media = [...(f.media ?? []), { ...m, state: 'live' }];
+      }
+      f.pending_media = f.pending_media!.filter((x) => x.id !== mid);
+      syncListingFromOwner(f);
+      return summary(f);
+    },
+    async broadcastPreview(b) {
+      await wait(100);
+      const l = listings.find((x) => x.id === b.listing_id);
+      return { text: bcText(b), flat: l ? { society: l.society, locality: '', bhk: `${l.bhk} BHK`, txn_type: l.txn_type, price: l.asking_rent, price_label: `₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month`, available_from: null } : null, reach: reach(), free_in_pilot: true };
+    },
+    async sendBroadcast(b) {
+      await wait();
+      const text = (b.text ?? '').trim() || bcText(b);
+      if (!text) throw new ApiError(400, 'Write the message');
+      const r = reach();
+      const l = listings.find((x) => x.id === b.listing_id);
+      const bc: Broadcast = { id: id('bc'), kind: b.kind, text, listing_id: b.listing_id ?? null, locality: null, recipients_total: r.total, delivered_in_app: r.in_app, not_on_app: r.not_on_app, muted: 0, created_at: now() };
+      sent.unshift(bc);
+      if (!updates.some((u) => u.org_id === 'org-demo' && u.muted)) {
+        updates.unshift({ id: id('upd'), org_id: 'org-demo', org: 'Demo Realty Dhokali', kind: b.kind, text, sent_at: now(), read: false, muted: false,
+          flat: l ? { society: l.society, locality: '', bhk: `${l.bhk} BHK`, txn_type: l.txn_type, price: l.asking_rent, price_label: `₹${(l.asking_rent ?? 0).toLocaleString('en-IN')}/month`, available_from: null } : null });
+      }
+      const invite = customers.filter((c) => !c.on_platform).map((c) => ({
+        customer_id: c.id, name: c.name || 'Customer',
+        whatsapp_url: `https://wa.me/${c.phone.replace(/\D/g, '')}?text=${encodeURIComponent(`${text}\n\nGet updates like this from Demo Realty Dhokali on the Only Broker app.`)}`,
+      }));
+      return clone({ ...bc, invite });
+    },
+    async broadcasts() {
+      return clone(sent);
+    },
+    async myUpdates() {
+      await wait(100);
+      return clone(updates);
+    },
+    async markUpdatesRead() {
+      updates.forEach((u) => (u.read = true));
+      return {};
+    },
+    async muteBroker(orgId, muted) {
+      updates.filter((u) => u.org_id === orgId).forEach((u) => (u.muted = muted));
+      return { updated: 1 };
+    },
     async ownerInvites() {
       await wait(120);
       return clone(invites.filter((i) => i.state === 'pending'));
@@ -401,7 +491,7 @@ export function createDemoApi(): Api {
       await wait(400);
       const f = flat(fid);
       const kind = file.type.startsWith('video/') ? 'video' : 'photo';
-      const m: MediaItem = { id: id('med'), kind, url: file.uri, thumb_url: file.uri, content_type: file.type, width: null, height: null, caption: '', created_at: now() };
+      const m: MediaItem = { id: id('med'), kind, state: 'live', uploaded_by: 'Owner', url: file.uri, thumb_url: file.uri, content_type: file.type, width: null, height: null, caption: '', created_at: now() };
       f.media = [...(f.media ?? []), m];
       syncListingFromOwner(f);
       return clone(m);
@@ -461,7 +551,7 @@ export function createDemoApi(): Api {
       return { detail: 'Thanks — our team will check the building record, usually within a day.' };
     },
     async localities() {
-      return ['Dhokali', 'Manpada', 'Kolshet', 'Majiwada', 'Hiranandani Estate', 'Vasant Vihar'].map((name, i) => ({ id: `loc-${i}`, name, micro_market: 'Thane West', centroid: { lat: 19.23, lng: 72.97 } }));
+      return clone(LOCALITIES);
     },
     async dictionary(p) {
       return DICTIONARY.filter((d) => !p?.tier || p.tier.split(',').includes(d.tier)).filter((d) => !p?.matchable || d.matching !== 'display');

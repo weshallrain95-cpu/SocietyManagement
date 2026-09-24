@@ -104,6 +104,18 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     searchSocieties: async (q) => (await get<{ results: never[] }>(`/societies/search${qs({ q })}`)).results,
     searchFlats: (q) => get(`/listings/search${qs({ q })}`),
     askOwnerBack: (lid, note) => post(`/listings/${lid}/ask-owner-back`, { note }),
+    uploadListingMedia: (lid, file) => {
+      const f = new FormData();
+      appendFile(f, 'file', file);
+      return call('POST', `/listings/${lid}/media`, f);
+    },
+    reviewMedia: (mid, approve) => post(`/owner/media/${mid}/${approve ? 'approve' : 'reject'}`),
+    broadcastPreview: (p) => get(`/broadcasts/preview${qs({ ...p })}`),
+    sendBroadcast: (b) => post('/broadcasts', b),
+    broadcasts: () => get('/broadcasts'),
+    myUpdates: () => get('/me/updates'),
+    markUpdatesRead: () => post('/me/updates'),
+    muteBroker: (org_id, muted) => post('/me/updates/mute', { org_id, muted }),
     ownerInvites: () => get('/owner-invites'),
     respondInvite: (iid, action) => post(`/owner-invites/${iid}/${action}`),
 

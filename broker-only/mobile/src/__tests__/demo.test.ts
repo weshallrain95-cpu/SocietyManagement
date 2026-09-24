@@ -84,3 +84,32 @@ test('an invitation needs the owner’s allow tick; the broker accepts it into t
   expect(l.owner_appointed).toBe(true);
   expect(l.society).toBe('Hiranandani Meadows');
 });
+
+test('broker photos wait for the owner; the owner approves what goes live', async () => {
+  const api = createDemoApi();
+  const up = await run(api.uploadListingMedia('lst-1', { uri: 'blob:x', name: 'hall.jpg', type: 'image/jpeg' }));
+  expect(up.state).toBe('pending');
+  expect((await run(api.listing('lst-1'))).my_pending_media?.length).toBe(1);
+  const [flat] = await run(api.ownerFlats());
+  const f = await run(api.ownerFlat(flat.id));
+  expect(f.pending_media?.[0].uploaded_by).toBe('Demo Realty Dhokali');
+  const after = await run(api.reviewMedia(up.id, true));
+  expect(after.media?.length).toBe(4);
+  const l = await run(api.listing('lst-1'));
+  expect(l.media?.length).toBe(4);
+  expect(l.my_pending_media).toEqual([]);
+});
+
+test('a broadcast reaches customers in the app and lists the rest for a WhatsApp invite', async () => {
+  const api = createDemoApi();
+  const pre = await run(api.broadcastPreview({ kind: 'new_flat', listing_id: 'lst-1' }));
+  expect(pre.text).toMatch(/^New 2 BHK for rent in Hiranandani Estate/);
+  expect(pre.text).not.toMatch(/1203/);
+  const r = await run(api.sendBroadcast({ kind: 'new_flat', listing_id: 'lst-1' }));
+  expect(r.delivered_in_app).toBe(2);
+  expect(r.invite[0].whatsapp_url).toMatch(/^https:\/\/wa\.me\/91\d{10}\?text=/);
+  const ups = await run(api.myUpdates());
+  expect(ups[0].org).toBe('Demo Realty Dhokali');
+  await run(api.muteBroker('org-demo', true));
+  expect((await run(api.myUpdates())).find((u) => u.org_id === 'org-demo')?.muted).toBe(true);
+});
