@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 import { useSession } from '@/auth/session';
 import { indianMobile } from '@/lib/format';
 import type { TxnType } from '@/api';
-import { Button, Chip, ChipRow, ErrorBox, Field, Notice, P, Screen } from '@/ui/components';
+import { Button, Card, Chip, ChipRow, ErrorBox, Field, Notice, P, Screen } from '@/ui/components';
 import { font, space, usePalette } from '@/ui/theme';
 
 export default function Login() {
@@ -42,7 +42,7 @@ export default function Login() {
     try {
       const t = await api.verifyOtp(mobile!, code.trim());
       await signIn(t);
-      if (t.org) router.replace('/');
+      if (t.org || t.role === 'owner') router.replace('/');
       else setStep('register'); // signed in, but not yet part of a broker agency
     } catch (e) {
       setError(e);
@@ -51,7 +51,20 @@ export default function Login() {
     }
   }
 
-  async function register() {
+  async function becomeOwner() {
+    setBusy(true);
+    setError(null);
+    try {
+      await signIn(await api.switchRole('owner'));
+      router.replace('/');
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+    async function register() {
     setBusy(true);
     setError(null);
     try {
@@ -95,7 +108,12 @@ export default function Login() {
           </>
         ) : step === 'register' ? (
           <>
-            <P>Welcome! Register your agency to start. (Field staff: ask your principal to add your number instead.)</P>
+            <Card>
+              <P style={{ fontWeight: '700' }}>Own a flat?</P>
+              <P small muted>Add your flat, upload photos and choose which brokers may handle it.</P>
+              <Button kind="secondary" title="I’m a property owner" onPress={becomeOwner} busy={busy} testID="i-am-owner" />
+            </Card>
+            <P>Broker? Register your agency to start. (Field staff: ask your principal to add your number instead.)</P>
             <Field label="Agency / your name" value={agency} onChangeText={setAgency} placeholder="Suresh Realty" />
             <Field label="MahaRERA agent number (optional for rentals)" value={rera} onChangeText={setRera} autoCapitalize="characters" placeholder="A51700000001" />
             <P small style={{ fontWeight: '600' }}>You handle</P>
@@ -127,7 +145,7 @@ export default function Login() {
         <View style={{ marginTop: space.xl, gap: space.sm }}>
           {settings.demo ? (
             <Notice tone="warn">
-              Demo mode: sample Thane West data, nothing leaves this device. Brokers: 9820000001 · Field staff: 9820010000 · OTP 123456
+              Demo mode: sample Thane West data, nothing leaves this device. Broker: 9820000001 · Field staff: 9820010000 · Owner: 9820020000 · OTP 123456
             </Notice>
           ) : (
             <Button kind="secondary" title="Try the demo" onPress={tryDemo} testID="try-demo" />

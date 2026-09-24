@@ -13,10 +13,11 @@ const icon = (name: IconName) =>
   };
 
 export default function BrokerTabs() {
-  const { tokens, isStaff } = useSession();
+  const { tokens, isStaff, isOwner } = useSession();
   const c = usePalette();
   if (!tokens) return <Redirect href="/login" />;
   if (isStaff) return <Redirect href="/day" />;
+  if (isOwner) return <Redirect href="/my-flats" />;
   return (
     <Tabs
       screenOptions={{

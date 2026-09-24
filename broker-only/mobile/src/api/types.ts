@@ -1,7 +1,7 @@
 // Shapes returned by the Only Broker API (/v1). Kept in step with backend/apps/*/api.py.
 
 export type TxnType = 'RENT' | 'SALE_NEW' | 'SALE_RESALE';
-export type Role = 'customer' | 'broker_principal' | 'broker_manager' | 'broker_staff';
+export type Role = 'customer' | 'owner' | 'broker_principal' | 'broker_manager' | 'broker_staff';
 export type UnitState = 'UNKNOWN' | 'AVAILABLE' | 'AVAILABLE_UNCONFIRMED' | 'ON_HOLD' | 'LET' | 'SOLD' | 'OFF_MARKET';
 
 export interface Tokens {
@@ -65,6 +65,9 @@ export interface Listing {
   private_notes?: string;
   keys?: { holder_type: string; holder_user_id: string | null; instructions: string | null; needs_handover: boolean } | null;
   attributes?: Record<string, ResolvedAttr>;
+  owner_appointed?: boolean;
+  owner_withdrew?: boolean;
+  media?: MediaItem[];
 }
 
 export interface NewListing {
@@ -85,6 +88,100 @@ export interface NewListing {
   keys?: { holder_type: string; instructions?: string };
   /** Save despite layout warnings (never overrides a verified layout). */
   confirm_layout?: boolean;
+}
+
+// --- Owners (OWN-01..06; founder decisions D13/D14) ---------------------------------------------
+
+/** A picked photo/video/document ready to upload: `file` on the web, `uri` on phones. */
+export interface UploadFile {
+  uri: string;
+  name: string;
+  type: string;
+  file?: Blob;
+}
+
+export interface MediaItem {
+  id: string;
+  kind: 'photo' | 'video';
+  url: string;
+  thumb_url: string;
+  content_type: string;
+  width: number | null;
+  height: number | null;
+  caption: string;
+  created_at: string;
+}
+
+export interface OwnerTerms {
+  txn_type?: TxnType;
+  expected_rent?: number;
+  expected_price?: number;
+  deposit?: number;
+  available_from?: string;
+  note?: string;
+}
+
+/** A broker firm handling the owner's flat, as the owner sees it (read-only status, B). */
+export interface OwnerBroker {
+  org_id: string;
+  name: string;
+  contact: string;
+  rating: number;
+  rating_count: number;
+  since: string;
+  owner_appointed: boolean;
+  /** The owner's "Allowed to handle my property" tick. Unticked = the firm lost the flat. */
+  allowed: boolean;
+  asked_back: string;
+}
+
+export interface OwnerFlat {
+  id: string;
+  unit_id: string;
+  society: string;
+  society_id: string;
+  locality: string;
+  building: string;
+  unit_no: string;
+  floor: number | null;
+  bhk: number;
+  claim_status: 'declared' | 'verified' | 'pending';
+  terms: OwnerTerms;
+  photo_count: number;
+  video_count: number;
+  statuses: { txn_type: TxnType; state: UnitState; label: string }[];
+  brokers: OwnerBroker[];
+  invites?: { id: string; org_id: string; name: string; state: string; sent_at: string }[];
+  media?: MediaItem[];
+  proof_on_file?: boolean;
+}
+
+export interface NearbyBroker {
+  org_id: string;
+  name: string;
+  rating: number;
+  rating_count: number;
+  closures: number;
+  median_response_min: number | null;
+  rera_verified: boolean;
+  serving: boolean;
+  withdrawn: boolean;
+}
+
+/** Broker side: an owner who ticked "Allow this broker to handle my property". */
+export interface OwnerInvite {
+  id: string;
+  state: 'pending' | 'accepted' | 'declined' | 'cancelled';
+  society: string;
+  locality: string;
+  building: string;
+  unit_no: string;
+  bhk: number;
+  txn_type: TxnType;
+  terms: OwnerTerms;
+  owner_name: string;
+  allowed_at: string;
+  listing_id: string | null;
 }
 
 /** "HE A-1203" → the broker's own flats only. A flat not in their list is simply not found. */
@@ -272,7 +369,7 @@ export interface Api {
   requestOtp(phone: string): Promise<{ dev_code?: string }>;
   verifyOtp(phone: string, code: string, displayName?: string): Promise<Tokens>;
   me(): Promise<Me>;
-  switchRole(role: 'broker' | 'customer', orgId?: string): Promise<Tokens>;
+  switchRole(role: 'broker' | 'customer' | 'owner', orgId?: string): Promise<Tokens>;
   registerOrg(body: { name: string; txn_types: TxnType[]; rera_agent_no?: string; office_address?: string }): Promise<{ tokens: Tokens }>;
 
   listings(params?: { txn_type?: TxnType; status?: string }): Promise<Listing[]>;
@@ -284,6 +381,20 @@ export interface Api {
 
   searchSocieties(q: string): Promise<SocietyCandidate[]>;
   searchFlats(q: string): Promise<FlatSearchResult>;
+  askOwnerBack(listingId: string, note: string): Promise<{ detail: string }>;
+  ownerInvites(): Promise<OwnerInvite[]>;
+  respondInvite(id: string, action: 'accept' | 'decline'): Promise<OwnerInvite>;
+
+  ownerFlats(): Promise<OwnerFlat[]>;
+  ownerFlat(id: string): Promise<OwnerFlat>;
+  registerFlat(b: { society_id: string; wing?: string; unit_no: string; bhk: string; declared: boolean; proof: UploadFile }): Promise<OwnerFlat>;
+  setOwnerTerms(id: string, terms: OwnerTerms, houseRules: Record<string, string>): Promise<OwnerFlat>;
+  uploadMedia(id: string, file: UploadFile): Promise<MediaItem>;
+  deleteMedia(mediaId: string): Promise<void>;
+  brokersNearby(id: string): Promise<NearbyBroker[]>;
+  inviteBroker(id: string, orgId: string, allow: boolean): Promise<{ id: string; state: string; allowed_at: string }>;
+  setBrokerAllowed(id: string, orgId: string, allowed: boolean, reason?: string): Promise<OwnerFlat>;
+  reviewBroker(id: string, orgId: string, stars: number, text?: string): Promise<{ id: string; stars: number }>;
   wings(societyId: string): Promise<{ wings: Wing[]; wings_complete: boolean }>;
   checkFlat(societyId: string, p: { wing?: string; unit_no: string; floor?: number }): Promise<FlatCheck>;
   reportLayout(buildingId: string, body: { unit_no: string; note?: string }): Promise<{ detail: string }>;

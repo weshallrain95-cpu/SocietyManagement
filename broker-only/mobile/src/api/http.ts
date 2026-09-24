@@ -1,5 +1,5 @@
 // HTTP implementation of the Api contract against the Django backend.
-import type { Api, Tokens, Wing } from './types';
+import type { Api, Tokens, UploadFile, Wing } from './types';
 
 export class ApiError extends Error {
   constructor(
@@ -14,6 +14,12 @@ export class ApiError extends Error {
 export interface TokenStore {
   get(): Tokens | null;
   set(tokens: Tokens | null): void;
+}
+
+/** Web pickers give a File; phones give a local uri that React Native's FormData uploads itself. */
+function appendFile(f: FormData, field: string, u: UploadFile) {
+  if (u.file) f.append(field, u.file, u.name);
+  else f.append(field, { uri: u.uri, name: u.name, type: u.type } as unknown as Blob);
 }
 
 function detail(body: unknown, status: number): string {
@@ -54,11 +60,12 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
   async function call<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
     const t = tokens.get();
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const form = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (body !== undefined && !form) headers['Content-Type'] = 'application/json';
     if (t?.access) headers.Authorization = `Bearer ${t.access}`;
     let r: Response;
     try {
-      r = await fetch(`${root}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      r = await fetch(`${root}${path}`, { method, headers, body: body === undefined ? undefined : form ? (body as FormData) : JSON.stringify(body) });
     } catch {
       throw new ApiError(0, 'No connection to the server. Check your internet and try again.');
     }
@@ -96,6 +103,35 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
 
     searchSocieties: async (q) => (await get<{ results: never[] }>(`/societies/search${qs({ q })}`)).results,
     searchFlats: (q) => get(`/listings/search${qs({ q })}`),
+    askOwnerBack: (lid, note) => post(`/listings/${lid}/ask-owner-back`, { note }),
+    ownerInvites: () => get('/owner-invites'),
+    respondInvite: (iid, action) => post(`/owner-invites/${iid}/${action}`),
+
+    ownerFlats: () => get('/owner/flats'),
+    ownerFlat: (fid) => get(`/owner/flats/${fid}`),
+    registerFlat: (b) => {
+      const f = new FormData();
+      f.append('society_id', b.society_id);
+      if (b.wing) f.append('wing', b.wing);
+      f.append('unit_no', b.unit_no);
+      f.append('bhk', b.bhk);
+      f.append('declared', b.declared ? 'true' : 'false');
+      appendFile(f, 'proof', b.proof);
+      return call('POST', '/owner/flats', f);
+    },
+    setOwnerTerms: (fid, terms, house_rules) => call('PUT', `/owner/flats/${fid}/terms`, { terms, house_rules }),
+    uploadMedia: (fid, file) => {
+      const f = new FormData();
+      appendFile(f, 'file', file);
+      return call('POST', `/owner/flats/${fid}/media`, f);
+    },
+    deleteMedia: async (mid) => {
+      await call('DELETE', `/owner/media/${mid}`);
+    },
+    brokersNearby: (fid) => get(`/owner/flats/${fid}/brokers`),
+    inviteBroker: (fid, org_id, allow) => post(`/owner/flats/${fid}/invite`, { org_id, allow }),
+    setBrokerAllowed: (fid, oid, allowed, reason) => post(`/owner/flats/${fid}/brokers/${oid}/allowed`, { allowed, reason }),
+    reviewBroker: (fid, oid, stars, text) => post(`/owner/flats/${fid}/brokers/${oid}/review`, { stars, text }),
     wings: async (sid) => {
       const s = await get<{ buildings: Wing[]; wings_complete: boolean }>(`/societies/${sid}`);
       return { wings: s.buildings.map(({ id, name, layout }) => ({ id, name, layout })), wings_complete: s.wings_complete };

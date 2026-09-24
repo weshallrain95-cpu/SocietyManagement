@@ -39,6 +39,9 @@ function Shell() {
         <Stack.Screen name="match/[reqId]" options={{ title: 'Matching flats' }} />
         <Stack.Screen name="visit/[id]" options={{ title: 'Visit plan' }} />
         <Stack.Screen name="visit/new" options={{ title: 'Plan a visit' }} />
+        <Stack.Screen name="owner/new" options={{ title: 'Add my flat' }} />
+        <Stack.Screen name="owner/[id]" options={{ title: 'My flat' }} />
+        <Stack.Screen name="owner/brokers" options={{ title: 'Brokers near my flat' }} />
         <Stack.Screen name="lead/[id]" options={{ title: 'Enquiry' }} />
       </Stack>
       <LiveBanner />

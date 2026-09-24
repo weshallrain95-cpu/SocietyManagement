@@ -21,6 +21,7 @@ interface Session {
   tokens: Tokens | null;
   role: Role | null;
   isStaff: boolean;
+  isOwner: boolean;
   settings: Settings;
   queue: OfflineQueue;
   lastEvent: LiveEvent | null;
@@ -100,7 +101,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value: Session = {
-    ready, api, tokens, role: tokens?.role ?? null, isStaff: tokens?.role === 'broker_staff', settings, queue, lastEvent,
+    ready, api, tokens, role: tokens?.role ?? null, isStaff: tokens?.role === 'broker_staff', isOwner: tokens?.role === 'owner', settings, queue, lastEvent,
     signIn, signOut, updateSettings, dismissEvent: () => setLastEvent(null),
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

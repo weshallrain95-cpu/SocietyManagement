@@ -3,7 +3,7 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
+  MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
 import { checkFlat, parseUnitNo } from '@/lib/layout';
@@ -186,9 +186,61 @@ function demoMatch(req: Requirement): MatchResult[] {
     .sort((a, b) => Number(a.excluded) - Number(b.excluded) || b.score - a.score);
 }
 
+// --- Owner demo data: Mrs Kulkarni owns Hiranandani Estate A Wing 1203 (the flat Demo Realty lists as lst-1). ---
+// Photos are drawn placeholders, clearly marked as samples.
+function samplePhoto(label: string, hue: number): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="480"><rect width="640" height="480" fill="hsl(${hue},35%,78%)"/>`
+    + `<rect x="60" y="250" width="520" height="150" fill="hsl(${hue},25%,62%)"/><rect x="380" y="70" width="170" height="130" fill="hsl(200,60%,88%)" stroke="#fff" stroke-width="8"/>`
+    + `<text x="40" y="60" font-family="sans-serif" font-size="34" fill="#15201F">${label}</text>`
+    + `<text x="40" y="455" font-family="sans-serif" font-size="20" fill="#15201F">Sample photo (demo)</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+}
+const photo = (id: string, label: string, hue: number): MediaItem => {
+  const url = samplePhoto(label, hue);
+  return { id, kind: 'photo', url, thumb_url: url, content_type: 'image/svg+xml', width: 640, height: 480, caption: label, created_at: new Date().toISOString() };
+};
+
 export function createDemoApi(): Api {
   const tokens: Tokens = { access: 'demo', refresh: 'demo', role: 'broker_principal', org: 'org-demo' };
   let online = false;
+  const ownerMedia: MediaItem[] = [photo('med-1', 'Living room', 28), photo('med-2', 'Kitchen', 140), photo('med-3', 'View from balcony', 205)];
+  const ownerFlats: OwnerFlat[] = [{
+    id: 'own-1', unit_id: 'unit-1', society: 'Hiranandani Estate', society_id: 'soc-0', locality: 'Hiranandani Estate', building: 'A Wing',
+    unit_no: '1203', floor: 12, bhk: 2, claim_status: 'declared', terms: { txn_type: 'RENT', expected_rent: 24000, deposit: 72000 },
+    photo_count: 3, video_count: 0, statuses: [{ txn_type: 'RENT', state: 'AVAILABLE', label: 'Available for rent' }],
+    brokers: [
+      { org_id: 'org-demo', name: 'Demo Realty Dhokali', contact: '+91 98200 00001', rating: 4.6, rating_count: 23, since: '2026-08-02T10:00:00+05:30', owner_appointed: false, allowed: true, asked_back: '' },
+      { org_id: 'org-omsai', name: 'Om Sai Estate Agents', contact: '+91 98200 00002', rating: 4.1, rating_count: 9, since: '2026-09-10T10:00:00+05:30', owner_appointed: false, allowed: true, asked_back: '' },
+    ],
+    invites: [], media: ownerMedia, proof_on_file: true,
+  }];
+  const nearby: NearbyBroker[] = [
+    { org_id: 'org-demo', name: 'Demo Realty Dhokali', rating: 4.6, rating_count: 23, closures: 41, median_response_min: 6, rera_verified: true, serving: true, withdrawn: false },
+    { org_id: 'org-shree', name: 'Shree Ganesh Properties', rating: 4.8, rating_count: 31, closures: 57, median_response_min: 4, rera_verified: true, serving: false, withdrawn: false },
+    { org_id: 'org-omsai', name: 'Om Sai Estate Agents', rating: 4.1, rating_count: 9, closures: 12, median_response_min: 15, rera_verified: false, serving: true, withdrawn: false },
+    { org_id: 'org-thane', name: 'Thane Homes & Rentals', rating: 0, rating_count: 0, closures: 0, median_response_min: null, rera_verified: true, serving: false, withdrawn: false },
+  ];
+  const invites: OwnerInvite[] = [{
+    id: 'inv-1', state: 'pending', society: 'Hiranandani Meadows', locality: 'Pokhran Road', building: 'B Wing', unit_no: '704', bhk: 2,
+    txn_type: 'RENT', terms: { txn_type: 'RENT', expected_rent: 32000, deposit: 96000, available_from: indiaDate(10) }, owner_name: 'Mr Deshpande',
+    allowed_at: new Date().toISOString(), listing_id: null,
+  }];
+  // Owner decisions reach the broker's own listing of the same flat (lst-1 is unit-1).
+  const syncListingFromOwner = (f: OwnerFlat) => {
+    const l = listings.find((x) => x.unit_id === f.unit_id);
+    if (!l) return;
+    const me = f.brokers.find((b) => b.org_id === 'org-demo');
+    l.owner_withdrew = me ? !me.allowed : false;
+    l.media = l.owner_withdrew ? [] : clone(f.media ?? []);
+  };
+  syncListingFromOwner(ownerFlats[0]);
+  const flat = (fid: string) => {
+    const f = ownerFlats.find((x) => x.id === fid);
+    if (!f) throw new Error('Not found');
+    return f;
+  };
+  const summary = (f: OwnerFlat): OwnerFlat => ({ ...clone(f), photo_count: (f.media ?? []).filter((m) => m.kind === 'photo').length, video_count: (f.media ?? []).filter((m) => m.kind === 'video').length });
+
   return {
     mode: 'demo',
     async requestOtp() {
@@ -198,13 +250,14 @@ export function createDemoApi(): Api {
     async verifyOtp(phone, code) {
       await wait();
       if (code !== '123456') throw new Error('Incorrect OTP. In the demo the code is 123456.');
+      if (phone.endsWith('0020000')) return { ...tokens, role: 'owner', org: null };
       return { ...tokens, role: phone.endsWith('0010000') ? 'broker_staff' : 'broker_principal' };
     },
     async me() {
       return { id: 'usr-me', display_name: 'Demo Broker', phone_masked: '+91 ••••• 001', memberships: [{ org_id: 'org-demo', org_name: 'Demo Realty Dhokali', role: 'broker_principal' }], active_role: 'broker_principal', active_org_id: 'org-demo' };
     },
-    async switchRole() {
-      return tokens;
+    async switchRole(role) {
+      return role === 'owner' ? { ...tokens, role: 'owner', org: null } : tokens;
     },
     async registerOrg() {
       await wait();
@@ -284,6 +337,115 @@ export function createDemoApi(): Api {
         .sort((a, b) => Number(a.unit_no.toUpperCase() !== unitNo) - Number(b.unit_no.toUpperCase() !== unitNo)
           || Number(!!wing && !a.building.toUpperCase().startsWith(wing)) - Number(!!wing && !b.building.toUpperCase().startsWith(wing)));
       return clone({ results: hits.slice(0, 20), unit_no: unitNo, wing });
+    },
+    async askOwnerBack(lid, note) {
+      await wait();
+      const l = listings.find((x) => x.id === lid);
+      const f = ownerFlats.find((x) => x.unit_id === l?.unit_id);
+      const b = f?.brokers.find((x) => x.org_id === 'org-demo');
+      if (!b || b.allowed) throw new ApiError(400, 'The owner has not removed your firm from this flat');
+      b.asked_back = note;
+      return { detail: 'Sent. The owner will decide.' };
+    },
+    async ownerInvites() {
+      await wait(120);
+      return clone(invites.filter((i) => i.state === 'pending'));
+    },
+    async respondInvite(iid, action) {
+      await wait();
+      const inv = invites.find((i) => i.id === iid)!;
+      if (inv.state !== 'pending') throw new ApiError(400, 'This invitation is no longer open');
+      if (action === 'decline') {
+        inv.state = 'declined';
+        return clone(inv);
+      }
+      const soc = SOCIETIES.find((x) => x.name === inv.society) ?? SOCIETIES[0];
+      const l = mkListing(++seq, soc, inv.unit_no, inv.bhk, inv.terms.expected_rent ?? 0, 'AVAILABLE_UNCONFIRMED', {});
+      Object.assign(l, { building: inv.building, origin: 'owner_invite', owner_appointed: true, owner_name: inv.owner_name, deposit: inv.terms.deposit ?? null });
+      listings.unshift(l);
+      inv.state = 'accepted';
+      inv.listing_id = l.id;
+      return clone({ ...inv, listing_id: l.id });
+    },
+
+    async ownerFlats() {
+      await wait(120);
+      return ownerFlats.map(summary);
+    },
+    async ownerFlat(fid) {
+      await wait(80);
+      return summary(flat(fid));
+    },
+    async registerFlat(b) {
+      await wait();
+      if (!b.declared) throw new ApiError(400, 'Please confirm that you own this flat');
+      const soc = SOCIETIES.find((x) => x.society_id === b.society_id) ?? SOCIETIES[0];
+      const w = WINGS[soc.society_id];
+      const chk = checkFlat(soc.name, w.wings, w.wings_complete, b.wing, b.unit_no);
+      if (chk.blocking) throw new ApiError(400, chk.issues.find((i) => i.blocking)!.message);
+      const f: OwnerFlat = {
+        id: id('own'), unit_id: id('unit'), society: soc.name, society_id: soc.society_id, locality: soc.locality, building: chk.wing ?? 'Main',
+        unit_no: parseUnitNo(b.unit_no).unitNo, floor: parseUnitNo(b.unit_no).floor, bhk: Number(b.bhk), claim_status: 'declared', terms: {},
+        photo_count: 0, video_count: 0, statuses: [], brokers: [], invites: [], media: [], proof_on_file: true,
+      };
+      ownerFlats.unshift(f);
+      return summary(f);
+    },
+    async setOwnerTerms(fid, terms) {
+      await wait();
+      const f = flat(fid);
+      f.terms = { ...terms };
+      return summary(f);
+    },
+    async uploadMedia(fid, file) {
+      await wait(400);
+      const f = flat(fid);
+      const kind = file.type.startsWith('video/') ? 'video' : 'photo';
+      const m: MediaItem = { id: id('med'), kind, url: file.uri, thumb_url: file.uri, content_type: file.type, width: null, height: null, caption: '', created_at: now() };
+      f.media = [...(f.media ?? []), m];
+      syncListingFromOwner(f);
+      return clone(m);
+    },
+    async deleteMedia(mid) {
+      for (const f of ownerFlats) {
+        f.media = (f.media ?? []).filter((m) => m.id !== mid);
+        syncListingFromOwner(f);
+      }
+    },
+    async brokersNearby(fid) {
+      await wait(150);
+      const f = flat(fid);
+      return clone(nearby.map((n) => {
+        const b = f.brokers.find((x) => x.org_id === n.org_id);
+        return { ...n, serving: !!b?.allowed, withdrawn: !!b && !b.allowed };
+      }));
+    },
+    async inviteBroker(fid, orgId, allow) {
+      await wait();
+      if (!allow) throw new ApiError(400, 'Tick “Allow this broker to handle my property” first');
+      const f = flat(fid);
+      const n = nearby.find((x) => x.org_id === orgId)!;
+      const existing = f.brokers.find((b) => b.org_id === orgId);
+      if (existing) existing.allowed = true;
+      f.invites = [...(f.invites ?? []), { id: id('inv'), org_id: orgId, name: n.name, state: 'pending', sent_at: now() }];
+      syncListingFromOwner(f);
+      return { id: id('inv'), state: 'pending', allowed_at: now() };
+    },
+    async setBrokerAllowed(fid, orgId, allowed) {
+      await wait();
+      const f = flat(fid);
+      const b = f.brokers.find((x) => x.org_id === orgId);
+      if (b) {
+        b.allowed = allowed;
+        if (allowed) b.asked_back = '';
+      }
+      syncListingFromOwner(f);
+      return summary(f);
+    },
+    async reviewBroker(_fid, _orgId, stars) {
+      await wait();
+      if (stars < 1 || stars > 5) throw new ApiError(400, 'Stars must be 1 to 5');
+      return { id: id('rev'), stars };
     },
     async wings(sid) {
       return clone(WINGS[sid] ?? { wings: [], wings_complete: false });

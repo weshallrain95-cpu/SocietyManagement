@@ -120,6 +120,28 @@ export function Chip({ label, selected, onPress, tone }: { label: string; select
   );
 }
 
+/** A tick box with its label — used where the owner's tick is the decision ("Allow this broker…"). */
+export function Tick({ label, checked, onChange, testID }: { label: string; checked: boolean; onChange: (v: boolean) => void; testID?: string }) {
+  const c = usePalette();
+  return (
+    <Pressable
+      onPress={() => onChange(!checked)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      testID={testID}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 40 }}
+    >
+      <View style={{
+        width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: checked ? c.brand : c.border,
+        backgroundColor: checked ? c.brand : c.surface, alignItems: 'center', justifyContent: 'center',
+      }}>
+        {checked ? <Text style={{ color: c.brandText, fontWeight: '800', fontSize: 15 }}>✓</Text> : null}
+      </View>
+      <Text style={{ color: c.text, fontSize: font.body, flexShrink: 1 }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function ChipRow({ children }: { children: React.ReactNode }) {
   return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>{children}</View>;
 }

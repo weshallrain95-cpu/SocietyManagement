@@ -4,13 +4,16 @@ import React from 'react';
 
 import { useSession } from '@/auth/session';
 import { ago } from '@/lib/format';
-import { Card, Chip, Empty, ErrorBox, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { Card, Chip, Empty, ErrorBox, H2, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { OwnerInvites } from '@/ui/OwnerInvites';
 
 export default function Leads() {
   const { api } = useSession();
   const q = useQuery({ queryKey: ['leads'], queryFn: api.leads });
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isFetching}>
+      <OwnerInvites />
+      <H2>Customer enquiries</H2>
       <Notice>Enquiries from customers near your service area. You see how many of YOUR flats match; the customer sees your terms and rating.</Notice>
       {q.isLoading ? <Loading /> : q.error ? <ErrorBox error={q.error} onRetry={q.refetch} /> : null}
       {q.data?.length === 0 ? <Empty title="No enquiries yet" body="Stay online (More → Online) to get enquiries the moment they are posted." /> : null}

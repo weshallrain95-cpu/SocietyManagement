@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import React from 'react';
-import { Alert, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Image, Linking, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { bhk, inr, statusTone } from '@/lib/format';
-import { Button, Card, Chip, ChipRow, ErrorBox, H1, H2, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { Button, Card, Chip, ChipRow, ErrorBox, Field, H1, H2, Loading, Notice, P, Row, Screen } from '@/ui/components';
+import { usePalette } from '@/ui/theme';
 
 const KEY_LABEL: Record<string, string> = { office: 'At my office', owner: 'With the owner', staff: 'With field staff', society_office: 'Society office', lockbox: 'Lock-box', neighbour: 'Neighbour' };
 
@@ -30,6 +31,9 @@ export default function ListingDetail() {
     },
   });
   const reconfirm = useMutation({ mutationFn: () => api.reconfirm(id), onSuccess: () => q.refetch() });
+  const [note, setNote] = useState('');
+  const askBack = useMutation({ mutationFn: () => api.askOwnerBack(id, note) });
+  const c = usePalette();
 
   if (q.isLoading) return <Screen><Loading /></Screen>;
   if (q.error || !q.data) return <Screen><ErrorBox error={q.error} onRetry={q.refetch} /></Screen>;
@@ -46,7 +50,43 @@ export default function ListingDetail() {
         <Chip label={l.status_label} tone={statusTone(l.status)} />
         <Chip label={`${inr(l.asking_rent ?? l.asking_price, rent)}`} />
         {l.deposit ? <Chip label={`Deposit ${inr(l.deposit)}`} /> : null}
+        {l.owner_appointed ? <Chip label="Owner-appointed" tone="ok" /> : null}
       </Row>
+
+      {l.owner_withdrew ? (
+        <Card style={{ borderWidth: 2 }}>
+          <P style={{ fontWeight: '700' }}>The owner removed your firm from this flat</P>
+          <P small muted>It is hidden from matching, search and visit plans. You can’t add it again unless the owner allows you. If something went wrong, put it right and ask the owner — their decision is final.</P>
+          {askBack.isSuccess ? <Notice tone="ok">Sent. The owner will decide.</Notice> : (
+            <>
+              <Field label="Message to the owner" value={note} onChangeText={setNote} placeholder="e.g. Sorry for the missed call — I’ve assigned a new staff member" multiline />
+              <Button small title="Ask to be added back" disabled={!note.trim()} onPress={() => askBack.mutate()} busy={askBack.isPending} />
+            </>
+          )}
+          {askBack.error ? <ErrorBox error={askBack.error} /> : null}
+        </Card>
+      ) : null}
+
+      {l.media?.length ? (
+        <>
+          <H2>Owner’s photos & videos</H2>
+          <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
+            {l.media.map((m) => (
+              <Pressable key={m.id} onPress={() => Linking.openURL(m.url)} accessibilityLabel={m.kind === 'video' ? 'Play video' : 'Open photo'}>
+                {m.kind === 'photo' ? (
+                  <Image source={{ uri: m.thumb_url }} style={{ width: 150, height: 112, borderRadius: 8, backgroundColor: c.border }} />
+                ) : (
+                  <View style={{ width: 150, height: 112, borderRadius: 8, backgroundColor: c.brand, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: c.brandText, fontSize: 28 }}>▶</Text>
+                    <Text style={{ color: c.brandText, fontSize: 12 }}>Walkthrough video</Text>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </ScrollView>
+          <P small muted>Uploaded by the owner. Shown on the shortlist pages you send customers (never the flat number).</P>
+        </>
+      ) : null}
 
       <H2>Status</H2>
       {l.status === 'AVAILABLE_UNCONFIRMED' ? <Notice tone="warn">Waiting for the owner’s YES. Owners confirm from a WhatsApp link — no app needed.</Notice> : null}

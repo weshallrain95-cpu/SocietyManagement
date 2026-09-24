@@ -33,7 +33,14 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Only Broker uses your photos so you can add pictures and videos of your flat.",
+          "cameraPermission": "Only Broker uses the camera so you can photograph your flat."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false

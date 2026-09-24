@@ -236,6 +236,20 @@ shows the columns; the full list is in that file.
 **`media`**: `owner_type/owner_id` (unit / listing / society), `kind` (`photo`, `video`,
 `floor_plan`, `document`), `storage_key`, `hls_key`, `visibility` (`private_org`, `master_public`),
 `uploaded_by`, `exif_stripped bool`.
+*Built so far as `owners_unitmedia`*: `unit_id`, `claim_id`, `kind` (`photo`, `video`, `document`),
+`file`, `thumb`, `content_type`, `size_bytes`, `width`, `height`, `caption`, `uploaded_by`,
+`deleted_at`. Photos are re-encoded on upload (EXIF removed); documents are private to the owner.
+
+**`owner_invite`** (firm-private, RLS): `broker_org_id`, `unit_id`, `owner_id`, `txn_type`,
+`terms jsonb`, `allowed_at` (the owner's "Allow this broker to handle my property" tick — required),
+`state` (`pending`, `accepted`, `declined`, `cancelled`), `listing_id`, `responded_at`.
+
+**`owner_withdrawal`** (firm-private, RLS): `broker_org_id`, `unit_id`, `owner_id`, `reason`,
+`active` (one active row per firm and flat blocks the firm from holding or re-adding it),
+`reinstated_at`, `ask_note`, `asked_at` (the broker's request to be added back).
+
+`ownership_claim` also carries `terms jsonb` (the owner's preferred rent/price, deposit,
+availability) and the status `declared` (proof uploaded, not checked — D14).
 
 ### 3.3 Unit status (see §4 for the state machine)
 

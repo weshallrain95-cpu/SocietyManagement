@@ -134,3 +134,14 @@ python manage.py import_building_layouts layouts.xlsx --mark-complete  # "these 
 Societies must already exist; unknown names are listed back, never created. Ops can also edit a
 wing's layout on the society page of the ops console (`/ops/societies/...`). Only wings marked
 *Verified* refuse impossible flat numbers; the others only warn the broker.
+
+## 11. Owner photos, videos and proof documents
+
+Uploaded files are stored under `backend/media_store/` on the laptop (never committed; set
+`OB_MEDIA_ROOT` to move it). They are private: the app gets short-lived signed links (`/m/...`).
+Videos are stored as uploaded, up to `OB_MAX_VIDEO_MB` (150 MB). Owner photos on customer
+shortlist pages can be switched off with `OB_OWNER_MEDIA_ON_CUSTOMER_LINKS=false`.
+On the production server the same code stores files in S3 (docs/04); video conversion for smooth
+streaming comes with it.
+
+Demo logins now include an owner: `9820020000` (OTP 123456 in demo mode).

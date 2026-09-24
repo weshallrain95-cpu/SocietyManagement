@@ -56,3 +56,31 @@ test('staff find a flat by society nickname and number, and add it to a plan', a
   const after = (await run(api.planAction(p.id, 'add-stop', { listing_id: r.results[0].id }))) as { stops: { listing_id: string }[] };
   expect(after.stops.some((s) => s.listing_id === r.results[0].id)).toBe(true);
 });
+
+test('owner removes a broker; that broker loses the flat until allowed again', async () => {
+  const api = createDemoApi();
+  expect((await run(api.verifyOtp('9820020000', '123456'))).role).toBe('owner');
+  const [flat] = await run(api.ownerFlats());
+  expect(flat.brokers.map((b) => b.name)).toContain('Demo Realty Dhokali');
+  expect((await run(api.listing('lst-1'))).media?.length).toBe(3); // owner photos reach the broker holding the flat
+  await run(api.setBrokerAllowed(flat.id, 'org-demo', false, 'not responsive'));
+  const l = await run(api.listing('lst-1'));
+  expect(l.owner_withdrew).toBe(true);
+  expect(l.media).toEqual([]);
+  await run(api.askOwnerBack('lst-1', 'Sorry — new staff member assigned'));
+  expect((await run(api.ownerFlat(flat.id))).brokers.find((b) => b.org_id === 'org-demo')?.asked_back).toMatch(/new staff/);
+  await run(api.setBrokerAllowed(flat.id, 'org-demo', true));
+  expect((await run(api.listing('lst-1'))).owner_withdrew).toBe(false);
+});
+
+test('an invitation needs the owner’s allow tick; the broker accepts it into their own flats', async () => {
+  const api = createDemoApi();
+  const [flat] = await run(api.ownerFlats());
+  await expect(run(api.inviteBroker(flat.id, 'org-shree', false))).rejects.toMatchObject({ status: 400 });
+  expect((await run(api.inviteBroker(flat.id, 'org-shree', true))).state).toBe('pending');
+  const [inv] = await run(api.ownerInvites());
+  const r = await run(api.respondInvite(inv.id, 'accept'));
+  const l = await run(api.listing(r.listing_id!));
+  expect(l.owner_appointed).toBe(true);
+  expect(l.society).toBe('Hiranandani Meadows');
+});

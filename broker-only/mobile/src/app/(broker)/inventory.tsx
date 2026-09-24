@@ -36,6 +36,7 @@ export default function Inventory() {
           <Row>
             <Chip label={l.status_label} tone={statusTone(l.status)} />
             {l.stale ? <Chip label="Reconfirm" tone="warn" /> : null}
+            {l.owner_withdrew ? <Chip label="Owner removed you" tone="bad" /> : l.owner_appointed ? <Chip label="Owner-appointed" tone="ok" /> : null}
           </Row>
         </Card>
       ))}

@@ -48,6 +48,7 @@ because it was built in one push:
 | **Pin-check page for the pilot broker** (online link; answers applied with `apply_pin_review`) | ✅ Done |
 | **Building layouts and flat-number checks** (MD-13): wing picker in the app, live check as the broker types, uploads refuse impossible flats, ops edits layouts, spreadsheet import + template for MahaRERA / field-survey data | ✅ Done |
 | **Pick flats yourself** (VISIT-01a): society + flat-number search on visit plans, matching and customer pages, so staff can plan tours their usual way while they learn to trust matching | ✅ Done |
+| **Owners module**: owner mode in the app — add my flat with proof, photos & walkthrough videos, preferred terms and house rules, brokers near my flat, invite with the "Allow this broker to handle my property" tick, read-only status "currently serviced by … · number · review", untick to remove a broker; broker side: invitation inbox, owner-appointed badge, owner photos, "owner removed you" with ask-to-be-added-back | ✅ Done |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 
@@ -87,6 +88,7 @@ because it was built in one push:
 | D9 | Master-data sources and licences | MahaRERA + OSM first; evaluate paid data vendors | Data quality and legal use |
 | D12 | Who may create buildings | ✅ **Decided 2026-09-24: closed universe.** Brokers and owners pick from our wings; a new name is only a request that ops approves (MD-04, MD-13) | Upload quality: typos become matches, not duplicates |
 | D13 | Who puts flats into a broker's inventory | ✅ **Decided 2026-09-24.** (A) Only the broker, manually, in any scenario; the platform never offers a flat outside the broker's inventory. When an owner chooses a broker, the owner first ticks "Allow this broker to handle my property". (B) Owners don't police who lists their flat; they see a read-only status: "Currently serviced by XYZ · contact number · review". (C) When one broker reports a flat rented/sold, other brokers holding it get an anonymous alert (STAT-02) | Keeps each broker's inventory theirs alone; protects owners without extra work for them |
+| D14 | Owner rules | ✅ **Decided 2026-09-24.** Owners upload a proof document when registering; nobody checks it (a deterrent, not a gate). Owner photos/videos go to every broker holding the flat and, as an available feature, on customer links. An owner can untick any broker (invited or self-added); that broker loses the flat and can ask to be added back — the owner's decision is final | Keeps owners in control without adding ops work |
 | D10 | Repository | Keep `broker-only/` in this repo on its own branch for now; move to a **dedicated repository** before Phase 1 code grows | Clean history and permissions; CI separation |
 
 ## 6. Immediate next steps
