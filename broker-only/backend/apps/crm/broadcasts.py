@@ -20,6 +20,7 @@ from common.notify import notify_user
 from .models import Broadcast, Customer
 
 MAX_TEXT = 500
+MAX_FLATS = 10
 
 
 class BroadcastError(Exception):
@@ -58,7 +59,17 @@ def flat_summary(listing) -> dict:
     }
 
 
-def default_text(kind: str, *, org, listing=None, locality: Locality | None = None) -> str:
+def default_text(kind: str, *, org, listing=None, locality: Locality | None = None, listings=()) -> str:
+    if kind == Broadcast.Kind.NEW_FLAT and len(listings) > 1:
+        lines = []
+        for li in listings:
+            f = flat_summary(li)
+            what = "for rent" if f["txn_type"] == "RENT" else "for sale"
+            price = f" — {f['price_label']}" if f["price_label"] else ""
+            lines.append(f"• {f['bhk']} {what} in {f['society']}, {f['locality']}{price}")
+        return "\n".join([f"New flats with {org.name}:", *lines, f"Reply to see any of them. — {org.name}"])
+    if kind == Broadcast.Kind.NEW_FLAT and listings:
+        listing = listings[0]
     if kind == Broadcast.Kind.NEW_FLAT and listing is not None:
         f = flat_summary(listing)
         what = "for rent" if f["txn_type"] == "RENT" else "for sale"
@@ -95,15 +106,20 @@ def whatsapp_link(phone_e164: str, text: str) -> str:
 
 
 @transaction.atomic
-def send(org, *, user, kind: str, text: str, listing=None, locality=None, scope: str = "all") -> tuple[Broadcast, list[dict]]:
-    text = (text or "").strip() or default_text(kind, org=org, listing=listing, locality=locality)
+def send(org, *, user, kind: str, text: str, listing=None, locality=None, scope: str = "all", listings=()) -> tuple[Broadcast, list[dict]]:
+    """One or several flats (`listings`, up to MAX_FLATS) or a single `listing`; price drop; or news."""
+    listings = list(listings) or ([listing] if listing is not None else [])
+    listing = listings[0] if listings else None
+    if len(listings) > MAX_FLATS:
+        raise BroadcastError(f"At most {MAX_FLATS} flats in one message")
+    text = (text or "").strip() or default_text(kind, org=org, listing=listing, locality=locality, listings=listings)
     if kind not in Broadcast.Kind.values:
         raise BroadcastError("Choose: new flat, price drop or news")
     if not text:
         raise BroadcastError("Write the message")
     if len(text) > MAX_TEXT:
         raise BroadcastError(f"Keep it under {MAX_TEXT} characters")
-    if listing is not None and (listing.org_id != org.pk or listing.withdrawn_by_owner or listing.archived_at):
+    if any(li.org_id != org.pk or li.withdrawn_by_owner or li.archived_at for li in listings):
         raise BroadcastError("You can only announce flats you currently handle")
     qs = audience(org, scope=scope, locality=locality)
     c = counts(qs)
@@ -114,7 +130,7 @@ def send(org, *, user, kind: str, text: str, listing=None, locality=None, scope:
         text=text,
         listing=listing,
         locality=locality,
-        audience={"scope": scope, "locality_id": str(locality.pk) if locality else None},
+        audience={"scope": scope, "locality_id": str(locality.pk) if locality else None, "listing_ids": [str(li.pk) for li in listings]},
         recipients_total=c["total"],
         delivered_in_app=c["in_app"],
         not_on_app=c["not_on_app"],
@@ -127,6 +143,7 @@ def send(org, *, user, kind: str, text: str, listing=None, locality=None, scope:
         "kind": kind,
         "text": text,
         "flat": flat_summary(listing) if listing is not None else None,
+        "flats": [flat_summary(li) for li in listings],
         "sent_at": timezone.now().isoformat(),
     }
     for cust in qs.filter(platform_user__isnull=False, updates_muted=False).select_related("platform_user"):

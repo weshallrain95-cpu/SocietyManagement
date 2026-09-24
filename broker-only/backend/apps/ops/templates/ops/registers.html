@@ -1,0 +1,41 @@
+{% extends "ops/base.html" %}
+{% block title %}Flat registers{% endblock %}
+{% block content %}
+<h1>Official flat registers</h1>
+<div class="card">
+  <p>Wings, floors and flat numbers come only from official sources, never from brokers. Upload an extract of the
+    <b>TMC property-tax register</b>, <b>MahaRERA</b> building details or <b>IGR</b> registrations. From each wing's list we work out its
+    floors, flats per floor and refuge floors, and brokers can then only add flats that are on the list.</p>
+  <p class="muted">Columns, in any order, English or Marathi headings: Society, Wing, Flat no, Floor, Carpet area, Property no, Ward.
+    Owner names, phone numbers and any other personal columns are ignored and never stored.
+    Template: <code>tools/building-layouts/flat-register-template.xlsx</code>.</p>
+  <div class="grid">
+    {% for r in by_source %}<div class="stat"><b>{{ r.n }}</b><span class="muted">flats from {{ r.label }}</span></div>{% empty %}<div class="stat"><b>0</b><span class="muted">flats on record yet</span></div>{% endfor %}
+    <div class="stat"><b>{{ wings_done }}</b><span class="muted">wings with a complete official list</span></div>
+  </div>
+</div>
+<div class="card">
+  <h2>Upload</h2>
+  <form method="post" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:10px;max-width:560px">{% csrf_token %}
+    <label>File (.xlsx or .csv) <input type="file" name="file" accept=".xlsx,.csv" required></label>
+    <label>Source <select name="source">{% for v, label in sources %}<option value="{{ v }}">{{ label }}</option>{% endfor %}</select></label>
+    {% if society %}<input type="hidden" name="society_id" value="{{ society.pk }}"><span>Every row belongs to <b>{{ society.canonical_name }}</b> <a href="{% url 'ops-registers' %}">(change)</a></span>{% endif %}
+    <label><input type="checkbox" name="complete" value="1" checked> The file lists <b>every</b> flat of each wing in it (flats not listed cannot exist)</label>
+    <label><input type="checkbox" name="dry_run" value="1" checked> Check only — don't save yet</label>
+    <div><button class="primary">Upload</button></div>
+  </form>
+</div>
+{% if result %}
+<div class="card">
+  <h2>Result</h2>
+  <div class="scroll"><table>
+    <tr><th>Society</th><th>Wing</th><th>Floors</th><th>Flats / floor</th><th>No flats on</th><th>Outside the pattern</th><th>Flats</th></tr>
+    {% for w in result.layouts %}<tr><td>{{ w.society }}</td><td>{{ w.wing }}</td><td>{{ w.lowest_floor }}–{{ w.floors_total }}</td><td>{{ w.units_per_floor }}</td>
+      <td>{{ w.skip_floors|join:", " }}</td><td>{{ w.extra_unit_nos|join:", " }}</td><td>{{ w.flats }}</td></tr>{% endfor %}
+  </table></div>
+  {% if result.unmatched %}<p><b>Society names we don't know</b> (add them as a name on the society page, then upload again):</p>
+    <ul>{% for u in result.unmatched|slice:":50" %}<li>{{ u }}</li>{% endfor %}</ul>{% endif %}
+  {% if result.ignored_columns %}<p class="muted">Ignored columns (never stored): {{ result.ignored_columns|join:", " }}</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

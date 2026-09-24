@@ -88,6 +88,19 @@ class SocietyDetailView(APIView):
         )
 
 
+class SocietyStructureView(APIView):
+    """The building as a picture (D18): every wing, floor by floor, each flat; the broker's own flats marked."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        from .registers import society_structure
+
+        s = get_object_or_404(Society.objects.select_related("locality"), pk=pk).resolved()
+        m = getattr(request.user, "active_membership", None)
+        return Response(society_structure(s, org=m.org if m else None))
+
+
 class CheckFlatView(APIView):
     """Live check while the broker types: does this wing and flat number exist?"""
 

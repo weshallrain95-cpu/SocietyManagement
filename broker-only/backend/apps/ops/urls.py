@@ -14,5 +14,6 @@ urlpatterns = [
     path("societies", views.societies, name="ops-societies"),
     path("societies/<uuid:pk>", views.society, name="ops-society"),
     path("map", views.pin_map, name="ops-map"),
+    path("registers", views.registers, name="ops-registers"),
     path("audit", views.audit_view, name="ops-audit"),
 ]

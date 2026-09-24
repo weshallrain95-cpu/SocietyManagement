@@ -1,5 +1,6 @@
 """Broadcast API: brokers write to their own customers; customers read and mute updates."""
 
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -25,12 +26,26 @@ def _target(request):
     return listing, locality
 
 
+def _listings(request) -> list:
+    raw = request.data.get("listing_ids") if hasattr(request.data, "get") else None
+    raw = raw or request.query_params.get("listing_ids") or []
+    ids = [x for x in (raw.split(",") if isinstance(raw, str) else raw) if x]
+    if not ids:
+        return []
+    found = list(Listing.objects.filter(pk__in=ids).select_related("unit__building__society__locality"))  # RLS: own firm only
+    if len(found) != len(set(ids)):
+        raise Http404
+    order = {str(x): i for i, x in enumerate(ids)}
+    return sorted(found, key=lambda li: order[str(li.pk)])
+
+
 def broadcast_json(b: Broadcast) -> dict:
     return {
         "id": str(b.pk),
         "kind": b.kind,
         "text": b.text,
         "listing_id": str(b.listing_id) if b.listing_id else None,
+        "listing_ids": b.audience.get("listing_ids") or ([str(b.listing_id)] if b.listing_id else []),
         "locality": b.locality.name if b.locality_id else None,
         "audience": b.audience,
         "recipients_total": b.recipients_total,
@@ -49,12 +64,14 @@ class BroadcastPreview(APIView):
     def get(self, request):
         org = request.user.active_membership.org
         listing, locality = _target(request)
+        listings = _listings(request) or ([listing] if listing else [])
         kind = request.query_params.get("kind", "news")
         scope = request.query_params.get("scope", "all")
         return Response(
             {
-                "text": bc.default_text(kind, org=org, listing=listing, locality=locality),
-                "flat": bc.flat_summary(listing) if listing else None,
+                "text": bc.default_text(kind, org=org, listing=listing, locality=locality, listings=listings),
+                "flat": bc.flat_summary(listings[0]) if listings else None,
+                "flats": [bc.flat_summary(li) for li in listings],
                 "reach": bc.counts(bc.audience(org, scope=scope, locality=locality)),
                 "free_in_pilot": True,
             }
@@ -77,6 +94,7 @@ class BroadcastListCreate(APIView):
             kind=request.data.get("kind", ""),
             text=request.data.get("text", ""),
             listing=listing,
+            listings=_listings(request),
             locality=locality,
             scope=request.data.get("scope", "all"),
         )

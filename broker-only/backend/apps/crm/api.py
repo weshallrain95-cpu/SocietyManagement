@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -69,6 +70,26 @@ class CaptureSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, allow_blank=True, max_length=120)
     source = serializers.ChoiceField(choices=Customer.Source.choices, default="walk_in")
     notes = serializers.CharField(required=False, allow_blank=True)
+
+
+class CustomerImport(APIView):
+    """CRM-11: bring the existing customer list in (Excel / CSV / phone contacts .vcf, or pasted lines as `text`)."""
+
+    permission_classes = [IsBrokerManager]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        f = request.FILES.get("file")
+        if f is not None:
+            if f.size > 5 * 1024 * 1024:
+                return Response({"detail": "Keep the file under 5 MB"}, status=400)
+            name, content = f.name, f.read()
+        elif request.data.get("text"):
+            name, content = "pasted.txt", str(request.data["text"]).encode()
+        else:
+            return Response({"detail": "Attach a file or paste the list"}, status=400)
+        org = request.user.active_membership.org
+        return Response(domain_call(crm.import_customers, org=org, user=request.user, filename=name, content=content))
 
 
 class CustomerListCreate(APIView):

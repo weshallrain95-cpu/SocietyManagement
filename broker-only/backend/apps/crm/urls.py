@@ -4,6 +4,7 @@ from . import api, broadcast_api
 
 urlpatterns = [
     path("customers", api.CustomerListCreate.as_view()),
+    path("customers/import", api.CustomerImport.as_view()),
     path("broadcasts", broadcast_api.BroadcastListCreate.as_view()),
     path("broadcasts/preview", broadcast_api.BroadcastPreview.as_view()),
     path("me/updates", broadcast_api.MyUpdates.as_view()),

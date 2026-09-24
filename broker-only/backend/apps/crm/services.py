@@ -237,3 +237,36 @@ def respond_to_shortlist_item(token: str, item_id, response: str) -> ShortlistIt
             item.shortlist.customer, CustomerInteraction.Kind.SHORTLIST_RESPONSE, f"{response.replace('_', ' ')}: listing {item.listing_id}"
         )
     return item
+
+
+IMPORT_COLUMNS = {
+    "name": ("name", "customer", "customer name", "client", "client name", "contact", "contact name"),
+    "phone": ("phone", "mobile", "mobile no", "mobile number", "number", "contact no", "contact number", "whatsapp", "phone no"),
+    "notes": ("notes", "remarks", "comment", "requirement"),
+}
+
+
+def import_customers(*, org, user, filename: str, content: bytes) -> dict:
+    """Bring the broker's existing customer list in at once (Excel, CSV, phone contacts .vcf, or pasted lines).
+
+    One record per number per broker: numbers already in the book are left as they are (a blank name is
+    filled in). Imported customers get updates in the app once they log in; until then the broker invites them.
+    """
+    from common.people_import import clean_phone, read_people, text
+
+    rows = read_people(filename, content, IMPORT_COLUMNS)
+    added = existing = 0
+    skipped = []
+    for i, r in enumerate(rows, start=1):
+        e164 = clean_phone(r.get("phone"))
+        if not e164:
+            skipped.append(
+                {"row": i, "reason": "No valid mobile number", "text": text(r.get("name") or r.get("raw") or r.get("phone"), 60)}
+            )
+            continue
+        _, created = capture_customer(
+            org=org, user=user, phone=e164, name=text(r.get("name"), 120), source=Customer.Source.IMPORT, notes=text(r.get("notes"), 500)
+        )
+        added += created
+        existing += not created
+    return {"added": added, "already_in_book": existing, "skipped": skipped[:200], "skipped_count": len(skipped)}

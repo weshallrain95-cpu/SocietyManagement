@@ -20,8 +20,9 @@ from apps.audit.models import AuditEvent
 from apps.audit.services import audit, verify_chain
 from apps.masterdata import dedupe
 from apps.masterdata.layout import expected_units, layout_dict
-from apps.masterdata.models import Building, Society, SocietyAlias
+from apps.masterdata.models import Building, RegisterFlat, Society, SocietyAlias
 from apps.masterdata.normalise import normalise_building, normalise_name
+from apps.masterdata.registers import import_register, wing_grid
 from apps.masterdata.services import (
     MasterDataError,
     approve_provisional,
@@ -235,6 +236,8 @@ def society(request, pk):
     )
     for b in buildings:
         b.expected = expected_units(b)
+        b.grid = wing_grid(b)
+        b.n_register = b.register_flats.count()
     return render(
         request,
         "ops/society.html",
@@ -268,7 +271,7 @@ def pin_map(request):
     return render(request, "ops/map.html", {"pins": pins, "counts": _counts(), "nav": "map"})
 
 
-LAYOUT_SOURCES = ["rera", "survey", "ops", "broker"]
+LAYOUT_SOURCES = ["tmc", "rera", "igr", "survey", "ops", "broker"]
 
 
 def _int_list(text: str) -> list[int]:
@@ -316,5 +319,61 @@ def audit_view(request):
             "events": AuditEvent.objects.order_by("-seq")[:100],
             "counts": _counts(),
             "nav": "audit",
+        },
+    )
+
+
+@staff_only
+def registers(request):
+    """Upload an official flat list (TMC property-tax register, MahaRERA, IGR). Owner names are never stored."""
+    result = None
+    society = None
+    if request.GET.get("society"):
+        society = Society.objects.filter(pk=request.GET["society"]).first()
+    if request.method == "POST":
+        f = request.FILES.get("file")
+        society = Society.objects.filter(pk=request.POST.get("society_id")).first() if request.POST.get("society_id") else None
+        if f is None:
+            messages.error(request, "Choose the file first.")
+        elif f.size > 20 * 1024 * 1024:
+            messages.error(request, "Keep the file under 20 MB (split it by ward).")
+        else:
+            dry = request.POST.get("dry_run") == "1"
+            try:
+                result = import_register(
+                    f.name,
+                    f.read(),
+                    source=request.POST.get("source", ""),
+                    complete=request.POST.get("complete") == "1",
+                    dry_run=dry,
+                    society=society,
+                )
+            except ValueError as e:
+                messages.error(request, str(e))
+            else:
+                if not dry:
+                    audit(
+                        request.user,
+                        "register.uploaded",
+                        society or request.user,
+                        {"file": f.name[:120], "wings": result.wings, "flats_new": result.flats_new},
+                    )
+                messages.success(
+                    request,
+                    f"{'Checked (nothing saved)' if dry else 'Saved'}: {result.wings} wings, {result.flats_new} new flats, "
+                    f"{result.flats_known} already known, {len(result.unmatched)} society names not matched.",
+                )
+    by_source = RegisterFlat.objects.values("source").annotate(n=Count("id")).order_by("-n")
+    return render(
+        request,
+        "ops/registers.html",
+        {
+            "result": result,
+            "society": society,
+            "sources": RegisterFlat.Source.choices,
+            "by_source": [{"label": dict(RegisterFlat.Source.choices)[r["source"]], "n": r["n"]} for r in by_source],
+            "wings_done": Building.objects.filter(register_complete=True).count(),
+            "counts": _counts(),
+            "nav": "registers",
         },
     )

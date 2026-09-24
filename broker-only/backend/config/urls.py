@@ -31,6 +31,7 @@ urlpatterns = [
             "crm",
             "visits",
             "owners",
+            "trade",
             "marketplace",
             "reviews",
         )

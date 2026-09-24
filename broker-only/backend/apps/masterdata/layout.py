@@ -40,6 +40,7 @@ def layout_dict(b: Building) -> dict:
         "extra_unit_nos": b.extra_unit_nos,
         "verified": b.layout_verified,
         "source": b.layout_source,
+        "register_complete": b.register_complete,
     }
 
 
@@ -54,6 +55,11 @@ def check_unit(b: Building, unit_no: str, floor: int | None = None) -> list[Issu
     """What is wrong with flat `unit_no` in wing `b`? Empty list = fine, or nothing known to check against."""
     parsed = normalise_unit_no(unit_no)
     no = parsed.unit_no
+    if b.register_complete:  # the official list of this wing's flats is the last word
+        if b.register_flats.filter(unit_no_normalised=no).exists():
+            return []
+        label = dict(b.register_flats.model.Source.choices).get(b.layout_source, "official")
+        return [Issue("not_in_register", f"Flat {no} is not in the {label} list of flats in {b.name}.", True)]
     if no in {normalise_unit_no(x).unit_no for x in b.extra_unit_nos}:
         return []
     issues: list[Issue] = []

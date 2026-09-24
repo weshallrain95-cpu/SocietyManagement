@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "apps.linkpages",
     "apps.ops",
     "apps.owners",
+    "apps.trade",
 ]
 
 MIDDLEWARE = [

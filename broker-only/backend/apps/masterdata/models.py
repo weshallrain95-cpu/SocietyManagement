@@ -135,6 +135,9 @@ class Building(BaseModel):
     )
     layout_source = models.CharField(max_length=12, blank=True, help_text="rera | survey | broker | ops | demo")
     layout_verified = models.BooleanField(default=False, help_text="Verified layouts block impossible flat numbers")
+    register_complete = models.BooleanField(
+        default=False, help_text="Every flat of this wing is in RegisterFlat (official list): other flat numbers cannot exist"
+    )
     lifts = models.PositiveSmallIntegerField(null=True, blank=True)
     year_built = models.PositiveSmallIntegerField(null=True, blank=True)
     merged_into = models.ForeignKey("self", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
@@ -154,6 +157,39 @@ class Building(BaseModel):
 
     def __str__(self):
         return f"{self.society} – {self.name}"
+
+
+class RegisterFlat(BaseModel):
+    """A flat as listed by an official source (TMC property-tax register, MahaRERA, IGR), never by a broker (D18).
+
+    Only what describes the building is kept: wing, flat number, floor, area and the source's own reference.
+    Owner names and anything else personal in the source file are dropped on import.
+    """
+
+    class Source(models.TextChoices):
+        TMC = "tmc", "TMC property tax"
+        RERA = "rera", "MahaRERA"
+        IGR = "igr", "IGR registrations"
+        OPS = "ops", "Ops (from an official document)"
+
+    building = models.ForeignKey(Building, on_delete=models.CASCADE, related_name="register_flats")
+    unit_no = models.CharField(max_length=30)
+    unit_no_normalised = models.CharField(max_length=30)
+    floor = models.SmallIntegerField(null=True, blank=True)
+    carpet_sqft = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    source = models.CharField(max_length=6, choices=Source.choices)
+    source_ref = models.CharField(max_length=40, blank=True, help_text="e.g. TMC property number")
+    ward = models.CharField(max_length=40, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["building", "unit_no_normalised"], name="uniq_register_flat")]
+
+    def save(self, *a, **kw):
+        parsed = normalise_unit_no(self.unit_no)
+        self.unit_no_normalised = parsed.unit_no
+        if self.floor is None:
+            self.floor = parsed.floor
+        super().save(*a, **kw)
 
 
 class Unit(BaseModel):

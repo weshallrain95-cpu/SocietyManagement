@@ -60,6 +60,21 @@
   <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="add_wing">
     <input type="text" name="wing" placeholder="New wing, e.g. Rodas C" maxlength="80" required><button>Add wing</button></form>
 </div>
+<div class="card">
+  <h2>Building structure</h2>
+  <p class="muted">Floor by floor, as our official sources list it (TMC property-tax register, MahaRERA, IGR). Where we have no official list yet, it is drawn from the layout above.
+    <a href="{% url 'ops-registers' %}?society={{ s.pk }}">Upload an official flat list for this society</a>.</p>
+  <div class="bldg scroll">
+  {% for b in buildings %}
+    <div class="wing">
+      <h3>{{ b.name }} · {{ b.grid.flats_total }} flats {% if b.register_complete %}<span class="chip ok">{{ b.layout_source|upper }} list</span>{% elif b.n_register %}<span class="chip warn">partial list ({{ b.n_register }})</span>{% elif b.grid.known %}<span class="chip">from layout</span>{% endif %}</h3>
+      {% for r in b.grid.floors %}
+        <div class="fl {% if r.no_flats %}none{% endif %}"><span class="n">{{ r.label }}</span>{% for f in r.flats %}<span class="flat">{{ f.no }}</span>{% endfor %}</div>
+      {% empty %}<p class="muted">Nothing known yet.</p>{% endfor %}
+    </div>
+  {% empty %}<p class="muted">No wings yet.</p>{% endfor %}
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>

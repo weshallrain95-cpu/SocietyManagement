@@ -172,3 +172,27 @@ def test_apply_pin_review(tmp_path, society, thane):
     assert SocietyAlias.objects.filter(society=society, alias_raw="Hira Estate").exists()
     assert (round(other.location.y, 4), round(other.location.x, 4)) == (19.2345, 72.9876)
     assert ReviewQueueItem.objects.filter(kind="pin_correction", ref_id=str(lost.pk)).exists()
+
+
+def test_upload_official_flat_register(staff, society):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from apps.masterdata.models import Building, RegisterFlat
+
+    rows = ["Flat No,Floor,Owner Name"] + [f"{fl}{p:02d},{fl},Someone" for fl in range(1, 11) for p in range(1, 5)]
+    body = "\n".join(rows).encode()
+    url = f"/ops/registers?society={society.pk}"
+    assert "Every row belongs to" in staff.get(url).content.decode()
+    r = staff.post(
+        "/ops/registers",
+        {"file": SimpleUploadedFile("tmc.csv", body), "source": "tmc", "complete": "1", "dry_run": "1", "society_id": str(society.pk)},
+    )
+    assert "Checked (nothing saved): 1 wings, 40 new flats" in r.content.decode() and not RegisterFlat.objects.exists()
+    r = staff.post(
+        "/ops/registers", {"file": SimpleUploadedFile("tmc.csv", body), "source": "tmc", "complete": "1", "society_id": str(society.pk)}
+    )
+    assert RegisterFlat.objects.count() == 40 and "Owner Name" in r.content.decode()
+    b = Building.objects.get(society=society)
+    assert (b.floors_total, b.units_per_floor, b.register_complete) == (10, 4, True)
+    page = staff.get(f"/ops/societies/{society.pk}").content.decode()
+    assert "Building structure" in page and ">1004<" in page and "TMC list" in page
