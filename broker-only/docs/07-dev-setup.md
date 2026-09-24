@@ -87,7 +87,7 @@ Access so only invited people can reach it.
 - Keep full-disk encryption on (BitLocker / FileVault / LUKS).
 - Keys in `backend/.env` are random per laptop and are never committed (`.gitignore`).
 - `--demo` seeding refuses to run unless `DJANGO_DEBUG=true`.
-- Back up the dev database when it matters: `docker compose -f infra/compose/docker-compose.dev.yml exec db pg_dump -U postgres onlybroker > backup.sql`.
+- Back up the dev database when it matters: `docker compose -f infra/compose/docker-compose.dev.yml exec db pg_dump -U postgres onlybroker > backup.sql`. (From the laptop itself the database is on port 55432 and Redis on 56379, so they never clash with another database already installed on the Mac.)
 
 ## 7. Attribute dictionary
 
