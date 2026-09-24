@@ -271,6 +271,32 @@ async function icon(Comp, color) {
   });
   s.addNotes('Photos belong to the flat, not to one broker, so there\'s one good set instead of ten bad ones. Owners and the brokers they allow can upload; nothing a broker uploads goes live until the owner approves. Customers see live photos on their shortlist, but never the flat number.');
 
+  // 13a — Selling ready inventory: three routes (USP) -----------------------------------------------------------------------
+  s = pres.addSlide(); bg(s, LIGHT);
+  title(s, 'Selling ready flats: all three routes, one app', { w: 7.6 }); tag(s, 'USP');
+  phone(s, 'thub', 0.6, 1.2, 3.75, 'Offers from brokers');
+  phone(s, 'tblast', 2.75, 1.2, 3.75, 'Share with brokers nearby');
+  points(s, [
+    ['A. Fellow brokers (co-broking):', 'the broker’s own list of channel partners, imported from Excel or phone contacts. Blast ready flats to brokers in and around the flat — widen the distance, send to all, or tick names.'],
+    ['B. Walk-ins and customers we send:', 'matching against the broker’s own flats, visit plans, field staff.'],
+    ['C. The whole customer list:', 'import it once, then one message with several new flats reaches everyone — in the app, or a one-tap WhatsApp.'],
+    ['Trade-level only:', 'society, area, BHK, price. Never the flat number, owner, customer or commission.'],
+  ], 5.05, 1.25, 4.5, 4.1, { size: 12, gap: 5 });
+  s.addNotes('In the meeting, brokers told us ready inventory moves three ways: through fellow brokers, through walk-in customers, and by blasting the whole customer list. All three now live in one app. Co-broking uses the broker’s own list of fellow brokers and the flat’s location, so the right brokers nearby hear first. Nothing that lets anyone go around the listing broker ever leaves: no flat number, no owner, no customer, no commission. The owner is not asked; it is a trade agreement between brokers.');
+
+  // 13b — Building structure from official records (MOAT) -----------------------------------------------------------------
+  s = pres.addSlide(); bg(s, LIGHT);
+  title(s, 'Every building, floor by floor — officially', { w: 7.6 }); tag(s, 'MOAT');
+  phone(s, 'struct', 0.6, 1.2, 3.75, 'The building picture: my flats marked');
+  points(s, [
+    ['Our own source, never brokers:', 'TMC property-tax register (requested formally — there is no public API), MahaRERA for newer towers, IGR registrations to fill gaps.'],
+    ['From each wing’s flat list we work out the layout:', 'floors, flats per floor, refuge floors, odd flats like 2001A.'],
+    ['A flat that isn’t on the list cannot be added —', 'by any broker or owner. The universe is closed down to the flat.'],
+    ['Owner names are never stored,', 'even when the source file has them.'],
+    ['Built and ready:', 'upload page in the ops console; waiting on the TMC data request.'],
+  ], 3.0, 1.25, 6.5, 4.1, { size: 12.5, gap: 6 });
+  s.addNotes('The foundation is a correct list of every flat in every building. That has to come from official records, not from brokers, whose lists are fragmentary. TMC has no public API, so we are requesting the register formally, under RTI and a data-sharing letter. MahaRERA covers the newer towers. Once a wing’s list is loaded, the system works out its layout and refuses any flat number that does not exist. This is slow, careful work — which is exactly why it is hard to copy.');
+
   // 14 — Marketplace -----------------------------------------------------------------------------------------------------------
   s = pres.addSlide(); bg(s, LIGHT);
   title(s, 'Next: one enquiry, every relevant broker', { w: 7.6 }); tag(s, 'MOAT');
@@ -305,10 +331,10 @@ async function icon(Comp, color) {
   s = pres.addSlide(); bg(s, TEAL);
   title(s, 'Why this is hard to copy', { dark: true });
   const moats = [
-    ['database', 'Data that gets cleaner with use', 'Closed universe of buildings, learned spellings and wing layouts — every upload improves it.'],
+    ['database', 'Official building data', 'Every wing’s flats from TMC / MahaRERA records, plus learned spellings — the universe is closed down to the flat.'],
     ['lock', 'Brokers’ two assets live here', 'Flats and customers, with their full history — switching away means leaving the business behind.'],
     ['key', 'Owners trust the tick', 'Owner control and reviews make owners send flats to brokers through us.'],
-    ['whatsapp', 'Offline reach loop', 'Links and broadcasts pull walk-in customers onto the platform, broker by broker.'],
+    ['whatsapp', 'Network loops', 'Co-broking pulls fellow brokers in; broadcasts pull offline customers in — broker by broker.'],
     ['shield', 'Trust by design', 'Isolation, audit and consent built in from day one — slow and costly to retrofit.'],
   ];
   moats.forEach(([k, h, t], i) => {
@@ -342,7 +368,7 @@ async function icon(Comp, color) {
   // 18 — Where we are --------------------------------------------------------------------------------------------------------------
   s = pres.addSlide(); bg(s, LIGHT);
   title(s, 'Where we are today');
-  const stats = [['190+', 'automated server tests, all passing'], ['4', 'app modes: broker, field staff, owner, customer'], ['200', 'flat attributes — only 17 essential'], ['Live', 'Android test app & online demo']];
+  const stats = [['225+', 'automated tests, all passing'], ['4', 'app modes: broker, field staff, owner, customer'], ['200', 'flat attributes — only 17 essential'], ['Live', 'Android test app & online demo']];
   stats.forEach(([n, l], i) => {
     const x = 0.5 + i * 2.3;
     s.addText(n, { x, y: 1.25, w: 2.1, h: 0.85, fontFace: HEAD, fontSize: 40, bold: true, color: TEAL, margin: 0, isTextBox: true });
@@ -362,7 +388,7 @@ async function icon(Comp, color) {
   s = pres.addSlide(); bg(s, LIGHT);
   title(s, 'Next 90 days');
   const next = [
-    ['building', 'Thane West data', 'Pilot broker confirms map pins; wings, floors and flats per floor loaded (MahaRERA + site visits).'],
+    ['building', 'Thane West data', 'Pilot broker confirms map pins; official flat lists loaded — TMC register request (RTI), MahaRERA for newer towers.'],
     ['phone', 'Pilot broker live', 'Server in the cloud, real logins, Android app; iPhone via TestFlight.'],
     ['whatsapp', 'Real messages', 'DLT sender ID and templates, WhatsApp Business, Google Maps accounts.'],
     ['chart', 'Measure & price', 'Time per flat, stale listings, visits per deal, willingness to pay → pricing decision.'],

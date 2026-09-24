@@ -46,7 +46,7 @@ flowchart LR
 
 | Stage | What it means | Status |
 |---|---|---|
-| 1. Build the core | Backend, broker app, owner app, link pages, ops console, data checks | ✅ Done: 190+ automated tests, all green on GitHub |
+| 1. Build the core | Backend, broker app, owner app, link pages, ops console, data checks | ✅ Done: 225+ automated tests, all green on GitHub |
 | 2. Clean Thane West data | Pins checked by the pilot broker; official flat lists (TMC / MahaRERA) loaded per wing | ⏳ **Now.** Pin-check link is live; register upload is built — waiting on the TMC data request (docs/08) |
 | 3. Pilot broker uses the real app | Backend on a staging server (not the laptop), real phone numbers, real SMS/WhatsApp | ⏳ Next: needs the accounts below |
 | 4. Pilot metrics | Time to add a flat, stale-listing rate, visits per customer, broker's willingness to pay | Later |
