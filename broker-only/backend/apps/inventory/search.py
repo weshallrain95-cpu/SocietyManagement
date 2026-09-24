@@ -2,6 +2,8 @@
 
 Brokers keep planning visits their own way until they trust the matching engine, so staff must be
 able to jump straight to a society and flat number. Only the broker's own flats are searched (RLS).
+A flat that isn't in the broker's list is simply not found: the platform never offers a unit to a
+broker (it could be another broker's), and never moves flats between brokers.
 """
 
 import re
@@ -9,7 +11,7 @@ import re
 from django.db.models import Q
 
 from apps.masterdata import dedupe
-from apps.masterdata.models import Building, Society
+from apps.masterdata.models import Building
 from apps.masterdata.normalise import normalise_building, normalise_unit_no
 
 from .models import Listing
@@ -41,12 +43,10 @@ def search_flats(listings, q: str, *, org, limit: int = 20) -> dict:
         # a wing name typed as the place ("Rodas A 1203") finds the wing's society too
         wing_hits = Building.objects.filter(merged_into__isnull=True, name_normalised__startswith=key).values_list("pk", flat=True)[:50]
         listings = listings.filter(Q(unit__building__society__in=societies) | Q(unit__building__in=list(wing_hits)))
-        extra = Society.objects.filter(buildings__in=list(wing_hits)).exclude(pk__in=[s.pk for s in societies]).distinct()[:3]
-        societies += list(extra)
     if unit_no:
         listings = listings.filter(unit__unit_no_normalised__startswith=unit_no)
     if not (text or unit_no):
-        return {"results": [], "societies": [], "unit_no": "", "wing": ""}
+        return {"results": [], "unit_no": "", "wing": ""}
 
     rank_soc = {s.pk: i for i, s in enumerate(societies)}
 
@@ -61,4 +61,4 @@ def search_flats(listings, q: str, *, org, limit: int = 20) -> dict:
         )
 
     results = sorted(listings[:200], key=rank)[:limit]
-    return {"results": results, "societies": societies[:5], "unit_no": unit_no, "wing": wing}
+    return {"results": results, "unit_no": unit_no, "wing": wing}

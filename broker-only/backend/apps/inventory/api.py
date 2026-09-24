@@ -138,7 +138,7 @@ class ListingListCreate(APIView):
         if society.status == Society.Status.PROVISIONAL and society.proposed_by_org_id != org.pk:
             return Response({"detail": "That society is awaiting approval"}, status=400)
         society = society.resolved()
-        # MD-10: the wing must exist and the flat number must fit the wing's floors and flats per floor.
+        # MD-13: the wing must exist and the flat number must fit the wing's floors and flats per floor.
         chk = check_flat(society, d.pop("building", "") or None, d["unit_no"], d.get("floor"))
         confirmed = d.pop("confirm_layout", False)
         if chk["blocking"] or (chk["issues"] and not confirmed):
@@ -163,10 +163,6 @@ class ListingListCreate(APIView):
         return Response(listing_json(listing, request, detail=True), status=201 if created else 200)
 
 
-def _society_brief(s) -> dict:
-    return {"society_id": str(s.pk), "name": s.canonical_name, "locality": s.locality.name, "status": s.status}
-
-
 class ListingSearch(APIView):
     """GET /listings/search?q=HE A-1203 — jump straight to a flat the broker has in mind."""
 
@@ -182,7 +178,6 @@ class ListingSearch(APIView):
         return Response(
             {
                 "results": [listing_json(l, request) for l in r["results"]],
-                "societies": [_society_brief(s) for s in r["societies"]],
                 "unit_no": r["unit_no"],
                 "wing": r["wing"],
             }

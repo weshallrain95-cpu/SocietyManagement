@@ -169,7 +169,7 @@ erDiagram
 Unique on `(alias_normalised, society_id)`.
 
 **`building`**: `society_id`, `name` ("Wing B", "Tower 3", "Rodas-A"), `name_normalised`,
-`location`, `floors_total`, `lowest_floor` (0 = flats on ground), `units_per_floor`, `skip_floors int[]` (refuge/podium), `extra_unit_nos text[]` (penthouses, 1203A), `layout_source`, `layout_verified`, `lifts`, `year_built`, `oc_received bool NULL`. Society carries `wings_complete` (every wing on record: brokers cannot add wings). See PRD MD-10.
+`location`, `floors_total`, `lowest_floor` (0 = flats on ground), `units_per_floor`, `skip_floors int[]` (refuge/podium), `extra_unit_nos text[]` (penthouses, 1203A), `layout_source`, `layout_verified`, `lifts`, `year_built`, `oc_received bool NULL`. Society carries `wings_complete` (every wing on record: brokers cannot add wings). See PRD MD-13.
 
 **`unit`**: the physical flat or house. **One row per real unit.**
 

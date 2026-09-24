@@ -1,4 +1,4 @@
-// Flat-number checks against a wing's layout (MD-10). The server is the source of truth
+// Flat-number checks against a wing's layout (MD-13). The server is the source of truth
 // (backend/apps/masterdata/layout.py); this port powers demo mode with the same messages.
 import type { FlatCheck, LayoutIssue, Wing } from '@/api/types';
 

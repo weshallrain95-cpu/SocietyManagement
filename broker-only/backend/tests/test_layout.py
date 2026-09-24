@@ -1,4 +1,4 @@
-"""MD-10: building layouts; impossible flats and invented wings are caught at entry."""
+"""MD-13: building layouts; impossible flats and invented wings are caught at entry."""
 
 import pytest
 

@@ -50,8 +50,7 @@ test('staff find a flat by society nickname and number, and add it to a plan', a
   expect(r.results[0]).toMatchObject({ society: 'Hiranandani Estate', unit_no: '1203' });
   expect((await run(api.searchFlats('1203'))).results.every((l) => l.unit_no === '1203')).toBe(true);
   const none = await run(api.searchFlats('hiranandani estate 1504'));
-  expect(none.results).toEqual([]);
-  expect(none.societies[0].name).toBe('Hiranandani Estate'); // offered for "Add it now"
+  expect(none).toEqual({ results: [], unit_no: '1504', wing: '' }); // not in the broker's list: nothing offered
   const plans = await run(api.visitPlans());
   const p = plans[0];
   const after = (await run(api.planAction(p.id, 'add-stop', { listing_id: r.results[0].id }))) as { stops: { listing_id: string }[] };

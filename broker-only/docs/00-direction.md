@@ -64,5 +64,6 @@ flowchart LR
 - **Conduct-based house rules only**: no religion, caste, community or gender vocabulary anywhere.
 - **Meet brokers where they are**: staff can always pick flats their own way (society + flat number); the matching engine earns trust alongside, it is never forced.
 - **Offline customers are first-class**: everything a customer does in the app also works by link.
+- **A broker's inventory is theirs alone**: flats enter only when that broker adds them, manually, on their own account. Matching and search look only at the broker's own flats (several brokers may each hold the same flat). The platform never offers a flat to a broker and never moves or swaps flats between brokers. An owner who picks a broker first ticks "Allow this broker to handle my property".
 - **Each broker's data is private** (enforced by the database) unless they choose to share it.
 - **Every change is audited**, and the audit trail is tamper-evident.

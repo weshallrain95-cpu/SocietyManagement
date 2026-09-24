@@ -276,14 +276,14 @@ export function createDemoApi(): Api {
         if (!wing && tokens.length && /^[a-z]$/i.test(tokens[tokens.length - 1])) wing = tokens.pop()!.toUpperCase();
       }
       const text = tokens.join(' ');
-      if (!text && !unitNo) return { results: [], societies: [], unit_no: '', wing: '' };
+      if (!text && !unitNo) return { results: [], unit_no: '', wing: '' };
       const socs = text ? findSocieties(text) : [];
       const hits = listings
         .filter((l) => !text || socs.some((s) => s.society_id === l.society_id))
         .filter((l) => !unitNo || l.unit_no.toUpperCase().startsWith(unitNo))
         .sort((a, b) => Number(a.unit_no.toUpperCase() !== unitNo) - Number(b.unit_no.toUpperCase() !== unitNo)
           || Number(!!wing && !a.building.toUpperCase().startsWith(wing)) - Number(!!wing && !b.building.toUpperCase().startsWith(wing)));
-      return clone({ results: hits.slice(0, 20), societies: socs.slice(0, 5).map(({ society_id, name, locality, status }) => ({ society_id, name, locality, status })), unit_no: unitNo, wing });
+      return clone({ results: hits.slice(0, 20), unit_no: unitNo, wing });
     },
     async wings(sid) {
       return clone(WINGS[sid] ?? { wings: [], wings_complete: false });

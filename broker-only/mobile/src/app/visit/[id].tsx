@@ -76,7 +76,6 @@ export default function VisitPlanScreen() {
         label="Society and flat number you have in mind"
         pickedIds={p.stops.map((s) => s.listing_id)}
         onPick={(l) => act.mutate({ action: 'add-stop', body: { listing_id: l.id } })}
-        addParams={{ plan: p.id }}
       />
 
       <H2>Send & assign</H2>

@@ -61,10 +61,12 @@ def test_search_by_nickname_wing_and_flat(flats):
     assert ids(c.get("/v1/listings/search", {"q": "rodas a 1203"}))[0] == ("Rodas A", "1203")
     # flat number alone: every flat 1203 the broker has, across societies
     assert len(ids(c.get("/v1/listings/search", {"q": "1203"}))) == 3
-    # society alone: all its flats, and the society is offered for adding a new flat
+    # society alone: all the broker's own flats there
     r = c.get("/v1/listings/search", {"q": "Hiranandani Estate"}).json()
-    assert len(r["results"]) == 3 and r["societies"][0]["name"] == "Hiranandani Estate"
-    assert ids(c.get("/v1/listings/search", {"q": "HE 1205"})) == []  # other broker's flat stays private
+    assert len(r["results"]) == 3
+    # another broker's flat in the same building is never found, and nothing hints that it exists
+    r = c.get("/v1/listings/search", {"q": "HE 1205"}).json()
+    assert r["results"] == [] and set(r) == {"results", "unit_no", "wing"}
     r = c.get("/v1/listings/search", {"q": "Lodha Amara 1203"}).json()
     assert [x["society"] for x in r["results"]] == ["Lodha Amara"]
 

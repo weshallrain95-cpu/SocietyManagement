@@ -1,4 +1,4 @@
-"""Building layouts: which wings and flat numbers can exist (MD-10).
+"""Building layouts: which wings and flat numbers can exist (MD-13).
 
 Our master data is a closed universe. A broker never invents a building: they pick a wing we
 know, and the flat number is checked against that wing's floors and flats per floor.

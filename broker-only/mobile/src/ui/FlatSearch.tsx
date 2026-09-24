@@ -1,7 +1,7 @@
 // "Society + flat number" search for staff who already know which flat they want to show.
 // Works alongside the matching engine: brokers keep their own way of picking flats until they trust it.
+// Only the broker's own flats are searched. The app never offers a flat that isn't in their list.
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
 import React, { useState } from 'react';
 
 import type { Listing } from '@/api';
@@ -10,11 +10,9 @@ import { bhk, inr } from '@/lib/format';
 import { useDebounced } from '@/lib/useDebounced';
 import { Button, Card, Field, Loading, Notice, P, Row } from './components';
 
-export function FlatSearch({ pickedIds, onPick, addParams, label = 'Society and flat number' }: {
+export function FlatSearch({ pickedIds, onPick, label = 'Society and flat number' }: {
   pickedIds: string[];
   onPick: (l: Listing) => void;
-  /** Extra route params for "Add flat" when the flat isn't in the broker's list yet (e.g. { plan: id }). */
-  addParams?: Record<string, string>;
   label?: string;
 }) {
   const { api } = useSession();
@@ -22,7 +20,6 @@ export function FlatSearch({ pickedIds, onPick, addParams, label = 'Society and 
   const term = useDebounced(q.trim(), 300);
   const r = useQuery({ queryKey: ['flat-search', term], queryFn: () => api.searchFlats(term), enabled: term.length >= 2 || /\d/.test(term) });
   const d = r.data;
-  const society = d?.societies[0];
 
   return (
     <>
@@ -41,15 +38,7 @@ export function FlatSearch({ pickedIds, onPick, addParams, label = 'Society and 
         );
       })}
       {d && term && !d.results.length ? (
-        society && d.unit_no ? (
-          <Card>
-            <P>Flat {d.wing ? `${d.wing}-` : ''}{d.unit_no} at {society.name} isn’t in your flats yet.</P>
-            <Button small kind="secondary" title="Add it now" onPress={() => router.push({
-              pathname: '/listing/new',
-              params: { society_id: society.society_id, society_name: society.name, locality: society.locality, unit_no: d.unit_no, wing: d.wing, back: '1', ...addParams },
-            })} />
-          </Card>
-        ) : <Notice>No flat of yours matches “{term}”. Try the society name and flat number, e.g. “HE A-1203”.</Notice>
+        <Notice>None of your flats matches “{term}”. Only flats in your own list can be added to a visit.</Notice>
       ) : null}
     </>
   );

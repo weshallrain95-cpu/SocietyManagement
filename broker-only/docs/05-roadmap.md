@@ -46,7 +46,7 @@ because it was built in one push:
 | **Owner/customer link pages**: availability check, visit notice, shortlist, visit plan, consent, review | ✅ Done — server-rendered, tested in a real browser |
 | **Ops (admin) console** at `/ops/`: broker verification, review queue (new societies: approve / merge / reject), society pins (paste a Google Maps link or drag the pin) and names, whole-area pin map, tamper check | ✅ Done |
 | **Pin-check page for the pilot broker** (online link; answers applied with `apply_pin_review`) | ✅ Done |
-| **Building layouts and flat-number checks** (MD-10): wing picker in the app, live check as the broker types, uploads refuse impossible flats, ops edits layouts, spreadsheet import + template for MahaRERA / field-survey data | ✅ Done |
+| **Building layouts and flat-number checks** (MD-13): wing picker in the app, live check as the broker types, uploads refuse impossible flats, ops edits layouts, spreadsheet import + template for MahaRERA / field-survey data | ✅ Done |
 | **Pick flats yourself** (VISIT-01a): society + flat-number search on visit plans, matching and customer pages, so staff can plan tours their usual way while they learn to trust matching | ✅ Done |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
@@ -85,7 +85,8 @@ because it was built in one push:
 | D7 | Mobile stack | React Native (Expo) | One team for mobile + web |
 | D8 | Hosting | AWS ap-south-1 | Data residency; managed PostGIS |
 | D9 | Master-data sources and licences | MahaRERA + OSM first; evaluate paid data vendors | Data quality and legal use |
-| D12 | Who may create buildings | ✅ **Decided 2026-09-24: closed universe.** Brokers and owners pick from our wings; a new name is only a request that ops approves (MD-04, MD-10) | Upload quality: typos become matches, not duplicates |
+| D12 | Who may create buildings | ✅ **Decided 2026-09-24: closed universe.** Brokers and owners pick from our wings; a new name is only a request that ops approves (MD-04, MD-13) | Upload quality: typos become matches, not duplicates |
+| D13 | Who puts flats into a broker's inventory | ✅ **Decided 2026-09-24.** (A) Only the broker, manually, in any scenario; the platform never offers a flat outside the broker's inventory. When an owner chooses a broker, the owner first ticks "Allow this broker to handle my property". (B) Owners don't police who lists their flat; they see a read-only status: "Currently serviced by XYZ · contact number · review". (C) When one broker reports a flat rented/sold, other brokers holding it get an anonymous alert (STAT-02) | Keeps each broker's inventory theirs alone; protects owners without extra work for them |
 | D10 | Repository | Keep `broker-only/` in this repo on its own branch for now; move to a **dedicated repository** before Phase 1 code grows | Clean history and permissions; CI separation |
 
 ## 6. Immediate next steps

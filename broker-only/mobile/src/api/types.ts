@@ -87,10 +87,9 @@ export interface NewListing {
   confirm_layout?: boolean;
 }
 
-/** "HE A-1203" → the broker's own flats that fit, plus the societies it could mean (to add a new flat). */
+/** "HE A-1203" → the broker's own flats only. A flat not in their list is simply not found. */
 export interface FlatSearchResult {
   results: Listing[];
-  societies: { society_id: string; name: string; locality: string; status: string }[];
   unit_no: string;
   wing: string;
 }
