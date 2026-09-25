@@ -40,7 +40,7 @@ class MeSerializer(serializers.Serializer):
 
     def get_memberships(self, user):
         return [
-            {"org_id": str(m.org_id), "org_name": m.org.name, "role": m.role}
+            {"org_id": str(m.org_id), "org_name": m.org.name, "role": m.role, "can": m.effective_permissions()}
             for m in user.memberships.filter(active=True).select_related("org")
         ]
 

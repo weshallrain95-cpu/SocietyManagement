@@ -9,6 +9,7 @@ import { useSession } from '@/auth/session';
 import { ago } from '@/lib/format';
 import { Button, Card, Chip, ChipRow, Choice, ErrorBox, Field, H2, Notice, P, Row, Screen } from '@/ui/components';
 import { FlatPicker } from '@/ui/FlatPicker';
+import { NeedsPermission } from '@/ui/NeedsPermission';
 
 const KINDS: { value: BroadcastKind; label: string }[] = [
   { value: 'new_flat', label: 'New flats' },
@@ -16,7 +17,7 @@ const KINDS: { value: BroadcastKind; label: string }[] = [
   { value: 'news', label: 'News' },
 ];
 
-export default function BroadcastScreen() {
+function BroadcastScreenScreen() {
   const { api } = useSession();
   const qc = useQueryClient();
   const [kind, setKind] = useState<BroadcastKind>('new_flat');
@@ -108,5 +109,13 @@ export default function BroadcastScreen() {
         </>
       ) : null}
     </Screen>
+  );
+}
+
+export default function BroadcastScreen() {
+  return (
+    <NeedsPermission perm="blasts">
+      <BroadcastScreenScreen />
+    </NeedsPermission>
   );
 }

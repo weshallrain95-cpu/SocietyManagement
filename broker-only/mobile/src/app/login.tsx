@@ -1,19 +1,43 @@
 import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 
 import { useSession } from '@/auth/session';
 import { indianMobile } from '@/lib/format';
+import { kv } from '@/lib/kv';
+import { WHO_KEY } from '@/ui/SwitchMode';
 import type { TxnType } from '@/api';
-import { Button, Card, Chip, ChipRow, ErrorBox, Field, Notice, P, Screen } from '@/ui/components';
+import { Button, Chip, ChipRow, ErrorBox, Field, Notice, P, Row, Screen } from '@/ui/components';
 import { font, space, usePalette } from '@/ui/theme';
+
+type Who = 'broker' | 'owner' | 'customer';
+const WHO: { key: Who; title: string; short: string; body: string }[] = [
+  { key: 'broker', title: 'I’m a broker', short: 'Broker', body: 'Your agency’s flats, customers and site visits — for Admins, managers and field staff.' },
+  { key: 'owner', title: 'I own a flat', short: 'Owner', body: 'Add your flat, photos and terms, and choose which brokers may handle it.' },
+  { key: 'customer', title: 'I’m looking for a flat', short: 'Customer', body: 'Tell brokers nearby what you need, compare their offers, and get updates.' },
+];
 
 export default function Login() {
   const { api, signIn, settings, updateSettings } = useSession();
   const c = usePalette();
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp' | 'register'>('phone');
+  // Three ways in (founder decision 2026-09-25): broker, owner or customer. Remembered for next time.
+  const [who, setWho] = useState<Who | null>(null);
+  const [step, setStep] = useState<'who' | 'phone' | 'otp' | 'register'>('who');
+  useEffect(() => {
+    kv.getItem(WHO_KEY).then((w) => {
+      if (w === 'broker' || w === 'owner' || w === 'customer') {
+        setWho(w);
+        setStep((cur) => (cur === 'who' ? 'phone' : cur));
+      }
+    });
+  }, []);
+  const choose = (w: Who) => {
+    setWho(w);
+    kv.setItem(WHO_KEY, w);
+    setStep('phone');
+  };
   const [agency, setAgency] = useState('');
   const [rera, setRera] = useState('');
   const [txns, setTxns] = useState<TxnType[]>(['RENT']);
@@ -42,21 +66,16 @@ export default function Login() {
     try {
       const t = await api.verifyOtp(mobile!, code.trim());
       await signIn(t);
-      if (t.org || t.role === 'owner' || (t.role === 'customer' && !t.new_user)) router.replace('/');
-      else setStep('register'); // signed in, but not yet part of a broker agency
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function becomeOwner() {
-    setBusy(true);
-    setError(null);
-    try {
-      await signIn(await api.switchRole('owner'));
-      router.replace('/');
+      if (who === 'broker') {
+        if (t.org) router.replace('/');
+        else setStep('register'); // signed in, but not part of an agency yet
+      } else if (who === 'owner') {
+        if (t.role !== 'owner') await signIn(await api.switchRole('owner'));
+        router.replace('/');
+      } else {
+        if (t.role !== 'customer') await signIn(await api.switchRole('customer'));
+        router.replace('/find');
+      }
     } catch (e) {
       setError(e);
     } finally {
@@ -80,8 +99,8 @@ export default function Login() {
 
   async function tryDemo() {
     await updateSettings({ demo: true });
-    setPhone('9820000001');
-    setStep('phone');
+    setPhone(who === 'owner' ? '9820020000' : who === 'customer' ? '9876543210' : '9820000001');
+    setStep(who ? 'phone' : 'who');
   }
 
   return (
@@ -92,8 +111,28 @@ export default function Login() {
           <P muted>Your flats, customers and site visits — in one place.</P>
         </View>
 
-        {step === 'phone' ? (
+        {step === 'who' ? (
           <>
+            <Text style={{ fontSize: font.title, fontWeight: '800', color: c.text }}>Are you…</Text>
+            {WHO.map((w) => (
+              <Pressable
+                key={w.key}
+                onPress={() => choose(w.key)}
+                accessibilityRole="button"
+                style={{ backgroundColor: c.surface, borderRadius: 16, padding: 18, gap: 4, borderWidth: 1, borderColor: c.border }}
+                testID={`who-${w.key}`}
+              >
+                <Text style={{ fontSize: 19, fontWeight: '800', color: c.brand }}>{w.title}</Text>
+                <Text style={{ fontSize: 14, color: c.textMuted }}>{w.body}</Text>
+              </Pressable>
+            ))}
+          </>
+        ) : step === 'phone' ? (
+          <>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <P muted>Signing in as <Text style={{ fontWeight: '800', color: c.text }}>{WHO.find((w) => w.key === who)?.short}</Text></P>
+              <Button small kind="ghost" title="Change" onPress={() => setStep('who')} testID="change-who" />
+            </Row>
             <Field
               label="Mobile number"
               placeholder="98200 00001"
@@ -108,17 +147,8 @@ export default function Login() {
           </>
         ) : step === 'register' ? (
           <>
-            <Card>
-              <P style={{ fontWeight: '700' }}>Own a flat?</P>
-              <P small muted>Add your flat, upload photos and choose which brokers may handle it.</P>
-              <Button kind="secondary" title="I’m a property owner" onPress={becomeOwner} busy={busy} testID="i-am-owner" />
-            </Card>
-            <Card>
-              <P style={{ fontWeight: '700' }}>Looking for a flat?</P>
-              <P small muted>Tell every broker nearby what you need, compare their offers, and get updates from the brokers you deal with.</P>
-              <Button kind="secondary" title="I’m looking for a flat" onPress={() => router.replace('/find')} testID="i-am-customer" />
-            </Card>
-            <P>Broker? Register your agency to start. (Field staff: ask your principal to add your number instead.)</P>
+            <Notice>This number is not part of an agency yet. Managers and field staff: ask your agency Admin to add +91 {mobile}, then sign in again.</Notice>
+            <P style={{ fontWeight: '700' }}>Starting your own agency? Register it — you become its Admin.</P>
             <Field label="Agency / your name" value={agency} onChangeText={setAgency} placeholder="Suresh Realty" />
             <Field label="MahaRERA agent number (optional for rentals)" value={rera} onChangeText={setRera} autoCapitalize="characters" placeholder="A51700000001" />
             <P small style={{ fontWeight: '600' }}>You handle</P>
@@ -134,6 +164,7 @@ export default function Login() {
             </ChipRow>
             <Button title="Register agency" onPress={register} disabled={agency.trim().length < 3 || !txns.length} busy={busy} />
             <P small muted>Ops verifies new agencies within a working day. You can add flats and customers straight away.</P>
+            <Button kind="ghost" title="Not a broker? Go back" onPress={() => setStep('who')} />
           </>
         ) : (
           <>

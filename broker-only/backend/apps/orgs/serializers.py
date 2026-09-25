@@ -77,7 +77,7 @@ class MembershipSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Membership
-        fields = ["id", "user_id", "name", "role", "active", "created_at"]
+        fields = ["id", "user_id", "name", "role", "permissions", "active", "created_at"]
 
 
 class ServiceAreaSerializer(serializers.ModelSerializer):

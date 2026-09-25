@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Linking } from 'react-native';
 
@@ -20,6 +21,7 @@ export default function MyDay() {
       </Row>
       {error && !online ? null : error ? <Notice tone="warn">{error}</Notice> : null}
       {lastSync ? <P small muted>Last synced {time(lastSync)}</P> : null}
+      <Button kind="secondary" title="+ Walk-in customer" onPress={() => router.push('/walk-in')} testID="walk-in" />
 
       {myStops.length === 0 ? <Empty title="No visits assigned" body="Your broker will assign visits here. Pull down to refresh." /> : null}
       {plans.map((p) => (

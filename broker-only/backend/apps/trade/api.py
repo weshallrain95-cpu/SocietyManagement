@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.masterdata.models import Locality
-from apps.orgs.permissions import IsBrokerManager
+from apps.orgs.permissions import CanDo, IsBrokerManager
 from common.api import domain_call
 
 from . import services as svc
@@ -97,14 +97,15 @@ class ContactImport(APIView):
 class BlastPreview(APIView):
     """GET ?kind=flats&listing_ids=a,b | kind=requirement&requirement_id= &scope=radius|all|selected&radius_km=&contact_ids="""
 
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("blasts")]
 
     def get(self, request):
         return Response(domain_call(svc.preview, _org(request), user=request.user, **_blast_args(request.query_params)))
 
 
 class BlastListCreate(APIView):
-    permission_classes = [IsBrokerManager]
+    def get_permissions(self):
+        return [IsBrokerManager()] if self.request.method == "GET" else [CanDo("blasts")()]
 
     def get(self, request):
         return Response([svc.blast_json(b) for b in TradeBlast.objects.order_by("-created_at")[:50]])

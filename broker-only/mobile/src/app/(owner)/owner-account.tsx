@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useSession } from '@/auth/session';
 import { Button, Notice, P, Screen } from '@/ui/components';
+import { SwitchMode } from '@/ui/SwitchMode';
 
 export default function OwnerAccount() {
   const { signOut, settings } = useSession();
@@ -13,6 +14,7 @@ export default function OwnerAccount() {
         Only brokers you allow can handle your flat. Untick a broker on your flat’s page at any time — your decision is final.
         Your proof of ownership is private: brokers and customers never see it.
       </Notice>
+      <SwitchMode current="owner" />
       <Button kind="danger" title="Sign out" onPress={async () => { await signOut(); router.replace('/login'); }} />
     </Screen>
   );

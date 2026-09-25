@@ -6,8 +6,9 @@ import React from 'react';
 import { useSession } from '@/auth/session';
 import { Button, Notice, P, Screen } from '@/ui/components';
 import { ImportPanel } from '@/ui/ImportPanel';
+import { NeedsPermission } from '@/ui/NeedsPermission';
 
-export default function ImportCustomers() {
+function ImportCustomersScreen() {
   const { api } = useSession();
   const qc = useQueryClient();
   return (
@@ -17,5 +18,13 @@ export default function ImportCustomers() {
       <Notice>Imported customers get your updates in the app once they log in with their number. Until then, each update gives you a one-tap WhatsApp message for them.</Notice>
       <Button kind="secondary" title="📣 Send them an update" onPress={() => router.push('/broadcast')} />
     </Screen>
+  );
+}
+
+export default function ImportCustomers() {
+  return (
+    <NeedsPermission perm="uploads">
+      <ImportCustomersScreen />
+    </NeedsPermission>
   );
 }

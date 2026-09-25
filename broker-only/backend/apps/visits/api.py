@@ -131,7 +131,9 @@ class PlanAction(APIView):
             domain_call(v.share_with_customer, p, user=request.user)
         elif action == "assign":
             staff = get_object_or_404(User, pk=request.data.get("staff_user_id"))
-            domain_call(v.assign, p, staff, stop_ids=request.data.get("stop_ids"))
+            n = domain_call(v.assign, p, staff, stop_ids=request.data.get("stop_ids"))
+            if not request.user.active_membership.is_admin:
+                v.tell_admin_about_assignment(p, staff, n, by=request.user)
         elif action == "notify-owners":
             return Response({"notified": v.notify_owners(p)})
         elif action == "add-stop":

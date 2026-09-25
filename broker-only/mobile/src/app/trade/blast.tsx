@@ -9,10 +9,11 @@ import type { TradeInput, TradeKind, TradeScope } from '@/api';
 import { useSession } from '@/auth/session';
 import { Button, Card, Chip, ChipRow, Choice, ErrorBox, Field, H2, Loading, Notice, P, Row, Screen, Tick } from '@/ui/components';
 import { FlatPicker } from '@/ui/FlatPicker';
+import { NeedsPermission } from '@/ui/NeedsPermission';
 
 const RADII = [1, 3, 5, 10, 25];
 
-export default function TradeBlastScreen() {
+function TradeBlastScreenScreen() {
   const { api } = useSession();
   const qc = useQueryClient();
   const params = useLocalSearchParams<{ kind?: string }>();
@@ -135,5 +136,13 @@ export default function TradeBlastScreen() {
         </>
       ) : null}
     </Screen>
+  );
+}
+
+export default function TradeBlastScreen() {
+  return (
+    <NeedsPermission perm="blasts">
+      <TradeBlastScreenScreen />
+    </NeedsPermission>
   );
 }

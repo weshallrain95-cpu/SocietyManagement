@@ -16,7 +16,8 @@ export interface Me {
   id: string;
   display_name: string;
   phone_masked: string;
-  memberships: { org_id: string; org_name: string; role: Role }[];
+  /** `can`: what this person may do in the agency beyond day-to-day work (the Admin can do all of it). */
+  memberships: { org_id: string; org_name: string; role: Role; can?: TeamPermission[] }[];
   active_role: Role;
   active_org_id: string | null;
 }
@@ -634,11 +635,15 @@ export interface Lead {
   my_proposal: string | null;
 }
 
+/** Switches the agency Admin can turn on for a manager (all off by default). */
+export type TeamPermission = 'uploads' | 'blasts' | 'add_staff';
+
 export interface StaffMember {
   id: string;
   user_id: string;
   name: string;
   role: Role;
+  permissions?: TeamPermission[];
   active: boolean;
 }
 
@@ -761,4 +766,6 @@ export interface Api {
 
   staff(): Promise<StaffMember[]>;
   inviteStaff(body: { phone: string; display_name?: string; role: 'broker_staff' | 'broker_manager' }): Promise<StaffMember>;
+  removeStaff(membershipId: string): Promise<unknown>;
+  setTeamPermissions(membershipId: string, permissions: TeamPermission[]): Promise<StaffMember>;
 }

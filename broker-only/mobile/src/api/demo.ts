@@ -118,7 +118,8 @@ const leads: Lead[] = [
 ];
 
 const staff: StaffMember[] = [
-  { id: 'mem-1', user_id: 'usr-me', name: 'You (principal)', role: 'broker_principal', active: true },
+  { id: 'mem-1', user_id: 'usr-me', name: 'You (Admin)', role: 'broker_principal', active: true },
+  { id: 'mem-3', user_id: 'usr-meena', name: 'Meena (manager)', role: 'broker_manager', permissions: [], active: true },
   { id: 'mem-2', user_id: 'usr-imran', name: 'Imran (field staff)', role: 'broker_staff', active: true },
 ];
 
@@ -450,10 +451,10 @@ export function createDemoApi(): Api {
       return { ...tokens, role: phone.endsWith('0010000') ? 'broker_staff' : 'broker_principal' };
     },
     async me() {
-      return { id: 'usr-me', display_name: 'Demo Broker', phone_masked: '+91 ••••• 001', memberships: [{ org_id: 'org-demo', org_name: 'Demo Realty Dhokali', role: 'broker_principal' }], active_role: 'broker_principal', active_org_id: 'org-demo' };
+      return { id: 'usr-me', display_name: 'Demo Broker', phone_masked: '+91 ••••• 001', memberships: [{ org_id: 'org-demo', org_name: 'Demo Realty Dhokali', role: 'broker_principal', can: ['uploads', 'blasts', 'add_staff'] }], active_role: 'broker_principal', active_org_id: 'org-demo' };
     },
     async switchRole(role) {
-      return role === 'owner' ? { ...tokens, role: 'owner', org: null } : tokens;
+      return role === 'owner' || role === 'customer' ? { ...tokens, role, org: null } : tokens;
     },
     async registerOrg() {
       await wait();
@@ -1092,6 +1093,16 @@ export function createDemoApi(): Api {
     async inviteStaff(b) {
       const m: StaffMember = { id: id('mem'), user_id: id('usr'), name: b.display_name || b.phone, role: b.role, active: true };
       staff.push(m);
+      return clone(m);
+    },
+    async removeStaff(mid) {
+      const m = staff.find((x) => x.id === mid);
+      if (m) m.active = false;
+      return {};
+    },
+    async setTeamPermissions(mid, permissions) {
+      const m = staff.find((x) => x.id === mid)!;
+      m.permissions = permissions;
       return clone(m);
     },
   };

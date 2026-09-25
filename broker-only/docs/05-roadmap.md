@@ -55,8 +55,23 @@ because it was built in one push:
 | **Official flat registers** (D18): TMC property-tax / MahaRERA / IGR flat lists → wing layouts worked out automatically, flats outside a complete list refused, owner names never stored; ops upload page and template; **building picture** floor by floor in the app and ops console | ✅ Done — waiting on the data itself (docs/08) |
 | **Flats at scale + new flat page** (INV-10/11, approved design): one search box (society, flat no., owner name or phone), filters, quick views, browse by society; the full flat page with a customer view | ✅ Done |
 | **Customer marketplace screens** (MKT-01/03/07/08/09): "Find a flat" (flats available now and price ranges per area, brokers online — counts only), post a requirement, offers from brokers best first, accept up to 3, found a flat / cancel | ✅ Done 2026-09-25 — design not yet reviewed by the founder |
+| **Broker team roles** (founder decisions 2026-09-25): entry screen "I'm a broker / I own a flat / I'm looking for a flat"; one Admin per agency; managers run the day, with uploads, blasts and adding field staff only when the Admin switches them on (off by default); trip allocation never waits (the Admin is told and can reassign); field staff see their trips and add walk-in customers; one phone number = one agency; switch mode from Account | ✅ Done 2026-09-25 |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
+
+
+## 2b. Development notes for the next cycle
+
+- **Second Admin and Admin handover** (founder, 2026-09-25: next cycle). Today each agency has exactly one
+  Admin (the person who registered it) and the Admin cannot be removed. Next: an optional co-Admin, and
+  handing the Admin role to another member with an OTP confirmation from both phones; if the Admin's phone
+  is lost with no co-Admin, ops restores access after checking RERA / ID documents. Touches
+  `orgs.Membership`, `StaffRemoveView`, the Team section, the ops console and audit.
+- **"Admin must approve trips first"** as an optional agency setting (today trip allocation never waits; the
+  Admin is told and can reassign).
+- **Flat Excel upload in the app** (today uploads run through the API; the app has the customer-list import).
+- **Pricing model** (decision D2): per agency with unlimited logins, or by number of logins — see the
+  founder discussion of 2026-09-25.
 
 ## 3. Definition of done (every story)
 

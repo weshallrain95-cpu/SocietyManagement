@@ -215,6 +215,8 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
 
     staff: () => get('/broker-orgs/me/staff'),
     inviteStaff: (b) => post('/broker-orgs/me/staff', b),
+    removeStaff: (mid) => call('DELETE', `/broker-orgs/me/staff/${mid}`),
+    setTeamPermissions: (mid, permissions) => call('PUT', `/broker-orgs/me/staff/${mid}/permissions`, { permissions }),
   };
 }
 

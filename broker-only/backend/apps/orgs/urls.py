@@ -7,6 +7,7 @@ urlpatterns = [
     path("broker-orgs/me", views.MyOrgView.as_view()),
     path("broker-orgs/me/staff", views.StaffView.as_view()),
     path("broker-orgs/me/staff/<uuid:membership_id>", views.StaffRemoveView.as_view()),
+    path("broker-orgs/me/staff/<uuid:membership_id>/permissions", views.MemberPermissionsView.as_view()),
     path("broker-orgs/me/service-areas", views.ServiceAreaListCreate.as_view()),
     path("broker-orgs/me/service-areas/<uuid:pk>", views.ServiceAreaDelete.as_view()),
     path("brokers/<uuid:pk>", views.PublicBrokerView.as_view()),

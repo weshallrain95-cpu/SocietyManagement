@@ -52,15 +52,31 @@ class Membership(BaseModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships")
     org = models.ForeignKey(BrokerOrg, on_delete=models.CASCADE, related_name="memberships")
     role = models.CharField(max_length=20, choices=Role.choices)
+    # What the Admin has switched on for a manager (all off by default). The Admin can always do everything;
+    # field staff never do these.
+    permissions = ArrayField(models.CharField(max_length=20), default=list, blank=True)
     active = models.BooleanField(default=True)
     ended_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["user", "org"], condition=models.Q(active=True), name="one_active_membership")]
 
+    # Switches the Admin can turn on for a manager.
+    DELEGABLE = ("uploads", "blasts", "add_staff")
+
     @property
     def can_manage(self):
         return self.role in (self.Role.PRINCIPAL, self.Role.MANAGER)
+
+    @property
+    def is_admin(self):
+        return self.role == self.Role.PRINCIPAL
+
+    def can(self, perm: str) -> bool:
+        return self.is_admin or (self.role == self.Role.MANAGER and perm in (self.permissions or []))
+
+    def effective_permissions(self) -> list[str]:
+        return [p for p in self.DELEGABLE if self.can(p)]
 
 
 class ServiceArea(BaseModel):

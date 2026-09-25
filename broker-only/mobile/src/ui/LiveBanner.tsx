@@ -15,6 +15,7 @@ const TITLES: Record<string, string> = {
   'enquiry.closed': 'An enquiry was closed',
   'visit_plan.updated': 'A visit plan changed',
   'visit_stop.assigned': 'You have new visits',
+  'visit_plan.team_assigned': 'A manager assigned visits',
   'status.changed': 'A flat you list changed status',
 };
 

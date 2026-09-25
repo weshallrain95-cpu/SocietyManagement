@@ -134,6 +134,26 @@ def key_conflicts(plan: VisitPlan) -> list[dict]:
 
 
 @transaction.atomic
+def tell_admin_about_assignment(plan: VisitPlan, staff_user, stops: int, *, by) -> None:
+    """Trip allocation never waits for approval: a manager assigns, staff get it at once, and the Admin is told
+    (and can reassign from the plan)."""
+    admin = Membership.objects.filter(org_id=plan.org_id, role=Membership.Role.PRINCIPAL, active=True).select_related("user").first()
+    if admin is None or admin.user_id == by.pk:
+        return
+    notify_user(
+        admin.user,
+        "visit_assigned_by_manager",
+        {
+            "plan_id": str(plan.pk),
+            "date": plan.date.isoformat(),
+            "stops": stops,
+            "summary": f"{by.display_name or 'A manager'} gave {stops} visit{'s' if stops != 1 else ''} on {plan.date:%d %b} "
+            f"to {staff_user.display_name or 'field staff'}",
+        },
+        realtime_event="visit_plan.team_assigned",
+    )
+
+
 def assign(plan: VisitPlan, staff_user, *, stop_ids=None) -> int:
     if not Membership.objects.filter(user=staff_user, org_id=plan.org_id, active=True).exists():
         raise VisitError("That person is not part of your team")

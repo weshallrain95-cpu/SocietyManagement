@@ -48,7 +48,7 @@ function InviteCard({ i, canAnswer }: { i: OwnerInvite; canAnswer: boolean }) {
           <Button small title="Accept — add to my flats" onPress={() => answer.mutate('accept')} busy={answer.isPending && answer.variables === 'accept'} testID="accept-invite" />
           <Button small kind="ghost" title="Decline" onPress={() => answer.mutate('decline')} />
         </Row>
-      ) : <P small muted>Your principal or manager can accept this.</P>}
+      ) : <P small muted>Your Admin or a manager can accept this.</P>}
       {answer.error ? <ErrorBox error={answer.error} /> : null}
     </Card>
   );

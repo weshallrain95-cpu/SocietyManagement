@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 
 from apps.inventory.models import Listing
 from apps.masterdata.models import Locality
-from apps.orgs.permissions import IsBrokerManager
+from apps.orgs.permissions import CanDo, IsBrokerManager
 from common.api import domain_call
 
 from . import broadcasts as bc
@@ -59,7 +59,7 @@ def broadcast_json(b: Broadcast) -> dict:
 class BroadcastPreview(APIView):
     """GET ?kind=&listing_id=&locality_id=&scope= → suggested text and who it will reach."""
 
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("blasts")]
 
     def get(self, request):
         org = request.user.active_membership.org
@@ -79,7 +79,8 @@ class BroadcastPreview(APIView):
 
 
 class BroadcastListCreate(APIView):
-    permission_classes = [IsBrokerManager]
+    def get_permissions(self):
+        return [IsBrokerManager()] if self.request.method == "GET" else [CanDo("blasts")()]
 
     def get(self, request):
         return Response([broadcast_json(b) for b in Broadcast.objects.select_related("locality").order_by("-created_at")[:50]])

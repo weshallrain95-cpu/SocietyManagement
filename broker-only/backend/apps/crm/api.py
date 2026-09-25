@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -9,7 +10,7 @@ from apps.identity.serializers import PhoneField
 from apps.inventory.models import Listing
 from apps.masterdata.models import Locality
 from apps.matching.services import match_requirement
-from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
+from apps.orgs.permissions import CanDo, IsBrokerManager, IsBrokerMember
 from common.api import PublicLinkMixin, domain_call, is_field_staff
 from common.crypto import mask_phone
 
@@ -61,7 +62,8 @@ def requirement_json(r: Requirement):
 def _customers(request):
     qs = Customer.objects.all()
     if is_field_staff(request):
-        qs = qs.filter(visit_plans__stops__assigned_staff=request.user).distinct()
+        # Customers on their visits, plus walk-ins they captured themselves.
+        qs = qs.filter(Q(visit_plans__stops__assigned_staff=request.user) | Q(created_by=request.user)).distinct()
     return qs
 
 
@@ -75,7 +77,7 @@ class CaptureSerializer(serializers.Serializer):
 class CustomerImport(APIView):
     """CRM-11: bring the existing customer list in (Excel / CSV / phone contacts .vcf, or pasted lines as `text`)."""
 
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("uploads")]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
@@ -110,12 +112,13 @@ class CustomerListCreate(APIView):
         return Response([customer_json(c, request) for c in qs[:500]])
 
     def post(self, request):
-        """OFF-01 quick capture: phone + name + source, ≤ 60 s."""
-        if not request.user.active_membership.can_manage:
-            return Response(status=403)
+        """OFF-01 quick capture: phone + name + source, ≤ 60 s. Field staff can capture walk-ins too."""
         s = CaptureSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         c, created = crm.capture_customer(org=request.user.active_membership.org, user=request.user, **s.validated_data)
+        if not created and is_field_staff(request) and not _customers(request).filter(pk=c.pk).exists():
+            # Already the agency's customer: field staff learn only that, not the record.
+            return Response({"detail": "This customer is already with your agency. Tell your manager they walked in."}, status=409)
         return Response(customer_json(c, request, detail=True), status=201 if created else 200)
 
 
@@ -226,10 +229,12 @@ class RequirementSerializer(serializers.Serializer):
 
 
 class RequirementCreate(APIView):
-    permission_classes = [IsBrokerManager]
+    permission_classes = [IsBrokerMember]
 
     def post(self, request, pk):
-        c = get_object_or_404(Customer, pk=pk)
+        # Field staff may note what a walk-in they captured is looking for; managers for any customer.
+        base = Customer.objects.filter(created_by=request.user) if is_field_staff(request) else Customer.objects.all()
+        c = get_object_or_404(base, pk=pk)
         s = RequirementSerializer(data=request.data)
         s.is_valid(raise_exception=True)
         d = dict(s.validated_data)

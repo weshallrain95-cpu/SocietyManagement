@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from apps.masterdata.layout import check_flat, issues_json
 from apps.masterdata.models import MicroMarket, ResolvedAttribute, Society, Unit
 from apps.masterdata.services import get_or_create_building, get_or_create_unit
-from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
+from apps.orgs.permissions import CanDo, IsBrokerManager, IsBrokerMember
 from apps.owners.media import media_json
 from apps.owners.services import flat_media, pending_media
 from apps.status.models import UnitStatus
@@ -425,7 +425,7 @@ class CopyAttributesView(APIView):
 
 
 class UploadCreateView(APIView):
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("uploads")]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def post(self, request):
@@ -465,14 +465,14 @@ def batch_json(b):
 
 
 class UploadDetailView(APIView):
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("uploads")]
 
     def get(self, request, pk):
         return Response(batch_json(get_object_or_404(UploadBatch, pk=pk)))
 
 
 class UploadRowsView(APIView):
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("uploads")]
 
     def get(self, request, pk):
         qs = get_object_or_404(UploadBatch, pk=pk).rows.all()
@@ -496,7 +496,7 @@ class UploadRowsView(APIView):
 
 
 class UploadRowResolveView(APIView):
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("uploads")]
 
     def post(self, request, pk, row_id):
         row = get_object_or_404(UploadRow, pk=row_id, batch_id=pk)
@@ -512,7 +512,7 @@ class UploadRowResolveView(APIView):
 
 
 class UploadCommitView(APIView):
-    permission_classes = [IsBrokerManager]
+    permission_classes = [CanDo("uploads")]
 
     def post(self, request, pk):
         return Response(upload.commit_batch(get_object_or_404(UploadBatch, pk=pk), user=request.user))
