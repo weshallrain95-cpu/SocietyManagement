@@ -29,6 +29,10 @@ principles we don't bend). Decisions D1–D19 are in `docs/05-roadmap.md`; requi
 - The API reloads by itself on code changes, but **the Celery worker and beat do not**: after any backend
   change, run `docker compose -f infra/compose/docker-compose.dev.yml restart worker beat` (broadcasts,
   matching counts and the customer map run there and will otherwise use old code).
+- Phones on the laptop: iPhone simulator ("iPhone 17") and Android emulator (`~/Library/Android/sdk/emulator/emulator
+  -avd Pixel_8`); `cd mobile && ANDROID_HOME=~/Library/Android/sdk npx expo start --android` opens the app on
+  Android (it reaches the laptop at http://10.0.2.2:8000). To show Android beside the chat, run
+  `python3 tools/android-mirror/mirror.py` and open http://localhost:8090 in the browser pane.
 - Laptop testing guide: `docs/07-dev-setup.md` §13–14. Ops console: http://localhost:8000/ops/
   (9000000000 / onlybroker-dev-admin). Demo logins: brokers 9820000001–3, field staff 9820010000.
 - GitHub Actions run the same checks on every push, and build an Android test app
