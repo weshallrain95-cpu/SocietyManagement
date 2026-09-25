@@ -755,6 +755,7 @@ export interface Api {
 
   leads(): Promise<Lead[]>;
   propose(enquiryId: string, body: { brokerage_terms: string; message?: string }): Promise<unknown>;
+  reportEnquiry(enquiryId: string, reason: string): Promise<{ reported: boolean }>;
   presenceStatus(): Promise<{ online: boolean }>;
   presence(online: boolean): Promise<{ online: boolean }>;
 

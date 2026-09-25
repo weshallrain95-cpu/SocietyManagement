@@ -14,6 +14,12 @@
     <p class="muted">Society: <a href="{% url 'ops-society' r.society.pk %}">{{ r.society.canonical_name }}</a> · {{ r.society.locality.name }} · status {{ r.society.status }}</p>
   {% endif %}
   {% if r.item.data.link %}<p class="muted">Link sent: <a href="{{ r.item.data.link }}" target="_blank" rel="noopener noreferrer">{{ r.item.data.link|truncatechars:80 }}</a></p>{% endif %}
+  {% if r.society.provenance.source == "maharera" %}
+    <p class="muted">From MahaRERA{% if r.society.provenance.promoters %} · developer {{ r.society.provenance.promoters|join:", " }}{% endif %} · pin code {{ r.society.pincode }}
+      {% if r.society.provenance.location_approx %}<span class="chip">pin approximate: area centre</span>{% endif %}</p>
+    <p class="muted">RERA:{% for p in r.society.provenance.projects %} <a href="{{ p.details_url }}" target="_blank" rel="noopener noreferrer" title="{{ p.project_name }}">{{ p.rera_no }}</a>{% if not forloop.last %},{% endif %}{% endfor %}
+      {% if r.society.provenance.rera_buildings %} · buildings named: {{ r.society.provenance.rera_buildings|join:", " }}{% endif %}</p>
+  {% endif %}
   {% if r.item.kind == "provisional_society" and r.society and r.society.status == "provisional" %}
     {% if r.candidates %}
       <p class="muted">Possible existing matches:</p>

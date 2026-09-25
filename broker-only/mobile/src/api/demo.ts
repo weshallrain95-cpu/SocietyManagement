@@ -1069,6 +1069,10 @@ export function createDemoApi(): Api {
       await wait(150);
       return clone(leads);
     },
+    async reportEnquiry() {
+      await wait();
+      return { reported: true };
+    },
     async propose(eid) {
       await wait();
       const l = leads.find((x) => x.id === eid)!;

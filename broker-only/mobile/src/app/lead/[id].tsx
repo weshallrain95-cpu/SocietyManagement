@@ -11,6 +11,9 @@ export default function LeadScreen() {
   const qc = useQueryClient();
   const [terms, setTerms] = useState('1 month rent');
   const [message, setMessage] = useState(Number(matches) ? `I have ${matches} flats that fit your needs. I can show them today.` : 'I can find flats that fit your needs.');
+  const [reporting, setReporting] = useState(false);
+  const [reason, setReason] = useState('Fake or test enquiry');
+  const report = useMutation({ mutationFn: () => api.reportEnquiry(id, reason) });
   const send = useMutation({
     mutationFn: () => api.propose(id, { brokerage_terms: terms, message }),
     onSuccess: () => {
@@ -34,6 +37,17 @@ export default function LeadScreen() {
           {send.error ? <ErrorBox error={send.error} /> : null}
           <Button title="Send proposal" onPress={() => send.mutate()} busy={send.isPending} testID="send-proposal" />
         </>
+      )}
+      {report.isSuccess ? (
+        <Notice>Reported. Only Broker will check it; if it was fake, any credit you used is refunded.</Notice>
+      ) : reporting ? (
+        <Card>
+          <Choice label="What is wrong?" value={reason} onChange={setReason} options={['Fake or test enquiry', 'Spam / advertising', 'Asks about who people are', 'Same person, many enquiries'].map((t) => ({ value: t, label: t }))} />
+          {report.error ? <ErrorBox error={report.error} /> : null}
+          <Button small kind="danger" title="Send report" onPress={() => report.mutate()} busy={report.isPending} testID="send-report" />
+        </Card>
+      ) : (
+        <Button small kind="ghost" title="Report this enquiry" onPress={() => setReporting(true)} testID="report-enquiry" />
       )}
     </Screen>
   );

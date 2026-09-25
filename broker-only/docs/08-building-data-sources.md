@@ -75,6 +75,20 @@ Whichever route works, the file goes straight into the system (see "What is buil
 - Use: newer towers. Load them with `import_building_layouts` (floors and flats per floor), or with
   `import_flat_register --source rera` when a flat list is available.
 
+**Collected 2026-09-25.** `tools/maharera/fetch_projects.py` reads the public search-result list (no login,
+no CAPTCHA), politely, one page at a time: RERA number, project name, promoter, pin code, last modified,
+details link, for the whole of Thane district (≈ 7,000 projects) into `tools/maharera/thane_projects.csv`.
+The list has **no map pins** (the coordinates are empty) and **no wings/floors/flats**. The details page per
+project (`maharerait.maharashtra.gov.in/public/project/view/<id>`) sits behind a **CAPTCHA**, so we do not
+read it automatically. Wing, floor and flat counts come from the page by hand, from the promoter, or from
+the TMC register.
+
+`manage.py import_rera_projects tools/maharera/thane_projects.csv` loads the pilot pin codes (400606, 400607,
+400608, 400610, 400615): phases of one complex are grouped ("LODHA SPLENDORA - PLATINO - B/D" → Lodha
+Splendora); a near-exact name adds the RERA numbers to a society already on record; everything else
+becomes a **provisional** society in the ops review queue (approve / merge / reject), pinned at the area's
+centre and marked "pin approximate". Brokers see nothing until ops approves.
+
 ## IGR Maharashtra (property registrations)
 
 - Every registered sale or leave-and-licence agreement has an "Index-II" entry: the property's

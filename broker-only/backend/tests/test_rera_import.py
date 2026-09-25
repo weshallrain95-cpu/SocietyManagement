@@ -77,3 +77,18 @@ def test_dry_run_saves_nothing(society, rera_csv):
     import_projects(read_projects(rera_csv), dry_run=True)
     society.refresh_from_db()
     assert Society.objects.count() == before and society.rera_project_nos == []
+
+
+def test_ops_queue_shows_the_rera_details(society, rera_csv):
+    from django.test import Client
+
+    from apps.identity.models import User
+
+    import_projects(read_projects(rera_csv))
+    u = User.objects.create_user("9000000001", display_name="Ops")
+    u.is_staff = True
+    u.save()
+    c = Client()
+    c.force_login(u)
+    page = c.get("/ops/queue").content.decode()
+    assert "From MahaRERA" in page and "P51700000012" in page and "pin approximate" in page
