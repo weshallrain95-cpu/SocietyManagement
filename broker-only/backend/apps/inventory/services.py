@@ -7,6 +7,10 @@ from common import crypto
 
 from .models import KeyCustody, Listing
 
+# What "Available now" can hold: on offer, or on hold (a token was paid but the deal can still fall through).
+AVAILABLE_NOW_STATES = ("AVAILABLE", "AVAILABLE_UNCONFIRMED", "ON_HOLD")
+OFF_LIST_STATES = ("LET", "SOLD", "OFF_MARKET")
+
 LISTING_FIELDS = (
     "asking_rent",
     "asking_price",
@@ -41,6 +45,7 @@ def create_listing(
     origin="manual",
     source_type="broker",
     report_available: bool = True,
+    available_now: bool = True,
 ) -> tuple[Listing, bool]:
     """Create (or refresh) this org's claim on a unit. Returns (listing, created)."""
     from apps.owners.models import OwnerWithdrawal
@@ -60,6 +65,8 @@ def create_listing(
         listing.owner_phone_enc = crypto.encrypt(e164)
         listing.owner_phone_hash = crypto.phone_hash(e164)
     listing.last_confirmed_at = timezone.now()
+    if available_now or created:
+        listing.available_now = available_now
     listing.save()
 
     for field, attr_key in UNIT_EVIDENCE.items():
@@ -126,5 +133,24 @@ def report_status(
         licence_end_date=licence_end_date,
     )
     listing.last_confirmed_at = timezone.now()
-    listing.save(update_fields=["last_confirmed_at"])
+    if st.state in OFF_LIST_STATES:
+        listing.available_now = False
+    listing.save(update_fields=["last_confirmed_at", "available_now"])
     return st
+
+
+def set_available_now(listings, on: bool, *, user) -> int:
+    """The broker builds their "Available now" list from all their flats. Turning a flat on that is marked
+    rented out, sold or off the market reports it as available again (unconfirmed until the owner says so)."""
+    from apps.audit.services import audit
+
+    changed = 0
+    for listing in listings:
+        if on and status_svc.get_status(listing.unit, listing.txn_type).state not in AVAILABLE_NOW_STATES:
+            report_status(listing, "AVAILABLE", user=user, reason="made available now")
+        if listing.available_now != on:
+            listing.available_now = on
+            listing.save(update_fields=["available_now", "updated_at"])
+            audit(user, "listing.available_now" if on else "listing.not_available_now", listing, {})
+            changed += 1
+    return changed

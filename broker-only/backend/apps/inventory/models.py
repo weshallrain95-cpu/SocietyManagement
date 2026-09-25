@@ -36,6 +36,9 @@ class Listing(BaseModel):
     origin = models.CharField(max_length=14, choices=Origin.choices, default=Origin.MANUAL)
     visibility = models.CharField(max_length=14, choices=Visibility.choices, default=Visibility.PRIVATE)
     withdrawn_by_owner = models.BooleanField(default=False)
+    # "Available now": the broker's own choice to offer this flat. Off until the broker turns it on, and
+    # dropped when the flat is rented out, sold or taken off the market. Other brokers' lists are untouched.
+    available_now = models.BooleanField(default=False)
     last_confirmed_at = models.DateTimeField()
     private_notes = models.TextField(blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")

@@ -104,6 +104,7 @@ export default function ListingDetail() {
         <View style={{ padding: 12, gap: 12 }}>
           {broker && picker ? <CustomerPicker l={l} mode={picker} onDone={() => setPicker('')} /> : null}
           {broker && showStatus ? <StatusPanel l={l} onDone={() => { setShowStatus(false); q.refetch(); }} /> : null}
+          {broker && !l.owner_withdrew ? <AvailableNowCard l={l} onDone={() => q.refetch()} /> : null}
 
           {broker && p && p.fitting_customers.count > 0 ? (
             <Pressable onPress={() => openPicker('share')} accessibilityRole="button" style={{ backgroundColor: c.brand, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }} testID="fitting-customers">
@@ -407,6 +408,30 @@ function CustomerPicker({ l, mode, onDone }: { l: Listing; mode: 'share' | 'visi
           {share.error ? <ErrorBox error={share.error} /> : null}
         </>
       )}
+    </View>
+  );
+}
+
+/** The broker's own "Available now" list: this flat is in it or not, one tap either way. */
+function AvailableNowCard({ l, onDone }: { l: Listing; onDone: () => void }) {
+  const { api } = useSession();
+  const qc = useQueryClient();
+  const c = usePalette();
+  const on = !!l.available_now;
+  const set = useMutation({
+    mutationFn: () => api.setAvailableNow([l.id], !on),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['listings'] }); onDone(); },
+  });
+  return (
+    <View style={{ backgroundColor: on ? c.okBg : c.surface, borderRadius: 14, padding: 12, gap: 8, borderWidth: 1, borderColor: on ? c.ok : c.border }}>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: on ? c.ok : c.text }}>{on ? '✓ In your Available now list' : 'Not in your Available now list'}</Text>
+          <Text style={{ fontSize: 12.5, color: c.textMuted }}>{on ? 'Matched to customers and ready to share.' : 'Kept in All flats. Not matched or shared until you make it available.'}</Text>
+        </View>
+        <Button small kind={on ? 'ghost' : 'primary'} title={on ? 'Remove' : 'Make available now'} onPress={() => set.mutate()} busy={set.isPending} testID="toggle-available-now" />
+      </Row>
+      {set.error ? <ErrorBox error={set.error} /> : null}
     </View>
   );
 }

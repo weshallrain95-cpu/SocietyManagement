@@ -30,7 +30,7 @@ def rebuild() -> int:
     live_units = UnitStatus.objects.filter(state__in=LIVE).values_list("unit_id", "txn_type")
     live = set(live_units)
     rows = (
-        Listing.objects.filter(archived_at__isnull=True, withdrawn_by_owner=False)
+        Listing.objects.filter(archived_at__isnull=True, withdrawn_by_owner=False, available_now=True)
         .annotate(bx=F("unit__building__location"))
         .values_list("unit_id", "txn_type", "unit__bhk", "asking_rent", "asking_price", "unit__building__location")
     )

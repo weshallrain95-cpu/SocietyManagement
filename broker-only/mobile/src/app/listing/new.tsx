@@ -29,6 +29,7 @@ export default function AddFlat() {
   const [keys, setKeys] = useState('office');
   const [ownerPhone, setOwnerPhone] = useState('');
   const [askOwner, setAskOwner] = useState(true);
+  const [availableNow, setAvailableNow] = useState(true);
   const [pets, setPets] = useState<string | undefined>();
   const [nonveg, setNonveg] = useState<string | undefined>();
   const [bachelors, setBachelors] = useState<string | undefined>();
@@ -63,6 +64,7 @@ export default function AddFlat() {
         deposit: deposit ? Number(deposit.replace(/[^\d]/g, '')) : rent ? amount * 3 : undefined,
         owner_phone: indianMobile(ownerPhone) ?? undefined,
         keys: { holder_type: keys },
+        available_now: availableNow,
         attributes: {
           furnishing,
           car_parking_covered: Number(parking),
@@ -177,6 +179,13 @@ export default function AddFlat() {
           <Choice label="Bachelors" value={bachelors} onChange={setBachelors} options={[{ value: 'allowed', label: 'Allowed' }, { value: 'not allowed', label: 'Not allowed' }]} />
         </>
       )}
+
+      <H2>6 · Offer it now?</H2>
+      <ChipRow>
+        <Chip label="Yes — Available now" selected={availableNow} onPress={() => setAvailableNow(true)} />
+        <Chip label="Not yet — All flats only" selected={!availableNow} onPress={() => setAvailableNow(false)} />
+      </ChipRow>
+      <P small muted>{availableNow ? 'It goes into your Available now list: matched to customers and ready to share.' : 'It is saved in All flats. Make it available from there whenever you like.'}</P>
 
       {save.error && !refused ? <ErrorBox error={save.error} /> : null}
       {refused && !refused.blocking ? (

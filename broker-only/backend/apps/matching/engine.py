@@ -247,9 +247,9 @@ def load_facts(listings: list[Listing], txn_type: str) -> list[Facts]:
 
 def run(req, *, org_id, include_unconfirmed=True, include_excluded=False) -> list[Result]:
     """Match against the org's own listings. Caller must be in that org's RLS context."""
-    qs = Listing.objects.filter(org_id=org_id, txn_type=req.txn_type, archived_at__isnull=True, withdrawn_by_owner=False).select_related(
-        "unit__building__society"
-    )
+    qs = Listing.objects.filter(
+        org_id=org_id, txn_type=req.txn_type, archived_at__isnull=True, withdrawn_by_owner=False, available_now=True
+    ).select_related("unit__building__society")
     live = [State.AVAILABLE] + ([State.AVAILABLE_UNCONFIRMED] if include_unconfirmed else [])
     qs = qs.filter(unit__statuses__txn_type=req.txn_type, unit__statuses__state__in=live)
     if req.bhk_min is not None:

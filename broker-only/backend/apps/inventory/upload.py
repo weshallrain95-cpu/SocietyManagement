@@ -384,6 +384,7 @@ def commit_batch(batch: UploadBatch, *, user) -> dict:
                     owner_phone=_safe_phone(p.get("owner_phone")),
                     origin="upload",
                     source_type="upload",
+                    available_now=False,  # an upload is the broker's whole inventory; they pick what's available now
                 )
             except InvalidValue as e:
                 row.errors = [str(e)]

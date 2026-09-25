@@ -104,6 +104,7 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     listings: (p) => get(`/listings${qs(p)}`),
     listing: (id) => get(`/listings/${id}`),
     createListing: (b) => post('/listings', b),
+    setAvailableNow: (ids, on) => post('/listings/available-now', { listing_ids: ids, available_now: on }),
     reportStatus: (id, b) => post(`/listings/${id}/status`, b),
     reconfirm: (id) => post(`/listings/${id}/reconfirm`),
     setKeys: (id, b) => call('PUT', `/listings/${id}/keys`, b),

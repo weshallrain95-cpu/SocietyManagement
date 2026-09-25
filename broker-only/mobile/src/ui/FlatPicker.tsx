@@ -1,4 +1,4 @@
-// Tick flats from the broker's own inventory (only theirs; the app never offers anyone else's flat).
+// Tick flats from the broker's own "Available now" list (only theirs; the app never offers anyone else's flat).
 import { useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 
@@ -6,8 +6,6 @@ import type { Listing } from '@/api';
 import { useSession } from '@/auth/session';
 import { bhk, inr } from '@/lib/format';
 import { Card, Field, Loading, Notice, P, Tick } from './components';
-
-const OPEN = ['AVAILABLE', 'AVAILABLE_UNCONFIRMED', 'ON_HOLD'];
 
 export function FlatPicker({ picked, onChange, max = 10, label = 'Which of your flats?' }: {
   picked: string[];
@@ -18,7 +16,7 @@ export function FlatPicker({ picked, onChange, max = 10, label = 'Which of your 
   const { api } = useSession();
   const [q, setQ] = useState('');
   const r = useQuery({ queryKey: ['listings', 'open'], queryFn: () => api.listings() });
-  const all = (r.data ?? []).filter((l) => OPEN.includes(l.status) && !l.owner_withdrew);
+  const all = (r.data ?? []).filter((l) => l.available_now && !l.owner_withdrew);
   const n = q.trim().toLowerCase();
   const shown = all.filter((l) => !n || `${l.society} ${l.building} ${l.unit_no}`.toLowerCase().includes(n));
   const toggle = (l: Listing, on: boolean) => {
@@ -40,7 +38,7 @@ export function FlatPicker({ picked, onChange, max = 10, label = 'Which of your 
           />
         </Card>
       ))}
-      {r.data && !all.length ? <Notice>No open flats in your list yet.</Notice> : null}
+      {r.data && !all.length ? <Notice>Nothing in your “Available now” list yet. Pick flats from Flats → All flats.</Notice> : null}
       {picked.length >= max ? <P small muted>At most {max} flats in one message.</P> : null}
     </>
   );

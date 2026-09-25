@@ -67,6 +67,7 @@ function mkListing(i: number, soc: SocietyCandidate, unit: string, bhk: number, 
     unit_no: unit, floor: Math.floor(Number(unit) / 100) || 0, bhk, asking_rent: rent, asking_price: null, deposit: rent * 3,
     available_from: today(), status: state, status_label: LABEL[state], last_confirmed_at: now(), origin: 'manual',
     visibility: 'private', stale: i % 5 === 0, maintenance: 3500, negotiable: true, brokerage_terms: '1 month rent',
+    available_now: ['AVAILABLE', 'AVAILABLE_UNCONFIRMED', 'ON_HOLD'].includes(state),
     owner_name: 'Owner (demo)', owner_phone: '+91 98190 •••••', private_notes: '',
     keys: { holder_type: i % 3 === 0 ? 'owner' : 'office', holder_user_id: null, instructions: 'Drawer 3', needs_handover: false },
     attributes: Object.fromEntries(Object.entries(attrs).map(([k, v]) => [k, { value: v, source: 'broker', disputed: false }])),
@@ -479,6 +480,7 @@ export function createDemoApi(): Api {
       b = { ...b, building: chk.wing ?? b.building };
       const l = mkListing(++seq, soc, b.unit_no, Number(b.bhk), b.asking_rent ?? 0, 'AVAILABLE_UNCONFIRMED', b.attributes ?? {});
       l.building = b.building || 'Main';
+      l.available_now = b.available_now ?? true;
       l.deposit = b.deposit ?? null;
       listings.unshift(l);
       return clone(l);
@@ -493,7 +495,21 @@ export function createDemoApi(): Api {
       l.status_label = LABEL[st];
       l.last_confirmed_at = now();
       l.stale = false;
+      if (['LET', 'SOLD', 'OFF_MARKET'].includes(st)) l.available_now = false;
       return { state: st, label: LABEL[st] };
+    },
+    async setAvailableNow(ids, on) {
+      await wait();
+      let changed = 0;
+      for (const l of listings.filter((x) => ids.includes(x.id))) {
+        if (on && !['AVAILABLE', 'AVAILABLE_UNCONFIRMED', 'ON_HOLD'].includes(l.status)) {
+          l.status = 'AVAILABLE_UNCONFIRMED';
+          l.status_label = LABEL.AVAILABLE_UNCONFIRMED;
+        }
+        if (!!l.available_now !== on) changed += 1;
+        l.available_now = on;
+      }
+      return { changed };
     },
     async reconfirm(lid) {
       const l = listings.find((x) => x.id === lid)!;
@@ -526,7 +542,8 @@ export function createDemoApi(): Api {
       const officeKeys = (l: Listing) => l.keys?.holder_type === 'office';
       const photos = (l: Listing) => (l.media ?? []).filter((m) => m.kind === 'photo').length;
       const all = listings;
-      const counts = { total: all.length, reconfirm: all.filter(stale).length, new: 3, keys_office: all.filter(officeKeys).length, no_photos: all.filter((l) => !photos(l)).length };
+      const counts = { total: all.length, available_now: all.filter((l) => l.available_now).length, reconfirm: all.filter(stale).length, new: 3, keys_office: all.filter(officeKeys).length, no_photos: all.filter((l) => !photos(l)).length };
+      if (p.list === 'available_now') pool = pool.filter((l) => l.available_now);
       if (p.txn_type) pool = pool.filter((l) => p.txn_type!.split(',').includes(l.txn_type));
       if (p.status) pool = pool.filter((l) => p.status!.split(',').includes(l.status));
       if (p.bhk) {

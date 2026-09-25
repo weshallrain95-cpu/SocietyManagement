@@ -76,6 +76,8 @@ export interface Listing {
   attributes?: Record<string, ResolvedAttr>;
   owner_appointed?: boolean;
   owner_withdrew?: boolean;
+  /** In the broker's own "Available now" list (still on offer or on hold). */
+  available_now?: boolean;
   media?: MediaItem[];
   my_pending_media?: MediaItem[];
 }
@@ -109,6 +111,8 @@ export interface BrowseParams {
   society_id?: string;
   building_id?: string;
   quick?: QuickView;
+  /** Only the broker's "Available now" list; omit for all flats. */
+  list?: 'available_now';
   sort?: 'confirmed' | 'newest' | 'price_low' | 'price_high';
   offset?: number;
   limit?: number;
@@ -116,7 +120,7 @@ export interface BrowseParams {
 
 export interface BrowseResult {
   count: number;
-  counts: { total: number } & Record<QuickView, number>;
+  counts: { total: number; available_now: number } & Record<QuickView, number>;
   results: Listing[];
 }
 
@@ -145,6 +149,8 @@ export interface NewListing {
   keys?: { holder_type: string; instructions?: string };
   /** Save despite layout warnings (never overrides a verified layout). */
   confirm_layout?: boolean;
+  /** Offer it now (default yes), or keep it in all flats only. */
+  available_now?: boolean;
 }
 
 // --- Owners (OWN-01..06; founder decisions D13/D14) ---------------------------------------------
@@ -601,6 +607,7 @@ export interface Api {
   listings(params?: { txn_type?: TxnType; status?: string }): Promise<Listing[]>;
   listing(id: string): Promise<Listing>;
   createListing(body: NewListing): Promise<Listing>;
+  setAvailableNow(ids: string[], on: boolean): Promise<{ changed: number }>;
   reportStatus(id: string, body: { state: string; reason?: string; on_behalf_of_owner?: boolean }): Promise<{ state: UnitState; label: string }>;
   reconfirm(id: string): Promise<{ state: UnitState; label: string }>;
   setKeys(id: string, body: { holder_type: string; instructions?: string; holder_user_id?: string }): Promise<unknown>;

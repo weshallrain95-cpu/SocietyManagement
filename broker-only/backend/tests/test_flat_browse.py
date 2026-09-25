@@ -64,7 +64,34 @@ def test_one_box_finds_any_flat(book):
     assert ids(c.get("/v1/listings/browse", {"q": "+91 98190 99999"}).json()) == []
     r = c.get("/v1/listings/browse").json()
     assert r["count"] == 3  # never broker B's listing of the same flat
-    assert r["counts"] == {"total": 3, "reconfirm": 1, "new": 3, "keys_office": 1, "no_photos": 3}
+    assert r["counts"] == {"total": 3, "available_now": 3, "reconfirm": 1, "new": 3, "keys_office": 1, "no_photos": 3}
+
+
+def test_broker_builds_available_now_from_all_flats(book):
+    c, l1, l2, l3 = book["api"], book["l1"], book["l2"], book["l3"]
+    with rls.org_context(book["org"].pk):  # e.g. uploaded as the whole inventory
+        Listing.objects.update(available_now=False)
+    r = c.get("/v1/listings/browse", {"list": "available_now"}).json()
+    assert r["count"] == 0 and r["counts"]["total"] == 3 and r["counts"]["available_now"] == 0
+
+    # Pick two flats from all flats; one was rented out, so it comes back as available (unconfirmed).
+    c.post(f"/v1/listings/{l2.pk}/status", {"state": "LET"}, format="json")
+    r = c.post("/v1/listings/available-now", {"listing_ids": [str(l1.pk), str(l2.pk)], "available_now": True}, format="json")
+    assert r.json() == {"changed": 2, "available_now": True}
+    assert sorted(ids(c.get("/v1/listings/browse", {"list": "available_now"}).json())) == sorted([l1.unit.unit_no, l2.unit.unit_no])
+    assert c.get(f"/v1/listings/{l2.pk}").json()["status"] == "AVAILABLE_UNCONFIRMED"
+
+    # On hold stays in the list (the deal can fall through); rented out leaves it and stays in all flats.
+    c.post(f"/v1/listings/{l1.pk}/status", {"state": "ON_HOLD"}, format="json")
+    c.post(f"/v1/listings/{l2.pk}/status", {"state": "LET"}, format="json")
+    assert ids(c.get("/v1/listings/browse", {"list": "available_now"}).json()) == [l1.unit.unit_no]
+    assert c.get("/v1/listings/browse").json()["count"] == 3
+    assert c.get(f"/v1/listings/{l2.pk}").json()["available_now"] is False
+
+    # Taking a flat off the list; a new flat added by hand is available now unless the broker says no.
+    c.post("/v1/listings/available-now", {"listing_ids": [str(l1.pk)], "available_now": False}, format="json")
+    assert c.get("/v1/listings/browse", {"list": "available_now"}).json()["count"] == 0
+    assert l3.unit.unit_no not in ids(c.get("/v1/listings/browse", {"list": "available_now"}).json())
 
 
 def test_filters_sort_and_paging(book):

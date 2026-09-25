@@ -159,3 +159,17 @@ test('one search box finds a flat by society + flat number, owner name or owner 
   expect(page.facts.find((f) => f.label === 'Floor')?.value).toBe('12 of 20');
   expect(page.fitting_customers.count).toBeGreaterThan(0);
 });
+
+test('the broker builds Available now from all flats; rented-out flats leave it', async () => {
+  const api = createDemoApi();
+  const before = await run(api.browseListings({ list: 'available_now' }));
+  expect(before.count).toBe(before.counts.available_now);
+  await run(api.reportStatus('lst-1', { state: 'LET' }));
+  const after = await run(api.browseListings({ list: 'available_now' }));
+  expect(after.results.some((l) => l.id === 'lst-1')).toBe(false);
+  expect((await run(api.browseListings({}))).results.some((l) => l.id === 'lst-1')).toBe(true);
+  await run(api.setAvailableNow(['lst-1'], true));
+  const back = (await run(api.listing('lst-1')));
+  expect(back.available_now).toBe(true);
+  expect(back.status).toBe('AVAILABLE_UNCONFIRMED');
+});

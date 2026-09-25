@@ -59,6 +59,7 @@ def listing_json(l: Listing, request, *, detail=False, summary=False) -> dict:
         "origin": l.origin,
         "owner_appointed": l.origin == Listing.Origin.OWNER_INVITE,
         "owner_withdrew": l.withdrawn_by_owner,
+        "available_now": l.available_now and bool(st) and st.state in services.AVAILABLE_NOW_STATES,
         "visibility": l.visibility,
         "stale": (timezone.now() - l.last_confirmed_at).days >= (21 if l.txn_type == "RENT" else 45),
         "carpet_sqft": float(u.carpet_sqft) if u.carpet_sqft else None,
@@ -137,6 +138,7 @@ class ListingCreateSerializer(serializers.Serializer):
     visibility = serializers.ChoiceField(choices=Listing.Visibility.choices, required=False)
     attributes = serializers.DictField(required=False)
     keys = serializers.DictField(required=False)
+    available_now = serializers.BooleanField(required=False, default=True)
 
     def validate(self, d):
         if d["txn_type"] == "RENT" and not d.get("asking_rent"):
@@ -194,6 +196,7 @@ class ListingListCreate(APIView):
                 attributes=d.pop("attributes", {}),
                 owner_phone=d.pop("owner_phone", None) or None,
                 keys=d.pop("keys", None),
+                available_now=d.pop("available_now"),
             )
         return Response(listing_json(listing, request, detail=True), status=201 if created else 200)
 
@@ -346,6 +349,25 @@ class ListingStatusView(APIView):
             on_behalf_of_owner=d["on_behalf_of_owner"],
         )
         return Response({"state": st.state, "label": st.label, "confirmed_by_owner": st.confirmed_by_owner})
+
+
+class AvailableNowView(APIView):
+    """POST {listing_ids: [...], available_now: true|false}: the broker picks flats from all their flats
+    for their "Available now" list (or takes them off it)."""
+
+    permission_classes = [IsBrokerManager]
+
+    def post(self, request):
+        ids = request.data.get("listing_ids") or []
+        if not isinstance(ids, list) or not ids or len(ids) > 500:
+            return Response({"detail": "Pick between 1 and 500 flats"}, status=400)
+        on = bool(request.data.get("available_now", True))
+        listings = list(
+            Listing.objects.filter(pk__in=ids, archived_at__isnull=True, withdrawn_by_owner=False).select_related("unit")
+        )  # RLS: own firm only
+        with transaction.atomic():
+            changed = domain_call(services.set_available_now, listings, on, user=request.user)
+        return Response({"changed": changed, "available_now": on})
 
 
 class ListingReconfirmView(APIView):

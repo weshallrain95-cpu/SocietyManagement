@@ -7,6 +7,7 @@ urlpatterns = [
     path("listings/search", api.ListingSearch.as_view()),
     path("listings/browse", api.ListingBrowse.as_view()),
     path("listings/by-society", api.ListingsBySociety.as_view()),
+    path("listings/available-now", api.AvailableNowView.as_view()),
     path("listings/<uuid:pk>", api.ListingDetail.as_view()),
     path("listings/<uuid:pk>/status", api.ListingStatusView.as_view()),
     path("listings/<uuid:pk>/reconfirm", api.ListingReconfirmView.as_view()),

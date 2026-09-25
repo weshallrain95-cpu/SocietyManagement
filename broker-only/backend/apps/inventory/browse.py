@@ -59,6 +59,14 @@ def _stale_q(now):
     )
 
 
+def available_now_q():
+    """The broker's "Available now" list: flats they turned on that are still on offer or on hold."""
+    from .services import AVAILABLE_NOW_STATES
+
+    live = UnitStatus.objects.filter(unit=OuterRef("unit"), txn_type=OuterRef("txn_type"), state__in=AVAILABLE_NOW_STATES)
+    return Q(available_now=True) & Exists(live)
+
+
 def _annotate(qs):
     live_photo = UnitMedia.objects.filter(unit=OuterRef("unit"), kind="photo", state="live", deleted_at__isnull=True)
     office_keys = KeyCustody.objects.filter(listing=OuterRef("pk"), to_ts__isnull=True, holder_type="office")
@@ -78,9 +86,15 @@ def browse(base, params, *, org):
     """Returns (page of listings, total matching, quick-view counts over the unfiltered base)."""
     now = timezone.now()
     base = _annotate(base.filter(archived_at__isnull=True).select_related("unit__building__society__locality"))
-    counts = {"total": base.count(), **{k: base.filter(quick_q(k, now)).count() for k in QUICK}}
+    counts = {
+        "total": base.count(),
+        "available_now": base.filter(available_now_q()).count(),
+        **{k: base.filter(quick_q(k, now)).count() for k in QUICK},
+    }
 
     qs = text_filter(base, params.get("q", ""), org=org)
+    if params.get("list") == "available_now":
+        qs = qs.filter(available_now_q())
     if params.get("txn_type"):
         qs = qs.filter(txn_type__in=params["txn_type"].split(","))
     if params.get("status"):

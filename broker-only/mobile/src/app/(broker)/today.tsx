@@ -17,7 +17,7 @@ export default function Today() {
 
   const newLeads = leads.data?.filter((l) => !l.my_proposal && l.state === 'open').length ?? 0;
   const stale = listings.data?.filter((l) => l.stale) ?? [];
-  const available = listings.data?.filter((l) => l.status === 'AVAILABLE' || l.status === 'AVAILABLE_UNCONFIRMED').length ?? 0;
+  const available = listings.data?.filter((l) => l.available_now).length ?? 0;
 
   return (
     <Screen onRefresh={refetch} refreshing={refreshing}>
@@ -25,7 +25,7 @@ export default function Today() {
       <Row style={{ flexWrap: 'wrap' }}>
         <Stat label="New leads" value={newLeads} tone={newLeads ? 'accent' : undefined} />
         <Stat label="Visits today" value={plans.data?.reduce((n, p) => n + p.stops.length, 0) ?? '–'} />
-        <Stat label="Flats available" value={available} />
+        <Stat label="Available now" value={available} />
       </Row>
 
       <H2 right={<Button small kind="ghost" title="+ Customer" onPress={() => router.push('/customer/new')} />}>Today’s visits</H2>
