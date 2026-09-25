@@ -70,8 +70,8 @@ because it was built in one push:
 - **"Admin must approve trips first"** as an optional agency setting (today trip allocation never waits; the
   Admin is told and can reassign).
 - **Flat Excel upload in the app** (today uploads run through the API; the app has the customer-list import).
-- **Pricing model** (decision D2): per agency with unlimited logins, or by number of logins — see the
-  founder discussion of 2026-09-25.
+- **Billing** for D2 (₹15,000 per agency per month, unlimited logins): subscription payments, invoices with
+  GST, and what happens when a payment lapses. Not needed for the free pilot.
 
 ## 3. Definition of done (every story)
 
@@ -98,7 +98,7 @@ because it was built in one push:
 | # | Decision | Recommendation | Why it matters |
 |---|----------|----------------|----------------|
 | D1 | Final product name and domain | Keep "Only Broker" as the working name; check the trademark before public launch | Branding, app-store listing, DLT sender ID |
-| D2 | Monetisation at pilot | Free for the pilot; introduce plans and credits at public launch | Adoption vs. early revenue signal |
+| D2 | Monetisation | ✅ **Decided and frozen 2026-09-25: one monthly subscription per agency, ₹15,000 per month, unlimited logins** (Admin, managers, field staff). Not per login, so nobody shares a login and every action stays tied to one phone. Pilot: free. Marketplace lead credits can come later, separately | Adoption vs. early revenue signal |
 | D3 | Pilot micro-market | ✅ **Decided 2026-09-23: Thane West**; a pilot broker is already engaged | Seeding effort is per micro-market |
 | D4 | Number of proposals a customer can accept | 3 | Balance between customer choice and broker lead value |
 | D5 | Rules for broker consensus without an owner | 2 independent brokers within 7 days | Status accuracy vs. speed |

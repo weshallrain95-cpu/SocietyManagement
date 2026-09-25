@@ -59,7 +59,9 @@ flowchart LR
 | Share the pin-check link with the pilot broker ("Can interact") | Correct pins mean correct distances and matching | Stage 2 |
 | Send the TMC RTI / data-sharing request for the pilot wards (drafts in docs/08) and share one real property-tax bill (owner name hidden) | Official flat lists make the building universe complete and exact | Stage 2 |
 | Open accounts: DLT sender ID + templates, WhatsApp Business, Google Cloud (Maps), a cloud server | Real messages to owners and customers; hosting outside the laptop | Stage 3 |
-| Decisions D1, D2, D4, D5 (docs/05 §5) | Name, pricing at pilot, marketplace rules | Stage 4–5, not urgent |
+| Decisions D1, D4, D5 (docs/05 §5) | Name, marketplace rules | Stage 4–5, not urgent |
+
+**Pricing (D2, frozen 2026-09-25):** ₹15,000 per month per agency, unlimited logins; free during the pilot.
 
 ## Principles we don't bend
 
