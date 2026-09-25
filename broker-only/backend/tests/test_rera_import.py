@@ -16,6 +16,7 @@ ROWS = [
     ("P51700000013", "LODHA SPLENDORA - PLATINO - D", "400615"),
     ("P51700000014", "TOKYO BAY PHASE 2A", "400607"),
     ("P51700000015", "GRAND HOTEL", "400607"),  # not housing
+    ("P51700000017", "HIRANANDANI WESTGATE", "400615"),  # close spelling, different complex
     ("P51700000016", "SUNRISE TOWERS", "421301"),  # outside the pilot pin codes
 ]
 
@@ -53,7 +54,7 @@ def test_complex_name_splits_building_and_phase():
 
 def test_import_links_known_societies_and_proposes_the_rest(society, rera_csv):
     groups = read_projects(rera_csv)
-    assert {g.name for g in groups.values()} == {"Hiranandani Estate", "Lodha Splendora", "Tokyo Bay"}
+    assert {g.name for g in groups.values()} == {"Hiranandani Estate", "Lodha Splendora", "Tokyo Bay", "Hiranandani Westgate"}
 
     res = import_projects(groups)
     society.refresh_from_db()
@@ -65,10 +66,11 @@ def test_import_links_known_societies_and_proposes_the_rest(society, rera_csv):
     assert splendora.rera_project_nos == ["P51700000012", "P51700000013"]  # two phases, one society
     assert splendora.provenance["location_approx"] is True
     assert ReviewQueueItem.objects.filter(kind="provisional_society", ref_id=str(splendora.pk)).exists()
-    assert len(res.proposed) == 2 and len(res.matched) == 1
+    assert len(res.proposed) == 3 and len(res.matched) == 1
+    assert Society.objects.get(canonical_name="Hiranandani Westgate").status == Society.Status.PROVISIONAL
 
     again = import_projects(read_projects(rera_csv))  # re-running changes nothing
-    assert again.already == 3 and not again.proposed
+    assert again.already == 4 and not again.proposed
     assert Society.objects.filter(canonical_name="Lodha Splendora").count() == 1
 
 

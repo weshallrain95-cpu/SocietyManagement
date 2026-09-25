@@ -45,6 +45,11 @@ _SUFFIX = re.compile(
 _TRAILING_CODE = re.compile(r"\s+(?:[A-Z]|[IVX]{1,4}|\d{1,2}|[A-Z]\d?|\d[A-Z])$")
 
 
+def _key(name: str) -> str:
+    n = normalise_name(name)
+    return n.strong_compact or n.compact
+
+
 @dataclass
 class Complex:
     name: str
@@ -123,7 +128,14 @@ def import_projects(groups: dict, *, user=None, dry_run=False) -> Result:
                 cands = dedupe.find_candidates(c.name)
                 best = cands[0] if cands else None
                 runner = cands[1].signals.get("name", 0) if len(cands) > 1 else 0
-                sure = best and best.signals.get("name", 0) >= NAME_SURE and best.signals["name"] - runner >= 0.05
+                sure = (
+                    best
+                    and best.signals.get("name", 0) >= NAME_SURE
+                    and best.signals["name"] - runner >= 0.05
+                    # Same words once place names ("Thane") and filler are dropped: "Hiranandani Westgate" is
+                    # not "Hiranandani Estate", however close the spelling.
+                    and _key(c.name) == _key(best.society.canonical_name)
+                )
                 target = best.society if sure else None
                 if target is None:
                     if dry_run:
