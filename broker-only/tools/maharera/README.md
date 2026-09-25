@@ -8,6 +8,8 @@ collected.
 
 Load the pilot pin codes into the society universe (links known societies, proposes the rest to ops):
 
-    docker compose -f infra/compose/docker-compose.dev.yml exec api python manage.py import_rera_projects /app/../tools/maharera/thane_projects.csv
+    cp tools/maharera/thane_projects.csv backend/_rera.csv
+    docker compose -f infra/compose/docker-compose.dev.yml exec api python manage.py import_rera_projects _rera.csv
+    rm backend/_rera.csv
 
-(or copy the file into `backend/` first). See docs/08.
+(The server container only sees `backend/`.) Running it again changes nothing. See docs/08.
