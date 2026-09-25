@@ -115,8 +115,8 @@ export default function Login() {
             </Card>
             <Card>
               <P style={{ fontWeight: '700' }}>Looking for a flat?</P>
-              <P small muted>See updates from the brokers you deal with.</P>
-              <Button kind="secondary" title="I’m looking for a flat" onPress={() => router.replace('/updates')} testID="i-am-customer" />
+              <P small muted>Tell every broker nearby what you need, compare their offers, and get updates from the brokers you deal with.</P>
+              <Button kind="secondary" title="I’m looking for a flat" onPress={() => router.replace('/find')} testID="i-am-customer" />
             </Card>
             <P>Broker? Register your agency to start. (Field staff: ask your principal to add your number instead.)</P>
             <Field label="Agency / your name" value={agency} onChangeText={setAgency} placeholder="Suresh Realty" />

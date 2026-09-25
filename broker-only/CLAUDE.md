@@ -26,6 +26,9 @@ principles we don't bend). Decisions D1–D19 are in `docs/05-roadmap.md`; requi
 - Run it: `make up` (server in Docker on :8000; database on 127.0.0.1:55432, Redis on 56379 so they
   never clash with another database on the Mac), `make seed` once, then
   `cd mobile && npx expo start --web` (app on :8081). After database changes: `make down && make up`.
+- The API reloads by itself on code changes, but **the Celery worker and beat do not**: after any backend
+  change, run `docker compose -f infra/compose/docker-compose.dev.yml restart worker beat` (broadcasts,
+  matching counts and the customer map run there and will otherwise use old code).
 - Laptop testing guide: `docs/07-dev-setup.md` §13–14. Ops console: http://localhost:8000/ops/
   (9000000000 / onlybroker-dev-admin). Demo logins: brokers 9820000001–3, field staff 9820010000.
 - GitHub Actions run the same checks on every push, and build an Android test app

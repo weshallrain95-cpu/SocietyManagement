@@ -551,6 +551,77 @@ export interface VisitPlan {
   key_warnings?: { stop_id: string; issue: string }[];
 }
 
+// --- Marketplace, customer side (MKT-01, 03, 07, 08, 09) -----------------------------------------
+export type EnquiryState = 'open' | 'in_progress' | 'fulfilled' | 'cancelled' | 'expired';
+
+export interface Enquiry {
+  id: string;
+  summary: string;
+  state: EnquiryState;
+  txn_type: TxnType;
+  created_at: string;
+  expires_at: string;
+  urgency: 'normal' | 'urgent';
+  radius_m: number;
+  area_label: string;
+  recipients: number;
+  proposals: number;
+}
+
+export interface PublicBroker {
+  id: string;
+  name: string;
+  rera_registered: boolean;
+  rating_bayes: string | number;
+  rating_count: number;
+  median_response_s: number | null;
+  closures: number;
+  languages: string[];
+}
+
+export interface Proposal {
+  id: string;
+  state: 'sent' | 'accepted' | 'declined' | 'expired' | 'withdrawn';
+  broker: PublicBroker;
+  brokerage_terms: string;
+  message: string;
+  match_count: number;
+  earliest_slot: string | null;
+  response_s: number;
+  promoted: boolean;
+  created_at: string;
+}
+
+export type EnquiryDetail = Omit<Enquiry, 'proposals'> & { proposals: Proposal[] };
+
+export interface NewEnquiry {
+  txn_type: TxnType;
+  bhk_min: number;
+  bhk_max: number;
+  budget_max: number;
+  center: { lat: number; lng: number };
+  radius_m: number;
+  area_label: string;
+  urgency: 'normal' | 'urgent';
+  house_rule_needs?: Record<string, string | boolean>;
+  move_in_by?: string | null;
+  notes?: string;
+}
+
+export interface SupplyCluster {
+  h3: string;
+  lat: number;
+  lng: number;
+  units: number;
+  brokers_serving: number;
+  price_band: { p25: number; p50: number; p75: number } | null;
+}
+
+export interface SupplyMap {
+  clusters: SupplyCluster[];
+  brokers_online: { id: string; name: string; rating: number; location: { lat: number; lng: number } | null }[];
+}
+
 export interface Lead {
   id: string;
   summary: string;
@@ -636,6 +707,12 @@ export interface Api {
   replyTrade(id: string, answer: TradeAnswer, message?: string): Promise<TradeDelivery>;
   societyStructure(societyId: string): Promise<SocietyStructure>;
   myUpdates(): Promise<CustomerUpdate[]>;
+  supplyMap(p: { bbox: [number, number, number, number]; zoom: number; txn: string; bhk?: string }): Promise<SupplyMap>;
+  myEnquiries(): Promise<Enquiry[]>;
+  createEnquiry(body: NewEnquiry): Promise<Enquiry>;
+  enquiry(id: string): Promise<EnquiryDetail>;
+  closeEnquiry(id: string, state: 'cancelled' | 'fulfilled'): Promise<Enquiry>;
+  acceptProposal(id: string): Promise<Proposal>;
   markUpdatesRead(): Promise<unknown>;
   muteBroker(orgId: string, muted: boolean): Promise<{ updated: number }>;
   ownerInvites(): Promise<OwnerInvite[]>;

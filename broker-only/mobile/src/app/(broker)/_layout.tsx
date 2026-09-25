@@ -18,7 +18,7 @@ export default function BrokerTabs() {
   if (!tokens) return <Redirect href="/login" />;
   if (isStaff) return <Redirect href="/day" />;
   if (isOwner) return <Redirect href="/my-flats" />;
-  if (role === 'customer') return <Redirect href="/updates" />;
+  if (role === 'customer') return <Redirect href="/find" />;
   return (
     <Tabs
       screenOptions={{

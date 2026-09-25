@@ -64,6 +64,13 @@ def _enquiry(user, **kw):
     return mkt.create_enquiry(user, data)
 
 
+def test_summary_has_no_trailing_decimal_for_whole_bhk(market):
+    from decimal import Decimal
+
+    e = _enquiry(market["riya"], bhk_min=Decimal("2.0"), bhk_max=Decimal("2.0"))
+    assert e.summary_text.startswith("2 BHK on rent")
+
+
 def test_summary_reads_like_the_brief(market):
     e = _enquiry(market["riya"])
     assert e.summary_text.startswith("2 BHK on rent, urgent, around Dhokali (3 km), up to ₹25,000/month, pets")

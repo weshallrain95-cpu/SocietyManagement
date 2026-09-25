@@ -54,6 +54,7 @@ because it was built in one push:
 | **Customer list import** (CRM-11) and **several flats in one customer update** | ✅ Done |
 | **Official flat registers** (D18): TMC property-tax / MahaRERA / IGR flat lists → wing layouts worked out automatically, flats outside a complete list refused, owner names never stored; ops upload page and template; **building picture** floor by floor in the app and ops console | ✅ Done — waiting on the data itself (docs/08) |
 | **Flats at scale + new flat page** (INV-10/11, approved design): one search box (society, flat no., owner name or phone), filters, quick views, browse by society; the full flat page with a customer view | ✅ Done |
+| **Customer marketplace screens** (MKT-01/03/07/08/09): "Find a flat" (flats available now and price ranges per area, brokers online — counts only), post a requirement, offers from brokers best first, accept up to 3, found a flat / cancel | ✅ Done 2026-09-25 — design not yet reviewed by the founder |
 | Broker desktop (Next.js) | Later — the app's web build covers it for now |
 | Attribute dictionary v1.0 | ✅ Approved and committed |
 

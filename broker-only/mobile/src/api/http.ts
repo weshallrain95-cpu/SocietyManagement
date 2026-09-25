@@ -14,6 +14,8 @@ export class ApiError extends Error {
 export interface TokenStore {
   get(): Tokens | null;
   set(tokens: Tokens | null): void;
+  /** Resolves once saved tokens are loaded; requests wait for it (a page reloaded on the web fires queries at once). */
+  loaded?: Promise<void>;
 }
 
 /** Web pickers give a File; phones give a local uri that React Native's FormData uploads itself. */
@@ -65,6 +67,7 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
   }
 
   async function call<T>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
+    if (tokens.loaded) await tokens.loaded;
     const t = tokens.get();
     const headers: Record<string, string> = { Accept: 'application/json' };
     const form = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -140,6 +143,12 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     replyTrade: (did, answer, message) => post(`/trade/inbox/${did}/reply`, { answer, message }),
     societyStructure: (sid) => get(`/societies/${sid}/structure`),
     myUpdates: () => get('/me/updates'),
+    supplyMap: (p) => get(`/map/supply${qs({ bbox: p.bbox.join(','), zoom: p.zoom, txn: p.txn, bhk: p.bhk })}`),
+    myEnquiries: () => get('/enquiries'),
+    createEnquiry: (b) => post('/enquiries', b),
+    enquiry: (id) => get(`/enquiries/${id}`),
+    closeEnquiry: (id, state) => post(`/enquiries/${id}/close`, { state }),
+    acceptProposal: (id) => post(`/proposals/${id}/accept`),
     markUpdatesRead: () => post('/me/updates'),
     muteBroker: (org_id, muted) => post('/me/updates/mute', { org_id, muted }),
     ownerInvites: () => get('/owner-invites'),

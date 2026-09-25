@@ -42,7 +42,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // The API client reads tokens through this store (outside React render); state mirrors it for the UI.
   const [store] = useState(() => {
     let current: Tokens | null = null;
+    let markLoaded = () => undefined as void;
+    const loaded = new Promise<void>((resolve) => { markLoaded = resolve; });
     return {
+      loaded,
+      markLoaded: () => markLoaded(),
       get: () => current,
       set: (t: Tokens | null) => {
         current = t;
@@ -59,6 +63,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       if (s) setSettings((prev) => ({ ...prev, ...JSON.parse(s), ...(DEMO_FORCED ? { demo: true } : {}) }));
       else await kv.setItem(SETTINGS, JSON.stringify(settings));
       if (t) store.set(JSON.parse(t));
+      store.markLoaded();
       setReady(true);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

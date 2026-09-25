@@ -3,7 +3,7 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatPage, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, UnitState, VisitPlan, VisitStop, Wing,
+  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatPage, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, EnquiryDetail, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
 import { checkFlat, parseUnitNo } from '@/lib/layout';
@@ -214,6 +214,7 @@ const photo = (id: string, label: string, hue: number): MediaItem => {
 export function createDemoApi(): Api {
   const tokens: Tokens = { access: 'demo', refresh: 'demo', role: 'broker_principal', org: 'org-demo' };
   let online = true;
+  const enquiries: EnquiryDetail[] = [];
   const ownerMedia: MediaItem[] = [photo('med-1', 'Living room', 28), photo('med-2', 'Kitchen', 140), photo('med-3', 'View from balcony', 205)];
   const ownerFlats: OwnerFlat[] = [{
     id: 'own-1', unit_id: 'unit-1', society: 'Hiranandani Estate', society_id: 'soc-0', locality: 'Hiranandani Estate', building: 'A Wing',
@@ -754,6 +755,54 @@ export function createDemoApi(): Api {
     },
     async broadcasts() {
       return clone(sent);
+    },
+    async supplyMap(p) {
+      await wait(120);
+      const inBox = (lat: number, lng: number) => lng >= p.bbox[0] && lat >= p.bbox[1] && lng <= p.bbox[2] && lat <= p.bbox[3];
+      const clusters = SOCIETIES.filter((s) => inBox(s.location.lat, s.location.lng)).map((s, i) => ({
+        h3: `demo-${i}`, lat: s.location.lat, lng: s.location.lng, units: 2 + (i % 4), brokers_serving: 1 + (i % 3),
+        price_band: p.txn === 'RENT' ? { p25: 20000 + i * 1000, p50: 24000 + i * 1000, p75: 30000 + i * 1000 } : null,
+      }));
+      return { clusters, brokers_online: [{ id: 'org-demo', name: 'Demo Realty Dhokali', rating: 4.6, location: null }] };
+    },
+    async myEnquiries() {
+      await wait();
+      return clone(enquiries.map(({ proposals, ...e }) => ({ ...e, proposals: proposals.length })));
+    },
+    async createEnquiry(b) {
+      await wait();
+      if (enquiries.filter((e) => e.state === 'open' || e.state === 'in_progress').length >= 3) throw new ApiError(400, 'You can have at most 3 open enquiries.');
+      const bhkText = b.bhk_min === b.bhk_max ? `${b.bhk_min} BHK` : `${b.bhk_min}–${b.bhk_max} BHK`;
+      const e: EnquiryDetail = {
+        id: id('enq'), state: 'open', txn_type: b.txn_type, created_at: now(), expires_at: now(), urgency: b.urgency, radius_m: b.radius_m, area_label: b.area_label, recipients: 4,
+        summary: `${bhkText} ${b.txn_type === 'RENT' ? 'on rent' : 'to buy'}${b.urgency === 'urgent' ? ', urgent' : ''}, around ${b.area_label} (${b.radius_m / 1000} km), up to ₹${b.budget_max.toLocaleString('en-IN')}`,
+        proposals: [{
+          id: id('prp'), state: 'sent', brokerage_terms: b.txn_type === 'RENT' ? '1 month rent' : '1% of sale value', message: 'I have flats that fit. Can show them this weekend.',
+          match_count: 3, earliest_slot: null, response_s: 240, promoted: false, created_at: now(),
+          broker: { id: 'org-demo', name: 'Demo Realty Dhokali', rera_registered: true, rating_bayes: 4.6, rating_count: 18, median_response_s: 300, closures: 42, languages: ['en', 'mr', 'hi'] },
+        }],
+      };
+      enquiries.unshift(e);
+      return clone({ ...e, proposals: e.proposals.length });
+    },
+    async enquiry(eid) {
+      await wait();
+      return clone(enquiries.find((e) => e.id === eid)!);
+    },
+    async closeEnquiry(eid, state) {
+      await wait();
+      const e = enquiries.find((x) => x.id === eid)!;
+      e.state = state;
+      return clone({ ...e, proposals: e.proposals.length });
+    },
+    async acceptProposal(pid) {
+      await wait();
+      const e = enquiries.find((x) => x.proposals.some((p) => p.id === pid))!;
+      if (e.proposals.filter((p) => p.state === 'accepted').length >= 3) throw new ApiError(400, 'You can accept at most 3 brokers.');
+      const p = e.proposals.find((x) => x.id === pid)!;
+      p.state = 'accepted';
+      e.state = 'in_progress';
+      return clone(p);
     },
     async myUpdates() {
       await wait(100);

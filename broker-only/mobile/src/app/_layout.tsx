@@ -52,6 +52,8 @@ function Shell() {
         <Stack.Screen name="owner/[id]" options={{ title: 'My flat' }} />
         <Stack.Screen name="owner/brokers" options={{ title: 'Brokers near my flat' }} />
         <Stack.Screen name="lead/[id]" options={{ title: 'Enquiry' }} />
+        <Stack.Screen name="enquiry/new" options={{ title: 'My requirement' }} />
+        <Stack.Screen name="enquiry/[id]" options={{ title: 'My request' }} />
       </Stack>
       <LiveBanner />
     </View>

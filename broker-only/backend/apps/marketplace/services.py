@@ -34,7 +34,8 @@ def circle(center: Point, metres: int) -> MultiPolygon:
 
 def summarise(e) -> str:
     """'2 BHK on rent, urgent, around Dhokali (3 km), up to ₹25,000, pets, gas stove + kitchen cabinet'."""
-    bhk = f"{e.bhk_min:g}" if e.bhk_min == e.bhk_max else f"{e.bhk_min:g}–{e.bhk_max:g}"
+    lo, hi = float(e.bhk_min), float(e.bhk_max)  # Decimal("2.0") would print as "2.0"
+    bhk = f"{lo:g}" if lo == hi else f"{lo:g}–{hi:g}"
     kind = {"RENT": "on rent", "SALE_NEW": "to buy (new)", "SALE_RESALE": "to buy (resale)"}[e.txn_type]
     parts = [f"{bhk} BHK {kind}"]
     if e.urgency == "urgent":
