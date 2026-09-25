@@ -136,6 +136,12 @@ export default function Inventory() {
         <Chip label={area ? `${area.name} ▾` : 'Area ▾'} selected={!!area || panel === 'area'} onPress={() => toggle('area')} />
         <Chip label="Sort ▾" selected={panel === 'sort'} onPress={() => toggle('sort')} />
       </ScrollView>
+      {place ? (
+        <Row>
+          <Chip label={`${place.label}  ✕`} selected onPress={() => { setPlace(null); setLimit(PAGE); }} />
+          <P small muted>Tap ✕ to show all flats</P>
+        </Row>
+      ) : null}
 
       {panel === 'bhk' ? (
         <ChipRow>

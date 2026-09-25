@@ -73,6 +73,7 @@ def test_broker_builds_available_now_from_all_flats(book):
         Listing.objects.update(available_now=False)
     r = c.get("/v1/listings/browse", {"list": "available_now"}).json()
     assert r["count"] == 0 and r["counts"]["total"] == 3 and r["counts"]["available_now"] == 0
+    assert r["counts"]["reconfirm"] == 0  # nothing on offer, so nothing to reconfirm
 
     # Pick two flats from all flats; one was rented out, so it comes back as available (unconfirmed).
     c.post(f"/v1/listings/{l2.pk}/status", {"state": "LET"}, format="json")

@@ -542,7 +542,7 @@ export function createDemoApi(): Api {
       const officeKeys = (l: Listing) => l.keys?.holder_type === 'office';
       const photos = (l: Listing) => (l.media ?? []).filter((m) => m.kind === 'photo').length;
       const all = listings;
-      const counts = { total: all.length, available_now: all.filter((l) => l.available_now).length, reconfirm: all.filter(stale).length, new: 3, keys_office: all.filter(officeKeys).length, no_photos: all.filter((l) => !photos(l)).length };
+      const counts = { total: all.length, available_now: all.filter((l) => l.available_now).length, reconfirm: all.filter((l) => stale(l) && l.available_now).length, new: 3, keys_office: all.filter(officeKeys).length, no_photos: all.filter((l) => !photos(l)).length };
       if (p.list === 'available_now') pool = pool.filter((l) => l.available_now);
       if (p.txn_type) pool = pool.filter((l) => p.txn_type!.split(',').includes(l.txn_type));
       if (p.status) pool = pool.filter((l) => p.status!.split(',').includes(l.status));
@@ -554,7 +554,7 @@ export function createDemoApi(): Api {
       if (p.price_max) pool = pool.filter((l) => (l.asking_rent ?? l.asking_price ?? 0) <= p.price_max!);
       if (p.society_id) pool = pool.filter((l) => l.society_id === p.society_id);
       if (p.building_id) pool = pool.filter((l) => `${l.society_id}|${l.building}` === p.building_id);
-      if (p.quick === 'reconfirm') pool = pool.filter(stale);
+      if (p.quick === 'reconfirm') pool = pool.filter((l) => stale(l) && l.available_now);
       if (p.quick === 'keys_office') pool = pool.filter(officeKeys);
       if (p.quick === 'no_photos') pool = pool.filter((l) => !photos(l));
       if (p.quick === 'new') pool = pool.slice(0, 3);

@@ -75,7 +75,8 @@ def _annotate(qs):
 
 def quick_q(name: str, now):
     return {
-        "reconfirm": _stale_q(now),
+        # Only flats the broker is offering need reconfirming; a rented-out or parked flat does not.
+        "reconfirm": _stale_q(now) & available_now_q(),
         "new": Q(created_at__gte=now - timedelta(days=7)),
         "keys_office": Q(_keys_office=True),
         "no_photos": Q(_has_photo=False),
