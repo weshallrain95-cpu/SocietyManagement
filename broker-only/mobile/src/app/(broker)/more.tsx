@@ -11,8 +11,10 @@ export default function More() {
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
   const staff = useQuery({ queryKey: ['staff'], queryFn: api.staff });
   const inbox = useQuery({ queryKey: ['trade-inbox'], queryFn: api.tradeInbox });
-  const [online, setOnline] = useState(false);
-  const presence = useMutation({ mutationFn: (on: boolean) => api.presence(on), onSuccess: (r) => setOnline(r.online) });
+  // Online for customer enquiries from sign-up; going offline is the broker's choice and is remembered.
+  const status = useQuery({ queryKey: ['presence'], queryFn: api.presenceStatus });
+  const online = status.data?.online ?? true;
+  const presence = useMutation({ mutationFn: (on: boolean) => api.presence(on), onSuccess: () => status.refetch() });
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<'broker_staff' | 'broker_manager'>('broker_staff');
@@ -46,7 +48,7 @@ export default function More() {
       <H2>Receive enquiries</H2>
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
-          <P>{online ? 'You are online — new enquiries alert you instantly.' : 'You are offline for new enquiries.'}</P>
+          <P>{online ? 'You are online — customer enquiries in your area reach you.' : 'You are offline — you get no new customer enquiries until you go online again.'}</P>
         </Row>
         <Button title={online ? 'Go offline' : 'Go online'} kind={online ? 'secondary' : 'primary'} onPress={() => presence.mutate(!online)} busy={presence.isPending} />
       </Card>

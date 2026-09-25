@@ -155,7 +155,7 @@ sequenceDiagram
 | MKT-08 | Customer accepts up to **3** proposals. Accepted brokers get the customer's contact (number masked through the calling proxy in P1) and the lead in their CRM | P0 | Non-accepted brokers notified; their proposals are archived |
 | MKT-09 | Enquiry lifecycle: `OPEN` → `IN_PROGRESS` (≥ 1 accepted) → `FULFILLED` / `CANCELLED` / `EXPIRED` (default 14 days) | P0 | Customer can pause or close at any time |
 | MKT-10 | Anti-spam: max 3 open enquiries per customer, OTP-verified numbers, customer trust score, and brokers can report fake enquiries (credit refund on validation) | P0 | Reports go to the admin queue |
-| MKT-11 | Broker "online" toggle + working hours; presence shown on the customer map | P0 | Presence expires after 10 min of no heartbeat |
+| MKT-11 | Broker is **online from sign-up** (installing the app = online); "Go offline" is the broker's opt-out and is remembered until they go online again. Online brokers show on the customer map | P0 | An offline broker gets no new enquiries and is not on the map. While the app is open, alerts are instant (heartbeat within 10 min); otherwise a push |
 
 ### 3.6 Broker CRM: customer book (CRM)
 

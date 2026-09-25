@@ -13,7 +13,6 @@ from apps.inventory.models import Listing
 from apps.orgs.models import ServiceArea
 from apps.status.models import UnitStatus
 
-from . import presence
 from .models import SupplyCell
 
 RESOLUTIONS = (7, 8, 9)
@@ -121,11 +120,11 @@ def online_brokers_in_bbox(bbox) -> list[dict]:
     poly.srid = 4326
     out = []
     for org_id, name, rating, loc in (
-        ServiceArea.objects.filter(area__intersects=poly, org__verification_status="verified")
+        ServiceArea.objects.filter(area__intersects=poly, org__verification_status="verified", org__accepting_enquiries=True)
         .values_list("org_id", "org__name", "org__rating_bayes", "org__office_location")
         .distinct()
     ):
-        if presence.is_online(org_id) and not any(o["id"] == str(org_id) for o in out):
+        if not any(o["id"] == str(org_id) for o in out):
             out.append(
                 {"id": str(org_id), "name": name, "rating": float(rating), "location": {"lat": loc.y, "lng": loc.x} if loc else None}
             )

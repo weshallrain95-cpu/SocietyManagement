@@ -32,6 +32,8 @@ class BrokerOrg(BaseModel):
     median_response_s = models.PositiveIntegerField(null=True, blank=True)
     listing_accuracy = models.DecimalField(max_digits=4, decimal_places=3, default=1)
     closures = models.PositiveIntegerField(default=0)
+    # Online for customer enquiries from sign-up; "Go offline" is the broker's opt-out (MKT-11).
+    accepting_enquiries = models.BooleanField(default=True)
 
     @property
     def is_verified(self):

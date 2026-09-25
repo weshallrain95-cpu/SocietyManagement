@@ -94,6 +94,7 @@ export default function ListingDetail() {
         {broker ? (
           <View style={{ flexDirection: 'row', backgroundColor: c.surface, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.border }}>
             <Action icon="☎" label="Call owner" primary disabled={!l.owner_phone || l.owner_phone.includes('•')} onPress={() => Linking.openURL(`tel:${(l.owner_phone ?? '').replace(/[^\d+]/g, '')}`)} />
+            <Action icon="➤" label="Directions" disabled={!l.directions_url} onPress={() => Linking.openURL(l.directions_url!)} testID="directions" />
             <Action icon="↗" label="Share" onPress={() => setPicker(picker === 'share' ? '' : 'share')} />
             <Action icon="▦" label="Add to visit" onPress={() => setPicker(picker === 'visit' ? '' : 'visit')} />
             <Action icon="↻" label="Status" onPress={() => setShowStatus(!showStatus)} testID="open-status" />

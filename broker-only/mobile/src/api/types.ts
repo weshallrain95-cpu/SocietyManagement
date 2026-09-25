@@ -58,6 +58,7 @@ export interface Listing {
   stale: boolean;
   carpet_sqft?: number | null;
   locality?: string;
+  directions_url?: string | null;
   // list (browse) only
   photo_count?: number;
   has_video?: boolean;
@@ -670,6 +671,7 @@ export interface Api {
 
   leads(): Promise<Lead[]>;
   propose(enquiryId: string, body: { brokerage_terms: string; message?: string }): Promise<unknown>;
+  presenceStatus(): Promise<{ online: boolean }>;
   presence(online: boolean): Promise<{ online: boolean }>;
 
   staff(): Promise<StaffMember[]>;

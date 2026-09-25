@@ -101,6 +101,8 @@ def test_broker_journey_listing_privacy_and_status(suresh, society, attrs):
     assert listing["status"] == "AVAILABLE_UNCONFIRMED"
     assert listing["keys"]["instructions"] == "Drawer 3"
     assert listing["attributes"]["pets_allowed"]["value"] == "all pets"
+    loc = society.location  # the wing is pinned at the society until ops moves it
+    assert listing["directions_url"] == f"https://www.google.com/maps/dir/?api=1&destination={loc.y},{loc.x}"
 
     # Another broker cannot see it, by list or by id.
     other, _ = login("9820000202", "Other")

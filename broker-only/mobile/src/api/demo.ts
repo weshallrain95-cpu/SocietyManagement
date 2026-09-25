@@ -212,7 +212,7 @@ const photo = (id: string, label: string, hue: number): MediaItem => {
 
 export function createDemoApi(): Api {
   const tokens: Tokens = { access: 'demo', refresh: 'demo', role: 'broker_principal', org: 'org-demo' };
-  let online = false;
+  let online = true;
   const ownerMedia: MediaItem[] = [photo('med-1', 'Living room', 28), photo('med-2', 'Kitchen', 140), photo('med-3', 'View from balcony', 205)];
   const ownerFlats: OwnerFlat[] = [{
     id: 'own-1', unit_id: 'unit-1', society: 'Hiranandani Estate', society_id: 'soc-0', locality: 'Hiranandani Estate', building: 'A Wing',
@@ -1008,6 +1008,9 @@ export function createDemoApi(): Api {
       const l = leads.find((x) => x.id === eid)!;
       l.my_proposal = 'sent';
       return {};
+    },
+    async presenceStatus() {
+      return { online };
     },
     async presence(on) {
       online = on;

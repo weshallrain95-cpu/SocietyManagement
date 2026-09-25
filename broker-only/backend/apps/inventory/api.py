@@ -30,6 +30,11 @@ def staff_listing_ids(request):
     return VisitStop.objects.filter(assigned_staff=request.user, removed=False).values_list("listing_id", flat=True)
 
 
+def directions_url(point) -> str | None:
+    """Google Maps directions from wherever the broker is to the flat's wing (the unit's own pin if set)."""
+    return f"https://www.google.com/maps/dir/?api=1&destination={point.y},{point.x}" if point else None
+
+
 def listing_json(l: Listing, request, *, detail=False, summary=False) -> dict:
     u = l.unit
     st = UnitStatus.objects.filter(unit=u, txn_type=l.txn_type).first()
@@ -58,6 +63,7 @@ def listing_json(l: Listing, request, *, detail=False, summary=False) -> dict:
         "stale": (timezone.now() - l.last_confirmed_at).days >= (21 if l.txn_type == "RENT" else 45),
         "carpet_sqft": float(u.carpet_sqft) if u.carpet_sqft else None,
         "locality": u.building.society.locality.name if u.building.society.locality_id else "",
+        "directions_url": directions_url(u.effective_location),
     }
     if summary:
         live = [] if l.withdrawn_by_owner else list(flat_media(u))

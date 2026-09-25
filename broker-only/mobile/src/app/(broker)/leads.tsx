@@ -16,7 +16,7 @@ export default function Leads() {
       <H2>Customer enquiries</H2>
       <Notice>Enquiries from customers near your service area. You see how many of YOUR flats match; the customer sees your terms and rating.</Notice>
       {q.isLoading ? <Loading /> : q.error ? <ErrorBox error={q.error} onRetry={q.refetch} /> : null}
-      {q.data?.length === 0 ? <Empty title="No enquiries yet" body="Stay online (More → Online) to get enquiries the moment they are posted." /> : null}
+      {q.data?.length === 0 ? <Empty title="No enquiries yet" body="Customer enquiries in your area appear here. (If you went offline, go online again from More.)" /> : null}
       {q.data?.map((l) => (
         <Card key={l.id} onPress={() => router.push({ pathname: '/lead/[id]', params: { id: l.id, summary: l.summary, matches: String(l.match_count), mine: l.my_proposal ?? '' } })}>
           <Row style={{ justifyContent: 'space-between' }}>

@@ -1,4 +1,5 @@
 from django.contrib.gis.geos import Point
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
@@ -6,12 +7,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.audit.services import audit
 from apps.orgs.permissions import IsBrokerManager, IsBrokerMember
 from apps.orgs.serializers import PublicBrokerSerializer
 from common.api import PublicLinkThrottle, domain_call
 
-from . import presence, supply
 from . import services as mkt
+from . import supply
 from .models import Enquiry, EnquiryDelivery, Proposal
 
 
@@ -177,11 +179,21 @@ class EnquiryReport(APIView):
 
 
 class PresenceView(APIView):
-    permission_classes = [IsBrokerMember]
+    """Online for enquiries (MKT-11): on from sign-up until the broker goes offline. The app's
+    live connection still heartbeats, which only decides instant alert vs push."""
+
+    def get_permissions(self):
+        return [IsBrokerMember()] if self.request.method == "GET" else [IsBrokerManager()]
+
+    def get(self, request):
+        return Response({"online": request.user.active_membership.org.accepting_enquiries})
 
     def post(self, request):
-        if request.data.get("online", True):
-            presence.heartbeat(request.user.active_org_id, request.user.pk)
-        else:
-            presence.go_offline(request.user.active_org_id, request.user.pk)
-        return Response({"online": presence.is_online(request.user.active_org_id)})
+        org = request.user.active_membership.org
+        online = bool(request.data.get("online", True))
+        if org.accepting_enquiries != online:
+            with transaction.atomic():
+                org.accepting_enquiries = online
+                org.save(update_fields=["accepting_enquiries", "updated_at"])
+                audit(request.user, "broker_org.online" if online else "broker_org.offline", org, {})
+        return Response({"online": org.accepting_enquiries})

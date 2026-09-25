@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import type { BrowseParams, Listing, QuickView } from '@/api';
 import { useSession } from '@/auth/session';
@@ -228,6 +228,11 @@ function FlatCard({ l }: { l: Listing }) {
             {l.stale ? `Reconfirm · ${days} d` : `${l.status_label.replace(' – not yet confirmed by owner', ' (unconfirmed)')} · ${days} d`}
           </Text>
           {l.keys_holder === 'office' ? <Text style={{ fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: c.surfaceAlt, color: c.textMuted, overflow: 'hidden' }}>Keys at office</Text> : null}
+          {l.directions_url ? (
+            <Pressable onPress={() => Linking.openURL(l.directions_url!)} accessibilityRole="link" accessibilityLabel={`Directions to ${l.society}`} hitSlop={8}>
+              <Text style={{ fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: c.surfaceAlt, color: c.brand, overflow: 'hidden' }}>📍 Directions</Text>
+            </Pressable>
+          ) : null}
           {l.owner_withdrew ? <Text style={{ fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: c.badBg, color: c.bad, overflow: 'hidden' }}>Owner removed you</Text> : null}
         </View>
       </View>

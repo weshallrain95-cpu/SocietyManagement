@@ -5,3 +5,6 @@ __pycache__/
 staticfiles/
 media/
 .pytest_cache/
+
+# Celery beat writes its schedule here while the server runs
+celerybeat-schedule*

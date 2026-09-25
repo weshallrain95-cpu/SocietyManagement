@@ -88,7 +88,11 @@ def eligible_orgs(e: Enquiry):
     area = circle(e.center, e.radius_m)
     org_ids = (
         ServiceArea.objects.filter(area__intersects=area)
-        .filter(org__verification_status=BrokerOrg.Verification.VERIFIED, org__txn_types__contains=[e.txn_type])
+        .filter(
+            org__verification_status=BrokerOrg.Verification.VERIFIED,
+            org__txn_types__contains=[e.txn_type],
+            org__accepting_enquiries=True,
+        )
         .values_list("org_id", flat=True)
         .distinct()
     )

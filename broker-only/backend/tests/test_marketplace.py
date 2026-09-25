@@ -4,19 +4,20 @@ import pytest
 from django.contrib.gis.geos import MultiPolygon, Point
 from django.utils import timezone
 
+from apps.audit.models import AuditEvent
 from apps.crm.models import Customer, Requirement
 from apps.inventory.services import create_listing
 from apps.marketplace import presence, supply
 from apps.marketplace import services as mkt
 from apps.marketplace.models import EnquiryDelivery
 from apps.masterdata.models import Building, Unit
-from apps.orgs.models import ServiceArea
+from apps.orgs.models import Membership, ServiceArea
 from apps.orgs.serializers import circle
 from common import rls
 from common.events import relay
 from common.models import Notification
 
-from .conftest import DHOKALI, make_org, make_user
+from .conftest import DHOKALI, api_for, make_org, make_user
 
 pytestmark = pytest.mark.django_db
 
@@ -80,6 +81,33 @@ def test_broadcast_reaches_only_eligible_brokers_with_their_own_counts(market, b
     assert "phone" not in str(n.payload).lower()  # no customer contact before acceptance
 
 
+def test_broker_who_goes_offline_gets_no_enquiries_until_back_online(market, broker_a, broker_b):
+    org_b, user_b = broker_b
+    c = api_for(user_b, org_b)
+    assert c.get("/v1/presence").json() == {"online": True}  # online from sign-up
+    assert c.post("/v1/presence", {"online": False}, format="json").json() == {"online": False}
+    assert c.get("/v1/presence").json() == {"online": False}  # remembered, not reset by the app
+    assert AuditEvent.objects.filter(action="broker_org.offline").exists()
+    view = supply.map_view(bbox=(72.90, 19.15, 73.05, 19.30), zoom=13, txn_type="RENT")
+    assert [b["name"] for b in view["brokers_online"]] == ["Suresh Realty"]
+    e = _enquiry(market["riya"])
+    relay()
+    assert set(EnquiryDelivery.objects.filter(enquiry=e).values_list("org_id", flat=True)) == {broker_a[0].pk}
+    c.post("/v1/presence", {"online": True}, format="json")
+    _enquiry(market["riya"])
+    relay()
+    assert EnquiryDelivery.objects.filter(org=org_b).exists()
+
+
+def test_field_staff_cannot_take_the_agency_offline(broker_a):
+    org, _ = broker_a
+    staff = make_user("9820010001")
+    Membership.objects.create(user=staff, org=org, role="broker_staff")
+    c = api_for(staff, org, role="broker_staff")
+    assert c.post("/v1/presence", {"online": False}, format="json").status_code == 403
+    assert c.get("/v1/presence").json() == {"online": True}
+
+
 def test_proposal_accept_flow_creates_crm_customer(market, broker_a, broker_b):
     e = _enquiry(market["riya"])
     relay()
@@ -120,7 +148,8 @@ def test_supply_map_is_anonymous(market, broker_a):
     [cluster] = view["clusters"]
     assert cluster["units"] == 6 and cluster["brokers_serving"] == 3 - 1  # pending broker not counted
     assert cluster["price_band"]["p25"] >= 20000
-    assert [b["name"] for b in view["brokers_online"]] == ["Suresh Realty"]
+    # Online from sign-up, whether or not the app is open right now (MKT-11).
+    assert sorted(b["name"] for b in view["brokers_online"]) == ["Om Sai Estate Agents", "Suresh Realty"]
     assert "listing" not in str(view).lower()
 
 

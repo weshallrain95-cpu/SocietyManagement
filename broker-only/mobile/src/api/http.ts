@@ -199,6 +199,7 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
 
     leads: () => get('/broker/leads'),
     propose: (id, b) => post(`/enquiries/${id}/proposals`, b),
+    presenceStatus: () => get('/presence'),
     presence: (online) => post('/presence', { online }),
 
     staff: () => get('/broker-orgs/me/staff'),
