@@ -38,6 +38,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     display_name = models.CharField(max_length=120, blank=True)
     email_enc = models.BinaryField(null=True, blank=True)
     preferred_lang = models.CharField(max_length=5, default="en")
+    # First-visit answers per mode (founder decision 2026-09-25): {"customer": {...}, "owner": {...}}, each with welcomed_at.
+    profile = models.JSONField(default=dict, blank=True)
     trust_score = models.PositiveSmallIntegerField(default=50)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     is_staff = models.BooleanField(default=False)

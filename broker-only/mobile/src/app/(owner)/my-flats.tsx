@@ -9,8 +9,11 @@ import { Button, Card, Chip, Empty, ErrorBox, Loading, P, Row, Screen } from '@/
 export default function MyFlats() {
   const { api } = useSession();
   const q = useQuery({ queryKey: ['owner-flats'], queryFn: api.ownerFlats });
+  const me = useQuery({ queryKey: ['me'], queryFn: api.me });
+  const first = me.data?.display_name?.trim().split(/\s+/)[0];
   return (
     <Screen onRefresh={q.refetch} refreshing={q.isFetching}>
+      {first ? <P style={{ fontWeight: '700', fontSize: 18 }}>Namaste {first} — your flats, your rules.</P> : null}
       <Button title="+ Add my flat" onPress={() => router.push('/owner/new')} testID="add-my-flat" />
       {q.isLoading ? <Loading /> : q.error ? <ErrorBox error={q.error} onRetry={q.refetch} /> : null}
       {q.data?.length === 0 ? <Empty title="No flats yet" body="Add your flat, then add photos and choose which brokers may handle it." /> : null}

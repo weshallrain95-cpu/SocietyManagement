@@ -6,8 +6,7 @@ import { useSession } from '@/auth/session';
 import { indianMobile } from '@/lib/format';
 import { kv } from '@/lib/kv';
 import { WHO_KEY } from '@/ui/SwitchMode';
-import type { TxnType } from '@/api';
-import { Button, Chip, ChipRow, ErrorBox, Field, Notice, P, Row, Screen } from '@/ui/components';
+import { Button, ErrorBox, Field, Notice, P, Row, Screen } from '@/ui/components';
 import { font, space, usePalette } from '@/ui/theme';
 
 type Who = 'broker' | 'owner' | 'customer';
@@ -38,9 +37,6 @@ export default function Login() {
     kv.setItem(WHO_KEY, w);
     setStep('phone');
   };
-  const [agency, setAgency] = useState('');
-  const [rera, setRera] = useState('');
-  const [txns, setTxns] = useState<TxnType[]>(['RENT']);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [devCode, setDevCode] = useState<string | undefined>();
@@ -76,20 +72,6 @@ export default function Login() {
         if (t.role !== 'customer') await signIn(await api.switchRole('customer'));
         router.replace('/find');
       }
-    } catch (e) {
-      setError(e);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-    async function register() {
-    setBusy(true);
-    setError(null);
-    try {
-      const { tokens } = await api.registerOrg({ name: agency.trim(), txn_types: txns, rera_agent_no: rera.trim() || undefined });
-      await signIn(tokens);
-      router.replace('/');
     } catch (e) {
       setError(e);
     } finally {
@@ -149,20 +131,8 @@ export default function Login() {
           <>
             <Notice>This number is not part of an agency yet. Managers and field staff: ask your agency Admin to add +91 {mobile}, then sign in again.</Notice>
             <P style={{ fontWeight: '700' }}>Starting your own agency? Register it — you become its Admin.</P>
-            <Field label="Agency / your name" value={agency} onChangeText={setAgency} placeholder="Suresh Realty" />
-            <Field label="MahaRERA agent number (optional for rentals)" value={rera} onChangeText={setRera} autoCapitalize="characters" placeholder="A51700000001" />
-            <P small style={{ fontWeight: '600' }}>You handle</P>
-            <ChipRow>
-              {(['RENT', 'SALE_RESALE', 'SALE_NEW'] as TxnType[]).map((t) => (
-                <Chip
-                  key={t}
-                  label={{ RENT: 'Rentals', SALE_RESALE: 'Resale', SALE_NEW: 'New projects' }[t]}
-                  selected={txns.includes(t)}
-                  onPress={() => setTxns((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]))}
-                />
-              ))}
-            </ChipRow>
-            <Button title="Register agency" onPress={register} disabled={agency.trim().length < 3 || !txns.length} busy={busy} />
+            <P small muted>About 3 minutes: your business, owners, PAN / GST / MahaRERA, office and the areas you serve.</P>
+            <Button title="Register my agency" onPress={() => router.push('/agency/register')} testID="register-agency" />
             <P small muted>Ops verifies new agencies within a working day. You can add flats and customers straight away.</P>
             <Button kind="ghost" title="Not a broker? Go back" onPress={() => setStep('who')} />
           </>

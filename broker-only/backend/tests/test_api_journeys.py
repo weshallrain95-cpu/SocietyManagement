@@ -13,7 +13,7 @@ from common.crypto import token_hash
 from common.events import relay
 from common.models import ShareLink
 
-from .conftest import DHOKALI, THANE_STN, api_for, make_user
+from .conftest import DHOKALI, THANE_STN, agency_form, api_for, make_user
 
 pytestmark = pytest.mark.django_db
 
@@ -49,12 +49,7 @@ def suresh(society, attrs, admin):
     c, _ = login("9820000101", "Suresh")
     r = c.post(
         "/v1/broker-orgs",
-        {
-            "name": "Suresh Realty",
-            "txn_types": ["RENT"],
-            "rera_agent_no": "A51700000001",
-            "office_location": {"lat": DHOKALI.y, "lng": DHOKALI.x},
-        },
+        agency_form("Suresh Realty", society.locality, rera_agent_no="A51700000001"),
         format="json",
     )
     assert r.status_code == 201, r.content
@@ -106,7 +101,7 @@ def test_broker_journey_listing_privacy_and_status(suresh, society, attrs):
 
     # Another broker cannot see it, by list or by id.
     other, _ = login("9820000202", "Other")
-    r = other.post("/v1/broker-orgs", {"name": "Other Realty", "txn_types": ["RENT"]}, format="json")
+    r = other.post("/v1/broker-orgs", agency_form("Other Realty", society.locality), format="json")
     other = with_token(r.json()["tokens"])
     assert other.get("/v1/listings").json() == []
     assert other.get(f"/v1/listings/{listing['id']}").status_code == 404

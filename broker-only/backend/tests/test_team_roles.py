@@ -14,7 +14,7 @@ from apps.visits import services as v
 from common import rls
 from common.models import Notification
 
-from .conftest import DHOKALI, api_for, make_user
+from .conftest import DHOKALI, agency_form, api_for, make_user
 
 pytestmark = pytest.mark.django_db
 
@@ -120,7 +120,7 @@ def test_manager_assigns_a_trip_at_once_and_the_admin_is_told(team, society, att
     assert Notification.objects.filter(user=admin, template="visit_assigned_by_manager").count() == 1  # not for the Admin's own
 
 
-def test_register_agency_makes_you_admin(db):
+def test_register_agency_makes_you_admin(thane):
     c = api_for(make_user("9820099999", "New Broker"))
-    r = c.post("/v1/broker-orgs", {"name": "New Realty", "txn_types": ["RENT"]}, format="json")
+    r = c.post("/v1/broker-orgs", agency_form("New Realty", thane["dhokali"]), format="json")
     assert r.status_code == 201 and r.json()["tokens"]["role"] == "broker_principal"

@@ -103,3 +103,22 @@ def _clear_cache():
     cache.clear()
     yield
     cache.clear()
+
+
+def agency_form(name, locality, **over):
+    """A complete first-time registration (business form, founder decision 2026-09-25)."""
+    return {
+        "name": name,
+        "legal_name": f"{name} (proprietor)",
+        "ownership_type": "proprietorship",
+        "owners": [{"name": f"{name} Owner"}],
+        "pan": "ABCPS1234K",
+        "gst_registered": False,
+        "office_address": "Shop 3, Ground floor, Main Road",
+        "office_locality": str(locality.pk),
+        "office_pincode": "400607",
+        "txn_types": ["RENT"],
+        "service_locality_ids": [str(locality.pk)],
+        "declaration": True,
+        **over,
+    }

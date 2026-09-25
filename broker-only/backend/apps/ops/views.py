@@ -90,7 +90,17 @@ def dashboard(request):
 @staff_only
 def brokers(request):
     state = request.GET.get("state", "pending")
-    qs = BrokerOrg.objects.filter(verification_status=state).annotate(members=Count("memberships")).order_by("created_at")
+    qs = list(
+        BrokerOrg.objects.filter(verification_status=state)
+        .select_related("office_locality")
+        .prefetch_related("service_areas")
+        .annotate(members=Count("memberships"))
+        .order_by("created_at")
+    )
+    for o in qs:  # the same PAN on another agency is worth a look before verifying
+        o.same_pan = (
+            list(BrokerOrg.objects.filter(pan_hash=o.pan_hash).exclude(pk=o.pk).values_list("name", flat=True)) if o.pan_hash else []
+        )
     return render(request, "ops/brokers.html", {"orgs": qs, "state": state, "counts": _counts(), "nav": "brokers"})
 
 

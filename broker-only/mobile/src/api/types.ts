@@ -20,7 +20,18 @@ export interface Me {
   memberships: { org_id: string; org_name: string; role: Role; can?: TeamPermission[] }[];
   active_role: Role;
   active_org_id: string | null;
+  email?: string;
+  preferred_lang?: 'en' | 'hi' | 'mr';
+  /** First-visit answers per mode; `welcomed_at` is set once the welcome is done. */
+  profile?: { customer?: CustomerWelcome; owner?: OwnerWelcome };
 }
+
+export interface CustomerWelcome { intent?: 'rent' | 'buy'; move_in?: 'now' | '1-3m' | 'exploring'; contact?: 'call' | 'whatsapp'; areas?: string[]; welcomed_at?: string }
+export interface OwnerWelcome { flats?: '1' | '2-3' | '4+'; plan?: 'rent' | 'sell' | 'both' | 'records'; contact?: 'call' | 'whatsapp'; welcomed_at?: string }
+export type MeUpdate = {
+  display_name?: string; email?: string; preferred_lang?: 'en' | 'hi' | 'mr';
+  profile?: { customer?: Omit<CustomerWelcome, 'welcomed_at'> & { welcomed?: boolean }; owner?: Omit<OwnerWelcome, 'welcomed_at'> & { welcomed?: boolean } };
+};
 
 export interface SocietyCandidate {
   society_id: string;
@@ -635,6 +646,42 @@ export interface Lead {
   my_proposal: string | null;
 }
 
+// --- Agency registration: the business form (founder decision 2026-09-25) ------------------------
+export type OwnershipType = 'individual' | 'proprietorship' | 'partnership' | 'llp' | 'private_limited' | 'public_limited';
+
+export interface AgencyForm {
+  name: string;
+  legal_name: string;
+  ownership_type: OwnershipType;
+  owners: { name: string }[];
+  established_year?: number | null;
+  pan?: string;
+  gst_registered: boolean;
+  gstin?: string;
+  company_reg_no?: string;
+  rera_agent_no?: string;
+  contact_email?: string;
+  office_address: string;
+  office_address_2?: string;
+  office_locality: string;
+  office_city?: string;
+  office_pincode: string;
+  txn_types: TxnType[];
+  service_locality_ids?: string[];
+  declaration?: boolean;
+}
+
+export interface AgencyProfile extends Omit<AgencyForm, 'pan' | 'owners' | 'declaration' | 'service_locality_ids'> {
+  id: string;
+  owners: { name: string; role: string }[];
+  pan_masked: string;
+  office_state: string;
+  service_areas: { id: string; label: string }[];
+  declared_at: string | null;
+  verification_status: 'pending' | 'verified' | 'rejected' | 'suspended';
+  verification_note: string;
+}
+
 /** Switches the agency Admin can turn on for a manager (all off by default). */
 export type TeamPermission = 'uploads' | 'blasts' | 'add_staff';
 
@@ -678,7 +725,10 @@ export interface Api {
   verifyOtp(phone: string, code: string, displayName?: string): Promise<Tokens>;
   me(): Promise<Me>;
   switchRole(role: 'broker' | 'customer' | 'owner', orgId?: string): Promise<Tokens>;
-  registerOrg(body: { name: string; txn_types: TxnType[]; rera_agent_no?: string; office_address?: string }): Promise<{ tokens: Tokens }>;
+  registerOrg(body: AgencyForm): Promise<{ tokens: Tokens; org: AgencyProfile }>;
+  myAgency(): Promise<AgencyProfile>;
+  updateMe(body: MeUpdate): Promise<Me>;
+  updateAgency(body: Partial<AgencyForm>): Promise<AgencyProfile>;
 
   listings(params?: { txn_type?: TxnType; status?: string }): Promise<Listing[]>;
   listing(id: string): Promise<Listing>;

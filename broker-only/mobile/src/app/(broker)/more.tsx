@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import React from 'react';
 
 import { useSession } from '@/auth/session';
-import { ROLE_LABEL } from '@/auth/useAgency';
+import { ROLE_LABEL, useAgency } from '@/auth/useAgency';
 import { Button, Card, Chip, H2, P, Row, Screen } from '@/ui/components';
 import { SwitchMode } from '@/ui/SwitchMode';
 import { TeamSection } from '@/ui/TeamSection';
@@ -11,6 +11,7 @@ import { TeamSection } from '@/ui/TeamSection';
 export default function More() {
   const { api, signOut, settings } = useSession();
   const qc = useQueryClient();
+  const a = useAgency();
   const me = useQuery({ queryKey: ['me'], queryFn: api.me });
   const inbox = useQuery({ queryKey: ['trade-inbox'], queryFn: api.tradeInbox });
   // Online for customer enquiries from sign-up; going offline is the broker's choice and is remembered.
@@ -25,6 +26,11 @@ export default function More() {
         <P style={{ fontWeight: '700' }}>{org?.org_name ?? 'Your agency'}</P>
         <P muted small>{me.data?.display_name} · {me.data?.phone_masked} · {ROLE_LABEL[org?.role ?? ''] ?? ''}</P>
         {settings.demo ? <Chip label="Demo mode" tone="warn" /> : null}
+      </Card>
+
+      <Card onPress={() => router.push('/agency/details')} testID="open-agency-details">
+        <P style={{ fontWeight: '700' }}>Agency details</P>
+        <P small muted>Business, owners, PAN / GST / MahaRERA, office{a.isAdmin ? ' — you can edit these' : ''}.</P>
       </Card>
 
       <H2>Trade with fellow brokers</H2>

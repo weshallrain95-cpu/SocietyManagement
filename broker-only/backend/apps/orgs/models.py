@@ -17,9 +17,36 @@ class BrokerOrg(BaseModel):
         REJECTED = "rejected"
         SUSPENDED = "suspended"
 
-    name = models.CharField(max_length=160)
+    class Ownership(models.TextChoices):
+        INDIVIDUAL = "individual", "Individual (no firm)"
+        PROPRIETORSHIP = "proprietorship", "Proprietorship"
+        PARTNERSHIP = "partnership", "Partnership firm"
+        LLP = "llp", "LLP"
+        PRIVATE_LIMITED = "private_limited", "Private limited company"
+        PUBLIC_LIMITED = "public_limited", "Public limited company"
+
+    name = models.CharField(max_length=160, help_text="Trade name customers see")
+    # Business registration (founder decision 2026-09-25). PAN is personal data for individuals and
+    # proprietors: stored encrypted, shown masked, hashed to spot the same PAN on two agencies.
+    legal_name = models.CharField(max_length=200, blank=True, help_text="As on PAN / GST")
+    ownership_type = models.CharField(max_length=20, choices=Ownership.choices, blank=True)
+    owners = models.JSONField(default=list, blank=True, help_text='[{"name": .., "role": ..}] proprietor, partners or directors')
+    established_year = models.PositiveSmallIntegerField(null=True, blank=True)
+    pan_enc = models.BinaryField(null=True, blank=True)
+    pan_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    pan_masked = models.CharField(max_length=10, blank=True)
+    gst_registered = models.BooleanField(default=False)
+    gstin = models.CharField(max_length=15, blank=True)
+    company_reg_no = models.CharField(max_length=21, blank=True, help_text="CIN / LLPIN / partnership registration")
+    contact_email = models.EmailField(blank=True)
+    declared_at = models.DateTimeField(null=True, blank=True)
     office_location = gis.PointField(geography=True, null=True, blank=True)
     office_address = models.CharField(max_length=300, blank=True)
+    office_address_2 = models.CharField(max_length=300, blank=True)
+    office_locality = models.ForeignKey("masterdata.Locality", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    office_city = models.CharField(max_length=80, blank=True)
+    office_pincode = models.CharField(max_length=6, blank=True)
+    office_state = models.CharField(max_length=40, blank=True)
     rera_agent_no = models.CharField(max_length=30, blank=True)
     rera_verified_at = models.DateTimeField(null=True, blank=True)
     verification_status = models.CharField(max_length=10, choices=Verification.choices, default=Verification.PENDING)

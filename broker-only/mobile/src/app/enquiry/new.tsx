@@ -19,17 +19,21 @@ export default function NewEnquiry() {
   const qc = useQueryClient();
   const params = useLocalSearchParams<{ locality?: string; txn?: string }>();
   const localities = useQuery({ queryKey: ['localities'], queryFn: api.localities });
-  const [txn, setTxn] = useState<TxnType>(params.txn === 'SALE_RESALE' ? 'SALE_RESALE' : 'RENT');
+  const me = useQuery({ queryKey: ['me'], queryFn: api.me });
+  const liked = me.data?.profile?.customer;
+  const [txnPick, setTxn] = useState<TxnType>();
+  const txn: TxnType = txnPick ?? (params.txn === 'SALE_RESALE' || (!params.txn && liked?.intent === 'buy') ? 'SALE_RESALE' : 'RENT');
   const [bhks, setBhks] = useState<number[]>([2]);
   const [budget, setBudget] = useState('');
   const [picked, setLocalityId] = useState<string | undefined>(params.locality);
   const [radius, setRadius] = useState(3000);
-  const [urgent, setUrgent] = useState(false);
+  const [urgentPick, setUrgent] = useState<boolean>();
+  const urgent = urgentPick ?? liked?.move_in === 'now';
   const [pets, setPets] = useState<'' | 'cat' | 'dog'>('');
   const [nonveg, setNonveg] = useState(false);
   const [bachelors, setBachelors] = useState(false);
   const [notes, setNotes] = useState('');
-  const localityId = picked ?? localities.data?.[0]?.id;
+  const localityId = picked ?? liked?.areas?.[0] ?? localities.data?.[0]?.id;
 
   const rent = txn === 'RENT';
   const amount = Number(budget.replace(/[^\d]/g, '')) || 0;

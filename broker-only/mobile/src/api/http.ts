@@ -103,6 +103,9 @@ export function createHttpApi(baseUrl: string, tokens: TokenStore): Api {
     me: () => get('/me'),
     switchRole: (role, org_id) => post('/auth/switch', { role, org_id }),
     registerOrg: (b) => post('/broker-orgs', b),
+    myAgency: () => get('/broker-orgs/me'),
+    updateMe: (b) => call('PATCH', '/me', b),
+    updateAgency: (b) => call('PATCH', '/broker-orgs/me', b),
 
     listings: (p) => get(`/listings${qs(p)}`),
     listing: (id) => get(`/listings/${id}`),

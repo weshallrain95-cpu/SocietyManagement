@@ -1,3 +1,4 @@
+from django.contrib.gis.geos import MultiPolygon
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -9,37 +10,43 @@ from rest_framework.views import APIView
 from apps.audit.services import audit
 from apps.identity.models import User
 from apps.identity.tokens import issue_tokens
+from common.notify import queue_for_admin
 
 from .models import BrokerOrg, Membership, ServiceArea
 from .permissions import IsBrokerAdmin, IsBrokerManager, IsBrokerMember, IsPlatformAdmin
 from .serializers import (
+    LEGAL_FIELDS,
+    AgencyProfileSerializer,
     BrokerOrgSerializer,
     MembershipSerializer,
     PublicBrokerSerializer,
     ServiceAreaSerializer,
     StaffInviteSerializer,
+    circle,
 )
+
+SERVICE_RADIUS_KM = 2.5  # each area a new agency serves = a circle this wide around the area's centre
 
 ONE_AGENCY = "This number already belongs to an agency. One phone number can be part of one agency only."
 ONE_AGENCY_OTHER = "This number already belongs to another agency. One phone number can be part of one agency only."
 
 
 class BrokerOrgCreateView(APIView):
-    """Any signed-in user can start a broker org and becomes its principal."""
+    """First-time broker registration: the full business form. The person registering becomes the agency Admin."""
 
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        s = BrokerOrgSerializer(data=request.data)
-        s.is_valid(raise_exception=True)
         if request.user.memberships.filter(active=True).exists():
             return Response({"detail": ONE_AGENCY}, status=status.HTTP_400_BAD_REQUEST)
+        s = AgencyProfileSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
         with transaction.atomic():
-            org = s.save()
+            org = save_agency_profile(BrokerOrg(), s.validated_data, user=request.user)
             Membership.objects.create(user=request.user, org=org, role=Membership.Role.PRINCIPAL)
-            audit(request.user, "broker_org.created", org, {"name": org.name})
+            audit(request.user, "broker_org.created", org, {"name": org.name, "ownership_type": org.ownership_type})
         return Response(
-            {"org": BrokerOrgSerializer(org).data, "tokens": issue_tokens(request.user, org_id=org.id, role="broker_principal")},
+            {"org": AgencyProfileSerializer(org).data, "tokens": issue_tokens(request.user, org_id=org.id, role="broker_principal")},
             status=status.HTTP_201_CREATED,
         )
 
@@ -48,15 +55,59 @@ class MyOrgView(APIView):
     permission_classes = [IsBrokerMember]
 
     def get(self, request):
-        return Response(BrokerOrgSerializer(request.user.active_membership.org).data)
+        return Response(AgencyProfileSerializer(request.user.active_membership.org).data)
 
     def patch(self, request):
         if not request.user.active_membership.is_admin:
             return Response({"detail": "Only the agency Admin can change the agency's details."}, status=status.HTTP_403_FORBIDDEN)
-        s = BrokerOrgSerializer(request.user.active_membership.org, data=request.data, partial=True)
+        org = request.user.active_membership.org
+        s = AgencyProfileSerializer(org, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
-        s.save()
-        return Response(s.data)
+        with transaction.atomic():
+            org = save_agency_profile(org, s.validated_data, user=request.user)
+        return Response(AgencyProfileSerializer(org).data)
+
+
+def save_agency_profile(org: BrokerOrg, d: dict, *, user) -> BrokerOrg:
+    """Apply the business form. A verified agency that changes its legal details keeps working, and ops re-checks."""
+    from common import crypto
+
+    creating = org._state.adding
+    d = dict(d)
+    legal_before = {k: getattr(org, k, None) for k in LEGAL_FIELDS if k != "pan"} | {"pan": org.pan_hash}
+    service_ids = d.pop("service_locality_ids", None)
+    d.pop("declaration", None)
+    pan = d.pop("pan", None)
+    for k, v in d.items():
+        setattr(org, k, v)
+    if pan:
+        org.pan_enc = crypto.encrypt(pan)
+        org.pan_hash = crypto.phone_hash(f"pan:{pan}")
+        org.pan_masked = f"{pan[:3]}*****{pan[-2:]}"
+    if creating:
+        org.declared_at = timezone.now()
+        org.office_state = "Maharashtra"
+        org.office_city = org.office_city or "Thane"
+    if org.office_locality_id and (creating or "office_locality" in d):
+        org.office_location = org.office_locality.centroid  # the area's centre until the office is pinned
+    org.save()
+    if service_ids:
+        from apps.masterdata.models import Locality
+
+        for loc in Locality.objects.filter(pk__in=service_ids):
+            if not org.service_areas.filter(locality=loc).exists():
+                ServiceArea.objects.create(
+                    org=org, locality=loc, label=loc.name, txn_types=org.txn_types,
+                    area=MultiPolygon(circle(loc.centroid, SERVICE_RADIUS_KM), srid=4326),
+                )  # fmt: skip
+    if not creating:
+        after = {k: getattr(org, k, None) for k in LEGAL_FIELDS if k != "pan"} | {"pan": org.pan_hash}
+        changed = sorted(k for k in after if after[k] != legal_before[k])
+        if changed:
+            audit(user, "broker_org.details_changed", org, {"fields": changed})
+            if org.verification_status == BrokerOrg.Verification.VERIFIED:
+                queue_for_admin("broker_details_changed", org, f"{org.name} changed {', '.join(changed)} after verification — re-check")
+    return org
 
 
 class StaffView(APIView):

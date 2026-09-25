@@ -1,7 +1,12 @@
+import datetime
+import re
+
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon, Point, Polygon
 from rest_framework import serializers
 
 from apps.identity.serializers import PhoneField
+from apps.masterdata.models import Locality
+from common import crypto
 
 from .models import TXN_TYPES, BrokerOrg, Membership, ServiceArea
 
@@ -120,3 +125,112 @@ def circle(center: Point, radius_km: float) -> Polygon:
     poly = p.buffer(radius_km * 1000, quadsegs=16)
     poly.transform(4326)
     return poly
+
+
+OWNER_ROLE = {
+    "individual": "Owner",
+    "proprietorship": "Proprietor",
+    "partnership": "Partner",
+    "llp": "Designated partner",
+    "private_limited": "Director",
+    "public_limited": "Director",
+}
+MIN_OWNERS = {"partnership": 2, "llp": 2}
+LEGAL_FIELDS = ("legal_name", "ownership_type", "owners", "pan", "gstin", "gst_registered", "company_reg_no", "rera_agent_no")
+
+
+class OwnerSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=120)
+    role = serializers.CharField(max_length=40, required=False, allow_blank=True)
+
+    def validate_name(self, v):
+        v = " ".join(v.split())
+        if len(v) < 3:
+            raise serializers.ValidationError("Enter the full name")
+        return v
+
+
+class AgencyProfileSerializer(serializers.ModelSerializer):
+    """First-time broker registration and the Admin's "Agency details" (founder decision 2026-09-25)."""
+
+    txn_types = serializers.ListField(child=serializers.ChoiceField(choices=TXN_TYPES), min_length=1)
+    owners = OwnerSerializer(many=True)
+    pan = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    office_locality = serializers.PrimaryKeyRelatedField(queryset=Locality.objects.all(), required=False, allow_null=True)
+    office_location = LatLngField(read_only=True)
+    service_locality_ids = serializers.ListField(child=serializers.UUIDField(), write_only=True, required=False)
+    declaration = serializers.BooleanField(write_only=True, required=False)
+    service_areas = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BrokerOrg
+        fields = [
+            "id", "name", "legal_name", "ownership_type", "owners", "established_year",
+            "pan", "pan_masked", "gst_registered", "gstin", "company_reg_no", "rera_agent_no",
+            "contact_email", "office_address", "office_address_2", "office_locality", "office_city",
+            "office_pincode", "office_state", "office_location", "txn_types", "languages",
+            "service_locality_ids", "service_areas", "declaration", "declared_at",
+            "verification_status", "verification_note",
+        ]  # fmt: skip
+        read_only_fields = ["pan_masked", "declared_at", "verification_status", "verification_note", "office_state"]
+
+    def get_service_areas(self, org):
+        return [] if org._state.adding else [{"id": str(a.pk), "label": a.label} for a in org.service_areas.all()]
+
+    def validate(self, d):
+        from .validators import RERA_AGENT_RE, clean_id, gstin_problem, pan_problem
+
+        creating = self.instance is None
+        cur = lambda k, default=None: d.get(k, getattr(self.instance, k, default) if self.instance else default)  # noqa: E731
+        errors = {}
+        required = ["name", "legal_name", "ownership_type", "owners", "office_address", "office_pincode", "office_locality"]
+        for k in required:
+            if creating and not d.get(k):
+                errors[k] = "This is needed to register your agency"
+        own = cur("ownership_type", "")
+        if "owners" in d or "ownership_type" in d:
+            owners = d.get("owners") if "owners" in d else list(self.instance.owners or [])
+            need = MIN_OWNERS.get(own, 1)
+            if own in ("individual", "proprietorship") and len(owners) != 1:
+                errors["owners"] = "Give the one owner's full name"
+            elif len(owners) < need:
+                errors["owners"] = f"A {own.replace('_', ' ')} needs at least {need} names"
+            d["owners"] = [{"name": o["name"], "role": OWNER_ROLE.get(own, "Owner")} for o in owners]
+        if "pan" in d or creating:
+            pan = clean_id(d.get("pan", ""))
+            if not pan:
+                errors["pan"] = "PAN is needed to register your agency"
+            elif p := pan_problem(pan, own):
+                errors["pan"] = p
+            d["pan"] = pan
+        pan_now = d.get("pan") or (crypto.decrypt(self.instance.pan_enc) if self.instance and self.instance.pan_enc else None)
+        if "gst_registered" in d or "gstin" in d or creating:
+            if cur("gst_registered", False):
+                g = clean_id(d.get("gstin", cur("gstin", "")))
+                if not g:
+                    errors["gstin"] = "Enter the GSTIN, or untick 'Registered for GST'"
+                elif p := gstin_problem(g, pan_now):
+                    errors["gstin"] = p
+                d["gstin"] = g
+            else:
+                d["gstin"] = ""
+        if "rera_agent_no" in d:
+            d["rera_agent_no"] = clean_id(d["rera_agent_no"])
+        rera = cur("rera_agent_no", "")
+        if rera and not RERA_AGENT_RE.match(rera):
+            errors["rera_agent_no"] = "MahaRERA agent numbers look like A51700012345 (A and 11 digits)."
+        if "SALE_NEW" in (cur("txn_types", []) or []) and not rera:
+            errors["rera_agent_no"] = "A MahaRERA agent number is needed to sell new projects"
+        if "office_pincode" in d and not re.fullmatch(r"[1-9]\d{5}", d["office_pincode"] or ""):
+            errors["office_pincode"] = "Pincode should be 6 digits"
+        y = d.get("established_year")
+        if y is not None and not (1950 <= y <= datetime.date.today().year):
+            errors["established_year"] = "Enter the year the business started"
+        if creating:
+            if not d.get("service_locality_ids"):
+                errors["service_locality_ids"] = "Pick at least one area you serve"
+            if d.get("declaration") is not True:
+                errors["declaration"] = "Please confirm the declaration"
+        if errors:
+            raise serializers.ValidationError(errors)
+        return d

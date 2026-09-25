@@ -10,13 +10,25 @@
 </div>
 <div class="card scroll">
 <table>
-  <tr><th>Firm</th><th>RERA agent no.</th><th>Office</th><th>People</th><th>Signed up</th><th>Decision</th></tr>
+  <tr><th>Firm</th><th>Registrations</th><th>Office</th><th>People</th><th>Signed up</th><th>Decision</th></tr>
   {% for o in orgs %}
   <tr>
-    <td><b>{{ o.name }}</b>{% if o.verification_note %}<div class="muted">{{ o.verification_note }}</div>{% endif %}</td>
-    <td>{{ o.rera_agent_no|default:"—" }}{% if o.rera_verified_at %} <span class="chip ok">checked</span>{% endif %}
-      {% if o.rera_agent_no %}<div class="muted">Check on maharera.maharashtra.gov.in</div>{% endif %}</td>
-    <td>{{ o.office_address|default:"—" }}</td>
+    <td><b>{{ o.name }}</b>
+      {% if o.legal_name %}<div>{{ o.legal_name }}</div>{% endif %}
+      {% if o.ownership_type %}<div class="muted">{{ o.get_ownership_type_display }}{% if o.established_year %} · since {{ o.established_year }}{% endif %}</div>{% endif %}
+      {% for w in o.owners %}<div class="muted">{{ w.role }}: {{ w.name }}</div>{% endfor %}
+      {% if o.verification_note %}<div class="muted">{{ o.verification_note }}</div>{% endif %}</td>
+    <td>
+      <div>PAN {{ o.pan_masked|default:"—" }}{% if o.same_pan %} <span class="chip bad">same PAN as {{ o.same_pan|join:", " }}</span>{% endif %}</div>
+      <div>GSTIN {% if o.gst_registered %}{{ o.gstin }}{% else %}<span class="muted">not registered</span>{% endif %}</div>
+      {% if o.company_reg_no %}<div>CIN / LLPIN {{ o.company_reg_no }}</div>{% endif %}
+      <div>MahaRERA {{ o.rera_agent_no|default:"—" }}{% if o.rera_verified_at %} <span class="chip ok">checked</span>{% endif %}</div>
+      {% if o.rera_agent_no %}<div class="muted">Check on maharera.maharashtra.gov.in</div>{% endif %}
+      {% if o.declared_at %}<div class="muted">Declaration {{ o.declared_at|date:"d M Y, H:i" }}</div>{% endif %}</td>
+    <td>{{ o.office_address|default:"—" }}{% if o.office_address_2 %}, {{ o.office_address_2 }}{% endif %}
+      {% if o.office_locality %}<div>{{ o.office_locality.name }}, {{ o.office_city }} {{ o.office_pincode }}</div>{% endif %}
+      {% if o.contact_email %}<div class="muted">{{ o.contact_email }}</div>{% endif %}
+      {% with areas=o.service_areas.all %}{% if areas %}<div class="muted">Serves: {% for a in areas %}{{ a.label }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>{% endif %}{% endwith %}</td>
     <td>{{ o.members }}</td>
     <td>{{ o.created_at|date:"d M Y" }}</td>
     <td>

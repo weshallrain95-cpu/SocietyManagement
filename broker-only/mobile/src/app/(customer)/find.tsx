@@ -46,8 +46,11 @@ function byArea(clusters: SupplyCluster[], localities: Locality[]): Area[] {
 export default function Find() {
   const { api } = useSession();
   const c = usePalette();
-  const [txn, setTxn] = useState<'RENT' | 'SALE_RESALE'>('RENT');
+  const [txnPick, setTxn] = useState<'RENT' | 'SALE_RESALE'>();
   const [bhk, setBhk] = useState<string | undefined>();
+  const me = useQuery({ queryKey: ['me'], queryFn: api.me });
+  const first = me.data?.display_name?.trim().split(/\s+/)[0];
+  const txn = txnPick ?? (me.data?.profile?.customer?.intent === 'buy' ? 'SALE_RESALE' : 'RENT');
   const localities = useQuery({ queryKey: ['localities'], queryFn: api.localities });
   const bbox = useMemo<[number, number, number, number] | null>(() => {
     const ls = localities.data;
@@ -66,10 +69,11 @@ export default function Find() {
   const total = areas.reduce((s, a) => s + a.units, 0);
   const rent = txn === 'RENT';
 
+
   return (
     <Screen onRefresh={() => { supply.refetch(); mine.refetch(); }} refreshing={supply.isFetching && !supply.isLoading}>
       <Card>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: c.text }}>Tell brokers what you need</Text>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: c.text }}>{first ? `Hi ${first} — tell brokers what you need` : 'Tell brokers what you need'}</Text>
         <P muted small>One request reaches every verified broker in the area. They reply with their terms; you pick up to 3. Your number stays hidden until you accept.</P>
         <Button title="Post my requirement" onPress={() => router.push('/enquiry/new')} testID="post-requirement" />
       </Card>

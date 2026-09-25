@@ -76,7 +76,10 @@ class MeView(APIView):
         s = MeSerializer(request.user, data=request.data, partial=True)
         s.is_valid(raise_exception=True)
         for k, v in s.validated_data.items():
-            setattr(request.user, k, v)
+            if k == "email":
+                request.user.email_enc = crypto.encrypt(v) if v else None
+            else:
+                setattr(request.user, k, v)
         request.user.save()
         return Response(MeSerializer(request.user).data)
 

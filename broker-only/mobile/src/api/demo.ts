@@ -3,7 +3,7 @@
 // Business rules mirror the backend in simplified form; the backend remains the source of truth.
 import type {
   Api, AttributeDef, Chip, Customer, Lead, Listing, MatchResult, Requirement, SocietyCandidate, StaffMember,
-  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatPage, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, EnquiryDetail, UnitState, VisitPlan, VisitStop, Wing,
+  Broadcast, BroadcastInput, CustomerUpdate, FellowBroker, FlatPage, FlatSummary, ImportResult, SocietyStructure, TradeBlast, TradeDelivery, TradeInput, TradePreview, MediaItem, NearbyBroker, OwnerFlat, OwnerInvite, TimelineItem, Tokens, EnquiryDetail, AgencyProfile, UnitState, VisitPlan, VisitStop, Wing,
 } from './types';
 import { indiaDate } from '@/lib/format';
 import { checkFlat, parseUnitNo } from '@/lib/layout';
@@ -216,6 +216,14 @@ export function createDemoApi(): Api {
   const tokens: Tokens = { access: 'demo', refresh: 'demo', role: 'broker_principal', org: 'org-demo' };
   let online = true;
   const enquiries: EnquiryDetail[] = [];
+  let meExtra: Record<string, unknown> & { profile: Record<string, unknown> } = { profile: {} };
+  let agency: AgencyProfile = {
+    id: 'org-demo', name: 'Demo Realty Dhokali', legal_name: 'Demo Realty (proprietor: Demo Broker)', ownership_type: 'proprietorship',
+    owners: [{ name: 'Demo Broker', role: 'Proprietor' }], established_year: 2015, pan_masked: 'ABC*****4K', gst_registered: false, gstin: '',
+    company_reg_no: '', rera_agent_no: 'A51700000001', contact_email: 'demo@example.com', office_address: 'Shop 3, Dhokali Naka', office_address_2: '',
+    office_locality: 'loc-dhokali', office_city: 'Thane', office_pincode: '400607', office_state: 'Maharashtra', txn_types: ['RENT', 'SALE_RESALE'],
+    service_areas: [{ id: 'sa-1', label: 'Dhokali' }], declared_at: now(), verification_status: 'verified', verification_note: '',
+  };
   const ownerMedia: MediaItem[] = [photo('med-1', 'Living room', 28), photo('med-2', 'Kitchen', 140), photo('med-3', 'View from balcony', 205)];
   const ownerFlats: OwnerFlat[] = [{
     id: 'own-1', unit_id: 'unit-1', society: 'Hiranandani Estate', society_id: 'soc-0', locality: 'Hiranandani Estate', building: 'A Wing',
@@ -450,15 +458,33 @@ export function createDemoApi(): Api {
       if (phone.endsWith('6543210')) return { ...tokens, role: 'customer', org: null, new_user: false };
       return { ...tokens, role: phone.endsWith('0010000') ? 'broker_staff' : 'broker_principal' };
     },
+    async updateMe(b) {
+      const { profile, ...rest } = b;
+      meExtra = { ...meExtra, ...rest };
+      for (const [k, v] of Object.entries(profile ?? {})) {
+        const { welcomed, ...ans } = v as Record<string, unknown>;
+        (meExtra.profile as Record<string, unknown>)[k] = { ...ans, ...(welcomed ? { welcomed_at: now() } : {}) };
+      }
+      return { ...(await api.me()) };
+    },
     async me() {
-      return { id: 'usr-me', display_name: 'Demo Broker', phone_masked: '+91 ••••• 001', memberships: [{ org_id: 'org-demo', org_name: 'Demo Realty Dhokali', role: 'broker_principal', can: ['uploads', 'blasts', 'add_staff'] }], active_role: 'broker_principal', active_org_id: 'org-demo' };
+      return { ...meExtra, id: 'usr-me', display_name: (meExtra.display_name as string) || 'Demo Broker', phone_masked: '+91 ••••• 001', memberships: [{ org_id: 'org-demo', org_name: 'Demo Realty Dhokali', role: 'broker_principal', can: ['uploads', 'blasts', 'add_staff'] }], active_role: 'broker_principal', active_org_id: 'org-demo' };
     },
     async switchRole(role) {
       return role === 'owner' || role === 'customer' ? { ...tokens, role, org: null } : tokens;
     },
-    async registerOrg() {
+    async registerOrg(b) {
       await wait();
-      return { tokens };
+      agency = { ...agency, ...b, owners: b.owners.map((o) => ({ name: o.name, role: 'Owner' })), pan_masked: (b.pan ?? '').slice(0, 3) + '*****' + (b.pan ?? '').slice(-2) };
+      return { tokens, org: clone(agency) };
+    },
+    async myAgency() {
+      return clone(agency);
+    },
+    async updateAgency(b) {
+      await wait();
+      agency = { ...agency, ...b, owners: b.owners ? b.owners.map((o) => ({ name: o.name, role: 'Owner' })) : agency.owners };
+      return clone(agency);
     },
     async listings(p) {
       await wait(150);
